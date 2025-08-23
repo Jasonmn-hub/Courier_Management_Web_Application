@@ -1,0 +1,154 @@
+Create a full-stack Courier Management Web Application using Node.js (Express.js), PostgreSQL, and React (with TailwindCSS).  
+
+## Features Required
+
+### Authentication & Roles
+- JWT authentication (login/logout).
+- Three roles: Admin, Manager, User.
+- Admin: full access, manage users, departments, fields, SMTP settings.
+- Manager: manage couriers in their department, delete/restore couriers.
+- User: add/edit/update couriers for their department only.
+
+### Courier Management
+- Add courier with standard fields: 
+  - To (Branch / Other)
+  - Email ID
+  - Courier Date
+  - Courier Vendor
+  - POD No.
+  - Courier Details (Assets/Documents)
+  - Contact Details
+  - Remarks
+- On submit, ask user if they want to send email notification.
+- Support CC sender email and multiple CC emails.
+- Status flow: On The Way → Completed → Deleted.
+- Update courier with Received Date & Remarks.
+- Soft delete couriers (moved to Deleted section).
+- Manager/Admin can restore deleted couriers.
+
+### Dashboard
+- Dashboard after login.
+- 2 Charts: "On The Way" and "Completed" (use Recharts).
+- Courier list with pagination (10/20/50/100).
+- Filters: Date, Vendor, Department, Status.
+
+### Admin Features
+- User Management: Create/Edit/Delete users with roles.
+- Department Management: Add/Edit/Delete departments, assign fields.
+- Field Management: Add new fields (Text, Calendar, Dropdown), assign to departments.
+- SMTP Settings: Host, Port, Username, Password, From-Email.
+
+### Extra Features
+- Audit logs: Track who created/updated/deleted.
+- Export courier data as Excel/PDF.
+- Upload POD copy (file storage: local).
+- Search by POD No., Vendor, Date, Receiver Email.
+
+---
+
+## Tech Stack
+- Backend: Node.js + Express.js
+- Database: PostgreSQL
+- ORM: Sequelize or Prisma
+- Auth: JWT + bcrypt password hashing
+- Frontend: React + TailwindCSS
+- Charts: Recharts
+- Email: Nodemailer (SMTP)
+
+---
+
+## PostgreSQL Schema (DDL)
+Generate tables:
+
+users (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(100),
+  email VARCHAR(100) UNIQUE NOT NULL,
+  password TEXT NOT NULL,
+  role VARCHAR(20) CHECK (role IN ('admin','manager','user')),
+  department_id INT REFERENCES departments(id),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+departments (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(100) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+fields (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(100),
+  type VARCHAR(20) CHECK (type IN ('text','calendar','dropdown')),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+department_fields (
+  id SERIAL PRIMARY KEY,
+  department_id INT REFERENCES departments(id),
+  field_id INT REFERENCES fields(id)
+);
+
+couriers (
+  id SERIAL PRIMARY KEY,
+  department_id INT REFERENCES departments(id),
+  created_by INT REFERENCES users(id),
+  to_branch VARCHAR(100),
+  email VARCHAR(100),
+  courier_date DATE,
+  vendor VARCHAR(100),
+  pod_no VARCHAR(100),
+  details TEXT,
+  contact_details TEXT,
+  remarks TEXT,
+  status VARCHAR(20) CHECK (status IN ('on_the_way','completed','deleted')) DEFAULT 'on_the_way',
+  received_date DATE,
+  received_remarks TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+smtp_settings (
+  id SERIAL PRIMARY KEY,
+  host VARCHAR(200),
+  port INT,
+  username VARCHAR(100),
+  password TEXT,
+  from_email VARCHAR(100)
+);
+
+audit_logs (
+  id SERIAL PRIMARY KEY,
+  user_id INT REFERENCES users(id),
+  action VARCHAR(50),
+  entity_type VARCHAR(50),
+  entity_id INT,
+  timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+---
+
+## Backend Requirements
+- Implement CRUD APIs for Users, Departments, Couriers, Fields, SMTP.
+- Protect routes with role-based access (middleware).
+- Use Nodemailer for sending emails.
+- Store file uploads in local `/uploads`.
+
+## Frontend Requirements
+- React with TailwindCSS layout (sidebar + top navbar).
+- Login page → Dashboard (role-based UI).
+- Courier Management UI with add/edit/update/delete.
+- Dashboard charts with Recharts.
+- User/Department/Field/SMTP settings pages for Admin.
+- Search & Filter in courier table.
+- Export button for Excel/PDF.
+
+---
+
+Deliver a working full-stack app (backend + frontend) with proper folder structure:
+
+/backend (Node.js, Express, PostgreSQL)
+/frontend (React, TailwindCSS)
