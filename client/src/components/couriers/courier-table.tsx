@@ -155,7 +155,7 @@ export default function CourierTable({
       queryClient.invalidateQueries({ queryKey: ['/api/stats'] });
       toast({
         title: "Success",
-        description: "Courier marked as completed",
+        description: "Courier marked as received",
       });
     },
     onError: (error) => {
@@ -184,8 +184,6 @@ export default function CourierTable({
         return <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">On The Way</Badge>;
       case 'received':
         return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Received</Badge>;
-      case 'completed':
-        return <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">Completed</Badge>;
       case 'deleted':
         return <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">Deleted</Badge>;
       default:

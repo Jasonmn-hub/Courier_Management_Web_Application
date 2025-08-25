@@ -86,7 +86,7 @@ export default function Couriers() {
               <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="all" data-testid="tab-all-couriers">All Couriers</TabsTrigger>
                 <TabsTrigger value="on_the_way" data-testid="tab-on-the-way">On The Way</TabsTrigger>
-                <TabsTrigger value="completed" data-testid="tab-completed">Completed</TabsTrigger>
+                <TabsTrigger value="received" data-testid="tab-received">Received</TabsTrigger>
                 <TabsTrigger value="deleted" data-testid="tab-deleted">Deleted</TabsTrigger>
               </TabsList>
               
@@ -98,8 +98,8 @@ export default function Couriers() {
                 <CourierTable status="on_the_way" onEdit={handleEdit} />
               </TabsContent>
               
-              <TabsContent value="completed" className="mt-6">
-                <CourierTable status="completed" onEdit={handleEdit} />
+              <TabsContent value="received" className="mt-6">
+                <CourierTable status="received" onEdit={handleEdit} />
               </TabsContent>
               
               <TabsContent value="deleted" className="mt-6">

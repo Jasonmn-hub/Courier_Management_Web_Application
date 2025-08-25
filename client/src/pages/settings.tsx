@@ -154,6 +154,22 @@ export default function Settings() {
   const queryClient = useQueryClient();
   const [newFieldName, setNewFieldName] = useState("");
   const [newFieldType, setNewFieldType] = useState("text");
+
+  const createFieldMutation = useMutation({
+    mutationFn: async (fieldData: { name: string; type: string }) => {
+      const res = await apiRequest('POST', '/api/fields', fieldData);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/fields'] });
+      toast({ title: "Custom Field", description: `Field "${newFieldName}" added successfully` });
+      setNewFieldName("");
+      setNewFieldType("text");
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to create field", variant: "destructive" });
+    },
+  });
   const [smtpData, setSmtpData] = useState<SmtpSettings>({
     host: "",
     port: 587,
@@ -303,12 +319,14 @@ export default function Settings() {
                         <SelectItem value="dropdown">Dropdown</SelectItem>
                       </SelectContent>
                     </Select>
-                    <Button onClick={() => {
-                      if (newFieldName) {
-                        toast({ title: "Custom Field", description: `Field "${newFieldName}" added successfully` });
-                        setNewFieldName("");
-                      }
-                    }}>
+                    <Button 
+                      onClick={() => {
+                        if (newFieldName) {
+                          createFieldMutation.mutate({ name: newFieldName, type: newFieldType });
+                        }
+                      }}
+                      disabled={createFieldMutation.isPending}
+                    >
                       <Plus className="h-4 w-4 mr-2" />
                       Add Field
                     </Button>

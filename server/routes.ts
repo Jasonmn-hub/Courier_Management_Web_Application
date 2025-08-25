@@ -282,8 +282,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Helper function to log audit
   const logAudit = async (userId: string, action: string, entityType: string, entityId?: string | number) => {
     try {
+      // For temp users, create audit logs with null userId to avoid foreign key constraint
       await storage.createAuditLog({
-        userId,
+        userId: userId.startsWith('temp_') ? null : userId,
         action,
         entityType,
         entityId: typeof entityId === 'number' ? entityId.toString() : entityId,
@@ -489,10 +490,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validatedData = insertCourierSchema.parse(courierData);
       const courier = await storage.createCourier(validatedData);
       
-      // Skip audit logging for temp users (no foreign key constraint)
-      if (!userId.startsWith('temp_')) {
-        await logAudit(userId, 'CREATE', 'courier', courier.id);
-      }
+      await logAudit(userId, 'CREATE', 'courier', courier.id);
       
       res.status(201).json(courier);
     } catch (error) {
@@ -548,10 +546,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validatedData = insertCourierSchema.partial().parse(updateData);
       const courier = await storage.updateCourier(id, validatedData);
       
-      // Skip audit logging for temp users (no foreign key constraint)
-      if (!userId.startsWith('temp_')) {
-        await logAudit(userId, 'UPDATE', 'courier', id);
-      }
+      await logAudit(userId, 'UPDATE', 'courier', id);
       
       res.json(courier);
     } catch (error) {
