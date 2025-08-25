@@ -45,9 +45,28 @@ export const authenticateToken: RequestHandler = async (req: any, res, next) => 
   }
 
   try {
-    const user = await storage.getUser(payload.userId);
-    if (!user) {
-      return res.status(403).json({ message: 'User not found' });
+    let user;
+    
+    // Check if it's a temporary user ID
+    if (payload.userId.startsWith('temp_')) {
+      // For temp users, create a user object from the token payload
+      user = {
+        id: payload.userId,
+        email: payload.email,
+        role: payload.role,
+        name: payload.email.split('@')[0], // Use email prefix as name
+        firstName: null,
+        lastName: null,
+        departmentId: null,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+    } else {
+      // For regular users, fetch from database
+      user = await storage.getUser(payload.userId);
+      if (!user) {
+        return res.status(403).json({ message: 'User not found' });
+      }
     }
     
     req.user = user;

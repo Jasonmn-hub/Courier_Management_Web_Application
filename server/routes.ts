@@ -32,23 +32,79 @@ const upload = multer({
   },
 });
 
+// CSV helper function
+const readTempUsersFromCSV = (): Array<{email: string, name: string, firstName: string, lastName: string, password: string, role: string}> => {
+  try {
+    const csvPath = path.join(process.cwd(), 'temp_users.csv');
+    if (!fs.existsSync(csvPath)) {
+      console.error('CSV file not found:', csvPath);
+      return [];
+    }
+    
+    const csvContent = fs.readFileSync(csvPath, 'utf8');
+    const lines = csvContent.split('\n');
+    const headers = lines[0].split(',');
+    
+    const users = [];
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (line) {
+        const values = line.split(',');
+        const user: any = {};
+        headers.forEach((header, index) => {
+          user[header.trim()] = values[index]?.trim();
+        });
+        users.push(user);
+      }
+    }
+    
+    return users;
+  } catch (error) {
+    console.error('Error reading CSV file:', error);
+    return [];
+  }
+};
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Login endpoint
   app.post('/api/auth/login', async (req, res) => {
     try {
-      const { email, password } = req.body;
+      const { email, password, useTempUser } = req.body;
       
       if (!email || !password) {
         return res.status(400).json({ message: 'Email and password are required' });
       }
 
-      const user = await storage.getUserByEmail(email);
-      if (!user || !user.password) {
-        return res.status(401).json({ message: 'Invalid credentials' });
+      let user;
+      let isValidPassword = false;
+
+      if (useTempUser) {
+        // Use CSV authentication
+        const tempUsers = readTempUsersFromCSV();
+        const tempUser = tempUsers.find(u => u.email === email);
+        
+        if (tempUser && tempUser.password === password) {
+          // Create a user object compatible with the response
+          user = {
+            id: `temp_${tempUser.email}`,
+            email: tempUser.email,
+            name: tempUser.name,
+            firstName: tempUser.firstName,
+            lastName: tempUser.lastName,
+            role: tempUser.role,
+            departmentId: null
+          };
+          isValidPassword = true;
+        }
+      } else {
+        // Use database authentication
+        user = await storage.getUserByEmail(email);
+        if (user && user.password) {
+          isValidPassword = await comparePassword(password, user.password);
+        }
       }
 
-      const isValidPassword = await comparePassword(password, user.password);
-      if (!isValidPassword) {
+      if (!user || !isValidPassword) {
         return res.status(401).json({ message: 'Invalid credentials' });
       }
 

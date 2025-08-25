@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Truck, Package, Users, BarChart3 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -13,7 +14,7 @@ export default function Landing() {
     // Auto-open login dialog if redirected from logout
     return new URLSearchParams(window.location.search).get('showLogin') === 'true';
   });
-  const [loginData, setLoginData] = useState({ email: "", password: "" });
+  const [loginData, setLoginData] = useState({ email: "", password: "", useTempUser: false });
   const [registerData, setRegisterData] = useState({ name: "", email: "", password: "" });
   const [isRegisterMode, setIsRegisterMode] = useState(false);
   
@@ -113,6 +114,21 @@ export default function Landing() {
                       placeholder="Enter your password"
                     />
                   </div>
+                  {!isRegisterMode && (
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="temp-user"
+                        checked={loginData.useTempUser}
+                        onCheckedChange={(checked) =>
+                          setLoginData({ ...loginData, useTempUser: !!checked })
+                        }
+                        data-testid="checkbox-temp-user"
+                      />
+                      <Label htmlFor="temp-user" className="text-sm">
+                        Use temporary test credentials (CSV)
+                      </Label>
+                    </div>
+                  )}
                   <div className="flex flex-col gap-3">
                     <Button
                       onClick={isRegisterMode ? handleRegister : handleLogin}

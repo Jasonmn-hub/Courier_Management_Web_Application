@@ -11,6 +11,7 @@ interface User {
 interface LoginData {
   email: string;
   password: string;
+  useTempUser?: boolean;
 }
 
 interface RegisterData {
