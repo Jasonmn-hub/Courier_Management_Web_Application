@@ -3,6 +3,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import CourierTable from "@/components/couriers/courier-table";
 import CourierForm from "@/components/couriers/courier-form";
+import PrintAuthorityForm from "@/components/print-authority/print-authority-form";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus } from "lucide-react";
@@ -83,11 +84,12 @@ export default function Couriers() {
           {/* Tabs for different courier statuses */}
           <div className="mt-8">
             <Tabs defaultValue="all" className="w-full">
-              <TabsList className="grid w-full grid-cols-4">
+              <TabsList className="grid w-full grid-cols-5">
                 <TabsTrigger value="all" data-testid="tab-all-couriers">All Couriers</TabsTrigger>
                 <TabsTrigger value="on_the_way" data-testid="tab-on-the-way">On The Way</TabsTrigger>
                 <TabsTrigger value="received" data-testid="tab-received">Received</TabsTrigger>
                 <TabsTrigger value="deleted" data-testid="tab-deleted">Deleted</TabsTrigger>
+                <TabsTrigger value="print_authority" data-testid="tab-print-authority">Print Authority Later</TabsTrigger>
               </TabsList>
               
               <TabsContent value="all" className="mt-6">
@@ -104,6 +106,10 @@ export default function Couriers() {
               
               <TabsContent value="deleted" className="mt-6">
                 <CourierTable status="deleted" onEdit={handleEdit} showRestore />
+              </TabsContent>
+              
+              <TabsContent value="print_authority" className="mt-6">
+                <PrintAuthorityForm />
               </TabsContent>
             </Tabs>
           </div>

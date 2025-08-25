@@ -155,6 +155,11 @@ export default function Settings() {
   const [newFieldName, setNewFieldName] = useState("");
   const [newFieldType, setNewFieldType] = useState("text");
 
+  // Fetch all fields
+  const { data: fields = [], isLoading: fieldsLoading } = useQuery<CustomField[]>({
+    queryKey: ['/api/fields'],
+  });
+
   const createFieldMutation = useMutation({
     mutationFn: async (fieldData: { name: string; type: string }) => {
       const res = await apiRequest('POST', '/api/fields', fieldData);
@@ -168,6 +173,19 @@ export default function Settings() {
     },
     onError: () => {
       toast({ title: "Error", description: "Failed to create field", variant: "destructive" });
+    },
+  });
+
+  const deleteFieldMutation = useMutation({
+    mutationFn: async (fieldId: number) => {
+      await apiRequest('DELETE', `/api/fields/${fieldId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/fields'] });
+      toast({ title: "Success", description: "Field deleted successfully" });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to delete field", variant: "destructive" });
     },
   });
   const [smtpData, setSmtpData] = useState<SmtpSettings>({
@@ -344,36 +362,53 @@ export default function Settings() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        <TableRow>
-                          <TableCell>Priority Level</TableCell>
-                          <TableCell>
-                            <Badge variant="outline">Dropdown</Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="secondary">Yes</Badge>
-                          </TableCell>
-                          <TableCell>All Departments</TableCell>
-                          <TableCell>
-                            <Button variant="ghost" size="sm">
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell>Reference Number</TableCell>
-                          <TableCell>
-                            <Badge variant="outline">Text</Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="outline">No</Badge>
-                          </TableCell>
-                          <TableCell>IT Department</TableCell>
-                          <TableCell>
-                            <Button variant="ghost" size="sm">
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
+                        {fieldsLoading ? (
+                          <TableRow>
+                            <TableCell colSpan={5} className="text-center py-4">
+                              Loading fields...
+                            </TableCell>
+                          </TableRow>
+                        ) : fields.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={5} className="text-center py-4 text-slate-500">
+                              No custom fields created yet. Add your first field above.
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          (fields as CustomField[]).map((field) => (
+                            <TableRow key={field.id} data-testid={`field-row-${field.id}`}>
+                              <TableCell className="font-medium">{field.name}</TableCell>
+                              <TableCell>
+                                <Badge variant="outline" className="capitalize">
+                                  {field.type}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant={field.required ? "secondary" : "outline"}>
+                                  {field.required ? "Yes" : "No"}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                {field.departmentId ? `Department ${field.departmentId}` : "All Departments"}
+                              </TableCell>
+                              <TableCell>
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm"
+                                  onClick={() => {
+                                    if (confirm(`Are you sure you want to delete the field "${field.name}"?`)) {
+                                      deleteFieldMutation.mutate(field.id);
+                                    }
+                                  }}
+                                  disabled={deleteFieldMutation.isPending}
+                                  data-testid={`button-delete-field-${field.id}`}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        )}
                       </TableBody>
                     </Table>
                   </div>

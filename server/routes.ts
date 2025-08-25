@@ -322,6 +322,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.delete('/api/fields/:id', authenticateToken, requireRole(['admin']), setCurrentUser(), async (req: any, res) => {
+    try {
+      const fieldId = parseInt(req.params.id);
+      if (isNaN(fieldId)) {
+        return res.status(400).json({ message: "Invalid field ID" });
+      }
+      
+      const success = await storage.deleteField(fieldId);
+      if (!success) {
+        return res.status(404).json({ message: 'Field not found' });
+      }
+
+      await logAudit(req.currentUser.id, 'DELETE', 'field', fieldId);
+
+      res.json({ message: 'Field deleted successfully' });
+    } catch (error) {
+      console.error('Field deletion error:', error);
+      res.status(500).json({ message: 'Field deletion failed' });
+    }
+  });
+
   // Department routes
   app.get('/api/departments', authenticateToken, async (req: any, res) => {
     try {
@@ -439,6 +460,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching couriers:", error);
       res.status(500).json({ message: "Failed to fetch couriers" });
+    }
+  });
+
+  // Export routes - Must be before :id route to avoid route conflicts
+  app.get('/api/couriers/export', authenticateToken, async (req: any, res) => {
+    try {
+      const result = await storage.getAllCouriers({ limit: 1000 });
+      
+      // Create CSV content
+      const headers = ['POD No', 'To Branch', 'Email', 'Vendor', 'Date', 'Status', 'Details', 'Contact Details', 'Remarks', 'Department', 'Created By'];
+      const csvRows = [headers.join(',')];
+      
+      result.couriers.forEach(courier => {
+        const row = [
+          courier.podNo || '',
+          courier.toBranch || '',
+          courier.email || '',
+          courier.vendor || '',
+          courier.courierDate ? new Date(courier.courierDate).toLocaleDateString() : '',
+          courier.status || '',
+          courier.details || '',
+          courier.contactDetails || '',
+          courier.remarks || '',
+          courier.department?.name || '',
+          courier.creator?.name || ''
+        ].map(field => `"${(field || '').toString().replace(/"/g, '""')}"`);
+        csvRows.push(row.join(','));
+      });
+      
+      const csvContent = csvRows.join('\\n');
+      
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', 'attachment; filename="couriers-export.csv"');
+      res.send(csvContent);
+    } catch (error) {
+      console.error("Error exporting couriers:", error);
+      res.status(500).json({ message: "Failed to export couriers" });
     }
   });
 
@@ -661,42 +719,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Export routes
-  app.get('/api/couriers/export', authenticateToken, async (req: any, res) => {
-    try {
-      const result = await storage.getAllCouriers({ limit: 1000 });
-      
-      // Create CSV content
-      const headers = ['POD No', 'To Branch', 'Email', 'Vendor', 'Date', 'Status', 'Details', 'Contact Details', 'Remarks', 'Department', 'Created By'];
-      const csvRows = [headers.join(',')];
-      
-      result.couriers.forEach(courier => {
-        const row = [
-          courier.podNo || '',
-          courier.toBranch || '',
-          courier.email || '',
-          courier.vendor || '',
-          courier.courierDate ? new Date(courier.courierDate).toLocaleDateString() : '',
-          courier.status || '',
-          courier.details || '',
-          courier.contactDetails || '',
-          courier.remarks || '',
-          courier.department?.name || '',
-          courier.creator?.name || ''
-        ].map(field => `"${(field || '').toString().replace(/"/g, '""')}"`);
-        csvRows.push(row.join(','));
-      });
-      
-      const csvContent = csvRows.join('\\n');
-      
-      res.setHeader('Content-Type', 'text/csv');
-      res.setHeader('Content-Disposition', 'attachment; filename="couriers-export.csv"');
-      res.send(csvContent);
-    } catch (error) {
-      console.error("Error exporting couriers:", error);
-      res.status(500).json({ message: "Failed to export couriers" });
-    }
-  });
 
   // Audit logs route
   app.get('/api/audit-logs', authenticateToken, requireRole(['admin']), async (req: any, res) => {

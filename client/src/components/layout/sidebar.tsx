@@ -27,7 +27,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   ];
 
   // Add admin-only navigation items
-  if (user?.role === 'admin') {
+  if ((user as any)?.role === 'admin') {
     navigation.push(
       { name: "Users", href: "/users", icon: Users, current: location === "/users" },
       { name: "Departments", href: "/departments", icon: Building2, current: location === "/departments" },
