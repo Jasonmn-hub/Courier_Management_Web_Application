@@ -107,7 +107,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user || !isValidPassword) {
         return res.status(401).json({ message: 'Invalid credentials' });
       }
-
       const token = generateToken({
         userId: user.id,
         email: user.email!,
