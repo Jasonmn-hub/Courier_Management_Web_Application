@@ -74,7 +74,16 @@ export default function Dashboard() {
 
           {/* Recent Couriers Table */}
           <div className="mt-8">
-            <CourierTable title="Recent Couriers" limit={10} />
+            <CourierTable title="Recent Couriers" limit={5} />
+          </div>
+          
+          {/* Received Couriers Table */}
+          <div className="mt-8">
+            <CourierTable 
+              title="Received Couriers" 
+              status="received"
+              limit={5} 
+            />
           </div>
         </div>
       </div>

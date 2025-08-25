@@ -26,7 +26,10 @@ export interface IStorage {
   // User operations
   getUser(id: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
+  getAllUsers(): Promise<User[]>;
   createUser(user: { name: string; email: string; password: string; role: string; departmentId?: number | null }): Promise<User>;
+  updateUser(id: string, userData: { name: string; email: string; role: string; departmentId?: number | null }): Promise<User | undefined>;
+  deleteUser(id: string): Promise<boolean>;
   upsertUser(user: UpsertUser): Promise<User>;
   
   // Department operations
@@ -93,6 +96,29 @@ export class DatabaseStorage implements IStorage {
       departmentId: userData.departmentId
     }).returning();
     return user;
+  }
+
+  async getAllUsers(): Promise<User[]> {
+    return await db.select().from(users).orderBy(users.createdAt);
+  }
+
+  async updateUser(id: string, userData: { name: string; email: string; role: string; departmentId?: number | null }): Promise<User | undefined> {
+    const [user] = await db.update(users)
+      .set({
+        name: userData.name,
+        email: userData.email,
+        role: userData.role as any,
+        departmentId: userData.departmentId,
+        updatedAt: new Date()
+      })
+      .where(eq(users.id, id))
+      .returning();
+    return user;
+  }
+
+  async deleteUser(id: string): Promise<boolean> {
+    const result = await db.delete(users).where(eq(users.id, id));
+    return result.rowCount > 0;
   }
 
   async upsertUser(userData: UpsertUser): Promise<User> {

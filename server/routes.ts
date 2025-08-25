@@ -122,6 +122,97 @@ export async function registerRoutes(app: Express): Promise<Server> {
     };
   };
 
+  // User management routes
+  app.get('/api/users', authenticateToken, requireRole(['admin', 'manager']), async (req: any, res) => {
+    try {
+      const users = await storage.getAllUsers();
+      res.json(users);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      res.status(500).json({ message: "Failed to fetch users" });
+    }
+  });
+
+  app.post('/api/users', authenticateToken, requireRole(['admin']), setCurrentUser(), async (req: any, res) => {
+    try {
+      const { name, email, password = 'defaultpassword123', role = 'user', departmentId } = req.body;
+      
+      if (!name || !email) {
+        return res.status(400).json({ message: 'Name and email are required' });
+      }
+
+      // Check if user already exists
+      const existingUser = await storage.getUserByEmail(email);
+      if (existingUser) {
+        return res.status(400).json({ message: 'User already exists' });
+      }
+
+      const hashedPassword = await hashPassword(password);
+      
+      const newUser = await storage.createUser({
+        name,
+        email,
+        password: hashedPassword,
+        role: role as any,
+        departmentId: departmentId || null
+      });
+
+      await logAudit(req.currentUser.id, 'CREATE', 'user', newUser.id);
+
+      res.status(201).json(newUser);
+    } catch (error) {
+      console.error('User creation error:', error);
+      res.status(500).json({ message: 'User creation failed' });
+    }
+  });
+
+  app.put('/api/users/:id', authenticateToken, requireRole(['admin']), setCurrentUser(), async (req: any, res) => {
+    try {
+      const userId = req.params.id;
+      const { name, email, role, departmentId } = req.body;
+      
+      if (!name || !email) {
+        return res.status(400).json({ message: 'Name and email are required' });
+      }
+
+      const updatedUser = await storage.updateUser(userId, {
+        name,
+        email,
+        role: role as any,
+        departmentId: departmentId || null
+      });
+
+      if (!updatedUser) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      await logAudit(req.currentUser.id, 'UPDATE', 'user', userId);
+
+      res.json(updatedUser);
+    } catch (error) {
+      console.error('User update error:', error);
+      res.status(500).json({ message: 'User update failed' });
+    }
+  });
+
+  app.delete('/api/users/:id', authenticateToken, requireRole(['admin']), setCurrentUser(), async (req: any, res) => {
+    try {
+      const userId = req.params.id;
+      
+      const success = await storage.deleteUser(userId);
+      if (!success) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      await logAudit(req.currentUser.id, 'DELETE', 'user', userId);
+
+      res.json({ message: 'User deleted successfully' });
+    } catch (error) {
+      console.error('User deletion error:', error);
+      res.status(500).json({ message: 'User deletion failed' });
+    }
+  });
+
   // Helper function to log audit
   const logAudit = async (userId: string, action: string, entityType: string, entityId?: number) => {
     try {

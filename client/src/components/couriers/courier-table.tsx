@@ -148,14 +148,14 @@ export default function CourierTable({
 
   const markAsReceivedMutation = useMutation({
     mutationFn: async (id: number) => {
-      await apiRequest('PATCH', `/api/couriers/${id}`, { status: 'completed', receivedDate: new Date().toISOString().split('T')[0] });
+      await apiRequest('PATCH', `/api/couriers/${id}`, { status: 'received', receivedDate: new Date().toISOString().split('T')[0] });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/couriers'] });
       queryClient.invalidateQueries({ queryKey: ['/api/stats'] });
       toast({
         title: "Success",
-        description: "Courier marked as received and completed",
+        description: "Courier marked as received",
       });
     },
     onError: (error) => {
@@ -182,8 +182,10 @@ export default function CourierTable({
     switch (status) {
       case 'on_the_way':
         return <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">On The Way</Badge>;
+      case 'received':
+        return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Received</Badge>;
       case 'completed':
-        return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Completed</Badge>;
+        return <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">Completed</Badge>;
       case 'deleted':
         return <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">Deleted</Badge>;
       default:
@@ -236,6 +238,7 @@ export default function CourierTable({
                 <SelectContent>
                   <SelectItem value="all">All Status</SelectItem>
                   <SelectItem value="on_the_way">On The Way</SelectItem>
+                  <SelectItem value="received">Received</SelectItem>
                   <SelectItem value="completed">Completed</SelectItem>
                   <SelectItem value="deleted">Deleted</SelectItem>
                 </SelectContent>
