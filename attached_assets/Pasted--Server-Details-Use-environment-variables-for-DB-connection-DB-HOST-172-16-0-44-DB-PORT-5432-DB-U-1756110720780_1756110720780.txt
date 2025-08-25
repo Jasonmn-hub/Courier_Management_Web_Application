@@ -1,0 +1,94 @@
+## Server Details
+Use environment variables for DB connection:
+DB_HOST=172.16.0.44
+DB_PORT=5432
+DB_USER=postgres
+DB_PASSWORD=postgres
+DB_NAME=LMF
+JWT_SECRET=supersecretjwt
+UPLOAD_DIR=uploads
+## PostgreSQL Schema (DDL)
+Run this once inside the `LMF` database:
+-- Database: LMF
+DROP TABLE IF EXISTS audit_logs CASCADE;
+DROP TABLE IF EXISTS smtp_settings CASCADE;
+DROP TABLE IF EXISTS couriers CASCADE;
+DROP TABLE IF EXISTS department_fields CASCADE;
+DROP TABLE IF EXISTS fields CASCADE;
+DROP TABLE IF EXISTS users CASCADE;
+DROP TABLE IF EXISTS departments CASCADE;
+
+CREATE TABLE departments (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL UNIQUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    password TEXT NOT NULL,
+    role VARCHAR(20) NOT NULL CHECK (role IN ('admin','manager','user')),
+    department_id INT REFERENCES departments(id) ON DELETE SET NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE fields (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    type VARCHAR(20) NOT NULL CHECK (type IN ('text','calendar','dropdown')),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE department_fields (
+    id SERIAL PRIMARY KEY,
+    department_id INT NOT NULL REFERENCES departments(id) ON DELETE CASCADE,
+    field_id INT NOT NULL REFERENCES fields(id) ON DELETE CASCADE,
+    UNIQUE (department_id, field_id)
+);
+
+CREATE TABLE couriers (
+    id SERIAL PRIMARY KEY,
+    department_id INT NOT NULL REFERENCES departments(id) ON DELETE CASCADE,
+    created_by INT NOT NULL REFERENCES users(id) ON DELETE SET NULL,
+    to_branch VARCHAR(100),
+    email VARCHAR(100),
+    courier_date DATE,
+    vendor VARCHAR(100),
+    pod_no VARCHAR(100),
+    details TEXT,
+    contact_details TEXT,
+    remarks TEXT,
+    status VARCHAR(20) NOT NULL DEFAULT 'on_the_way' CHECK (status IN ('on_the_way','completed','deleted')),
+    received_date DATE,
+    received_remarks TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE smtp_settings (
+    id SERIAL PRIMARY KEY,
+    host VARCHAR(200) NOT NULL,
+    port INT NOT NULL,
+    username VARCHAR(100) NOT NULL,
+    password TEXT NOT NULL,
+    from_email VARCHAR(100) NOT NULL
+);
+
+CREATE TABLE audit_logs (
+    id SERIAL PRIMARY KEY,
+    user_id INT REFERENCES users(id) ON DELETE SET NULL,
+    action VARCHAR(50) NOT NULL,
+    entity_type VARCHAR(50) NOT NULL,
+    entity_id INT,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_users_department ON users(department_id);
+CREATE INDEX idx_couriers_department ON couriers(department_id);
+CREATE INDEX idx_couriers_status ON couriers(status);
+CREATE INDEX idx_couriers_podno ON couriers(pod_no);
