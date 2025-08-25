@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   Table,
   TableBody,
@@ -13,7 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Edit, Eye, Trash2, RotateCcw, ChevronLeft, ChevronRight } from "lucide-react";
+import { Edit, Eye, Trash2, RotateCcw, ChevronLeft, ChevronRight, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
@@ -40,6 +41,7 @@ export default function CourierTable({
   const [currentPage, setCurrentPage] = useState(1);
   const [departmentFilter, setDepartmentFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState(status || "all");
+  const [viewingCourier, setViewingCourier] = useState<any>(null);
 
   const { data: couriersResult, isLoading } = useQuery({
     queryKey: ['/api/couriers', statusFilter, search, pageSize, currentPage, departmentFilter],
@@ -143,6 +145,38 @@ export default function CourierTable({
       restoreMutation.mutate(id);
     }
   };
+
+  const markAsReceivedMutation = useMutation({
+    mutationFn: async (id: number) => {
+      await apiRequest('PATCH', `/api/couriers/${id}`, { status: 'completed', receivedDate: new Date().toISOString().split('T')[0] });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/couriers'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/stats'] });
+      toast({
+        title: "Success",
+        description: "Courier marked as received and completed",
+      });
+    },
+    onError: (error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Error",
+        description: "Failed to update courier status",
+        variant: "destructive",
+      });
+    },
+  });
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -284,10 +318,24 @@ export default function CourierTable({
                             <Button 
                               variant="ghost" 
                               size="sm"
+                              onClick={() => setViewingCourier(courier)}
                               data-testid={`button-view-${courier.id}`}
                             >
                               <Eye className="h-4 w-4" />
                             </Button>
+                            
+                            {courier.status === 'on_the_way' && (
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => markAsReceivedMutation.mutate(courier.id)}
+                                disabled={markAsReceivedMutation.isPending}
+                                data-testid={`button-received-${courier.id}`}
+                                title="Mark as Received"
+                              >
+                                <Check className="h-4 w-4 text-green-600" />
+                              </Button>
+                            )}
                             
                             {showRestore ? (
                               <Button 
@@ -383,6 +431,88 @@ export default function CourierTable({
           </>
         )}
       </CardContent>
+      
+      {/* View Courier Details Modal */}
+      {viewingCourier && (
+        <Dialog open={true} onOpenChange={() => setViewingCourier(null)}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Courier Details</DialogTitle>
+            </DialogHeader>
+            
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-700">POD No.</label>
+                  <p className="text-sm text-gray-900">{viewingCourier.podNo || '-'}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-700">To Branch</label>
+                  <p className="text-sm text-gray-900">{viewingCourier.toBranch || '-'}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-700">Email</label>
+                  <p className="text-sm text-gray-900">{viewingCourier.email || '-'}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-700">Vendor</label>
+                  <p className="text-sm text-gray-900">{viewingCourier.vendor || '-'}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-700">Courier Date</label>
+                  <p className="text-sm text-gray-900">
+                    {viewingCourier.courierDate ? new Date(viewingCourier.courierDate).toLocaleDateString() : '-'}
+                  </p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-700">Status</label>
+                  <div className="mt-1">{getStatusBadge(viewingCourier.status)}</div>
+                </div>
+                {viewingCourier.receivedDate && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Received Date</label>
+                    <p className="text-sm text-gray-900">
+                      {new Date(viewingCourier.receivedDate).toLocaleDateString()}
+                    </p>
+                  </div>
+                )}
+              </div>
+              
+              {viewingCourier.details && (
+                <div>
+                  <label className="text-sm font-medium text-gray-700">Details</label>
+                  <p className="text-sm text-gray-900 mt-1">{viewingCourier.details}</p>
+                </div>
+              )}
+              
+              {viewingCourier.contactDetails && (
+                <div>
+                  <label className="text-sm font-medium text-gray-700">Contact Details</label>
+                  <p className="text-sm text-gray-900 mt-1">{viewingCourier.contactDetails}</p>
+                </div>
+              )}
+              
+              {viewingCourier.remarks && (
+                <div>
+                  <label className="text-sm font-medium text-gray-700">Remarks</label>
+                  <p className="text-sm text-gray-900 mt-1">{viewingCourier.remarks}</p>
+                </div>
+              )}
+              
+              {viewingCourier.receivedRemarks && (
+                <div>
+                  <label className="text-sm font-medium text-gray-700">Received Remarks</label>
+                  <p className="text-sm text-gray-900 mt-1">{viewingCourier.receivedRemarks}</p>
+                </div>
+              )}
+            </div>
+            
+            <div className="flex justify-end pt-4">
+              <Button onClick={() => setViewingCourier(null)}>Close</Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </Card>
   );
 }
