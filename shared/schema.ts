@@ -100,7 +100,7 @@ export const auditLogs = pgTable("audit_logs", {
   userId: varchar("user_id").references(() => users.id),
   action: varchar("action", { length: 50 }),
   entityType: varchar("entity_type", { length: 50 }),
-  entityId: integer("entity_id"),
+  entityId: varchar("entity_id", { length: 100 }),
   timestamp: timestamp("timestamp").defaultNow(),
 });
 

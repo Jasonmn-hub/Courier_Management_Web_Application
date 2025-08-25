@@ -15,10 +15,11 @@ interface TopNavbarProps {
 }
 
 export default function TopNavbar({ onMenuClick }: TopNavbarProps) {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
 
   const handleLogout = () => {
-    window.location.href = "/api/logout";
+    logout();
+    window.location.href = "/login";
   };
 
   const getInitials = (name?: string, firstName?: string, lastName?: string) => {
