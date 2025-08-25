@@ -56,6 +56,7 @@ export function useAuth() {
     localStorage.removeItem('auth_token');
     queryClient.setQueryData(["/api/auth/user"], null);
     queryClient.clear();
+    window.location.href = "/";
   };
 
   return {

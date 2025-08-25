@@ -19,6 +19,7 @@ export default function Departments() {
   const { toast } = useToast();
   const { user, isAuthenticated, isLoading } = useAuth();
   const [showDepartmentForm, setShowDepartmentForm] = useState(false);
+  const [editingDepartment, setEditingDepartment] = useState<any>(null);
 
   // Redirect to home if not authenticated or not admin
   useEffect(() => {
@@ -113,6 +114,10 @@ export default function Departments() {
                               <Button 
                                 variant="outline" 
                                 size="sm"
+                                onClick={() => {
+                                  setEditingDepartment(department);
+                                  setShowDepartmentForm(true);
+                                }}
                                 data-testid={`button-edit-department-${department.id}`}
                               >
                                 Edit
@@ -130,15 +135,20 @@ export default function Departments() {
         </div>
       </div>
 
-      {/* Add Department Modal */}
+      {/* Add/Edit Department Modal */}
       {showDepartmentForm && (
         <DepartmentForm
-          onClose={() => setShowDepartmentForm(false)}
+          department={editingDepartment}
+          onClose={() => {
+            setShowDepartmentForm(false);
+            setEditingDepartment(null);
+          }}
           onSuccess={() => {
             setShowDepartmentForm(false);
+            setEditingDepartment(null);
             toast({
               title: "Success",
-              description: "Department created successfully",
+              description: editingDepartment ? "Department updated successfully" : "Department created successfully",
             });
           }}
         />

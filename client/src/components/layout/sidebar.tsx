@@ -36,8 +36,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   }
 
   const secondaryNavigation = [
-    { name: "Export Data", href: "#", icon: FileDown },
-    { name: "Audit Logs", href: "#", icon: History },
+    { name: "Export Data", href: "/export", icon: FileDown },
+    { name: "Audit Logs", href: "/audit-logs", icon: History },
   ];
 
   return (
@@ -72,6 +72,41 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 }
 
 function SidebarContent({ navigation, secondaryNavigation }: any) {
+  const handleSecondaryNavigation = (name: string) => {
+    if (name === 'Export Data') {
+      handleExportData();
+    } else if (name === 'Audit Logs') {
+      window.location.href = '/settings';
+    }
+  };
+
+  const handleExportData = async () => {
+    try {
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch('/api/couriers/export', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `couriers-export-${new Date().toISOString().split('T')[0]}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+      } else {
+        alert('Export failed. Please try again.');
+      }
+    } catch (error) {
+      console.error('Export error:', error);
+      alert('Export failed. Please try again.');
+    }
+  };
   return (
     <div className="flex flex-col flex-grow bg-white border-r border-slate-200 pt-5 pb-4 overflow-y-auto">
       <div className="flex items-center flex-shrink-0 px-6">
@@ -107,15 +142,15 @@ function SidebarContent({ navigation, secondaryNavigation }: any) {
           {/* Reports Section */}
           <div className="pt-4 border-t border-slate-200">
             {secondaryNavigation.map((item: any) => (
-              <Link
+              <button
                 key={item.name}
-                href={item.href}
-                className="text-slate-600 hover:bg-slate-50 hover:text-slate-900 group flex items-center px-2 py-2 text-sm font-medium rounded-md"
+                onClick={() => handleSecondaryNavigation(item.name)}
+                className="w-full text-left text-slate-600 hover:bg-slate-50 hover:text-slate-900 group flex items-center px-2 py-2 text-sm font-medium rounded-md"
                 data-testid={`link-${item.name.toLowerCase().replace(' ', '-')}`}
               >
                 <item.icon className="mr-3 h-4 w-4" />
                 {item.name}
-              </Link>
+              </button>
             ))}
           </div>
         </nav>

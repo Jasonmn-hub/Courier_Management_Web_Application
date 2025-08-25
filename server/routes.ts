@@ -594,6 +594,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Export routes
+  app.get('/api/couriers/export', authenticateToken, async (req: any, res) => {
+    try {
+      const result = await storage.getAllCouriers({ limit: 1000 });
+      
+      // Create CSV content
+      const headers = ['POD No', 'To Branch', 'Email', 'Vendor', 'Date', 'Status', 'Details', 'Contact Details', 'Remarks', 'Department', 'Created By'];
+      const csvRows = [headers.join(',')];
+      
+      result.couriers.forEach(courier => {
+        const row = [
+          courier.podNo || '',
+          courier.toBranch || '',
+          courier.email || '',
+          courier.vendor || '',
+          courier.courierDate ? new Date(courier.courierDate).toLocaleDateString() : '',
+          courier.status || '',
+          courier.details || '',
+          courier.contactDetails || '',
+          courier.remarks || '',
+          courier.department?.name || '',
+          courier.creator?.name || ''
+        ].map(field => `"${(field || '').toString().replace(/"/g, '""')}"`);
+        csvRows.push(row.join(','));
+      });
+      
+      const csvContent = csvRows.join('\\n');
+      
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', 'attachment; filename="couriers-export.csv"');
+      res.send(csvContent);
+    } catch (error) {
+      console.error("Error exporting couriers:", error);
+      res.status(500).json({ message: "Failed to export couriers" });
+    }
+  });
+
   // Audit logs route
   app.get('/api/audit-logs', authenticateToken, requireRole(['admin']), async (req: any, res) => {
     try {

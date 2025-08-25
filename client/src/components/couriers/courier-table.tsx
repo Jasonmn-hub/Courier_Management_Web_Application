@@ -148,14 +148,14 @@ export default function CourierTable({
 
   const markAsReceivedMutation = useMutation({
     mutationFn: async (id: number) => {
-      await apiRequest('PATCH', `/api/couriers/${id}`, { status: 'received', receivedDate: new Date().toISOString().split('T')[0] });
+      await apiRequest('PATCH', `/api/couriers/${id}`, { status: 'completed', receivedDate: new Date().toISOString().split('T')[0] });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/couriers'] });
       queryClient.invalidateQueries({ queryKey: ['/api/stats'] });
       toast({
         title: "Success",
-        description: "Courier marked as received",
+        description: "Courier marked as completed",
       });
     },
     onError: (error) => {
