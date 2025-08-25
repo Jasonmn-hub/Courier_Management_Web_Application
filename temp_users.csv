@@ -1,0 +1,3 @@
+email,name,firstName,lastName,password,role
+admin@courier.com,Admin User,Admin,User,admin123,admin
+user@courier.com,Test User,Test,User,user123,user
