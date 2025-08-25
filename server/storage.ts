@@ -156,8 +156,8 @@ export class DatabaseStorage implements IStorage {
       conditions.push(eq(couriers.status, filters.status as any));
     }
 
-    if (filters.departmentId && filters.departmentId !== "") {
-      conditions.push(eq(couriers.departmentId, parseInt(filters.departmentId.toString())));
+    if (filters.departmentId && filters.departmentId !== 0) {
+      conditions.push(eq(couriers.departmentId, filters.departmentId));
     }
 
     if (filters.search) {
@@ -172,17 +172,17 @@ export class DatabaseStorage implements IStorage {
     }
 
     if (conditions.length > 0) {
-      query = query.where(and(...conditions));
+      query = query.where(and(...conditions)) as any;
     }
 
-    query = query.orderBy(desc(couriers.createdAt));
+    query = query.orderBy(desc(couriers.createdAt)) as any;
 
     if (filters.limit) {
-      query = query.limit(filters.limit);
+      query = query.limit(filters.limit) as any;
     }
 
     if (filters.offset) {
-      query = query.offset(filters.offset);
+      query = query.offset(filters.offset) as any;
     }
 
     const results = await query;
@@ -190,13 +190,17 @@ export class DatabaseStorage implements IStorage {
     // Get total count
     let countQuery = db.select({ count: sql`count(*)` }).from(couriers);
     if (conditions.length > 0) {
-      countQuery = countQuery.where(and(...conditions));
+      countQuery = countQuery.where(and(...conditions)) as any;
     }
     const countResult = await countQuery;
     const count = countResult[0]?.count || 0;
 
     return {
-      couriers: results,
+      couriers: results.map(r => ({
+        ...r,
+        department: r.department || undefined,
+        creator: r.creator || undefined
+      })),
       total: Number(count),
     };
   }
@@ -229,7 +233,11 @@ export class DatabaseStorage implements IStorage {
       .leftJoin(users, eq(couriers.createdBy, users.id))
       .where(eq(couriers.id, id));
     
-    return result;
+    return result ? {
+      ...result,
+      department: result.department || undefined,
+      creator: result.creator || undefined
+    } : undefined;
   }
 
   async createCourier(courier: InsertCourier): Promise<Courier> {
@@ -328,7 +336,10 @@ export class DatabaseStorage implements IStorage {
     const count = countResult[0]?.count || 0;
 
     return {
-      logs,
+      logs: logs.map(log => ({
+        ...log,
+        user: log.user || undefined
+      })),
       total: Number(count),
     };
   }
