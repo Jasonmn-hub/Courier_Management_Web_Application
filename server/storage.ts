@@ -58,6 +58,10 @@ export interface IStorage {
   updateField(id: number, field: Partial<InsertField>): Promise<Field | undefined>;
   deleteField(id: number): Promise<boolean>;
   
+  // Department-Field operations
+  getDepartmentFields(departmentId: number): Promise<Field[]>;
+  updateDepartmentFields(departmentId: number, fieldIds: number[]): Promise<void>;
+  
   // SMTP operations
   getSmtpSettings(): Promise<SmtpSettings | undefined>;
   updateSmtpSettings(settings: InsertSmtpSettings): Promise<SmtpSettings>;
@@ -386,6 +390,38 @@ export class DatabaseStorage implements IStorage {
       })),
       total: Number(count),
     };
+  }
+
+  // Department-Field operations
+  async getDepartmentFields(departmentId: number): Promise<Field[]> {
+    const result = await db
+      .select({
+        id: fields.id,
+        name: fields.name,
+        type: fields.type,
+        createdAt: fields.createdAt,
+        updatedAt: fields.updatedAt,
+      })
+      .from(departmentFields)
+      .innerJoin(fields, eq(departmentFields.fieldId, fields.id))
+      .where(eq(departmentFields.departmentId, departmentId))
+      .orderBy(fields.name);
+    
+    return result;
+  }
+
+  async updateDepartmentFields(departmentId: number, fieldIds: number[]): Promise<void> {
+    // Remove existing assignments
+    await db.delete(departmentFields).where(eq(departmentFields.departmentId, departmentId));
+    
+    // Add new assignments
+    if (fieldIds.length > 0) {
+      const values = fieldIds.map(fieldId => ({
+        departmentId,
+        fieldId
+      }));
+      await db.insert(departmentFields).values(values);
+    }
   }
 
   // Statistics

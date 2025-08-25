@@ -22,7 +22,7 @@ export default function Departments() {
 
   // Redirect to home if not authenticated or not admin
   useEffect(() => {
-    if (!isLoading && (!isAuthenticated || user?.role !== 'admin')) {
+    if (!isLoading && (!isAuthenticated || (user && 'role' in user && user.role !== 'admin'))) {
       toast({
         title: "Unauthorized",
         description: "You need admin privileges to access this page.",
@@ -35,12 +35,12 @@ export default function Departments() {
     }
   }, [isAuthenticated, isLoading, user, toast]);
 
-  const { data: departments, isLoading: departmentsLoading } = useQuery({
+  const { data: departments = [], isLoading: departmentsLoading } = useQuery<any[]>({
     queryKey: ['/api/departments'],
-    enabled: isAuthenticated && user?.role === 'admin',
+    enabled: isAuthenticated && user && 'role' in user && user.role === 'admin',
   });
 
-  if (isLoading || !isAuthenticated || user?.role !== 'admin') {
+  if (isLoading || !isAuthenticated || !user || !('role' in user) || user.role !== 'admin') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
@@ -94,14 +94,14 @@ export default function Departments() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {departments?.length === 0 ? (
+                      {departments.length === 0 ? (
                         <TableRow>
                           <TableCell colSpan={3} className="text-center py-8 text-slate-500">
                             No departments found. Create your first department to get started.
                           </TableCell>
                         </TableRow>
                       ) : (
-                        departments?.map((department: any) => (
+                        departments.map((department: any) => (
                           <TableRow key={department.id}>
                             <TableCell className="font-medium" data-testid={`text-department-name-${department.id}`}>
                               {department.name}

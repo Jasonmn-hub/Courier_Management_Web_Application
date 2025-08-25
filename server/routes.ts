@@ -214,18 +214,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Helper function to log audit
-  const logAudit = async (userId: string, action: string, entityType: string, entityId?: number) => {
+  const logAudit = async (userId: string, action: string, entityType: string, entityId?: string | number) => {
     try {
       await storage.createAuditLog({
         userId,
         action,
         entityType,
-        entityId,
+        entityId: typeof entityId === 'number' ? entityId.toString() : entityId,
       });
     } catch (error) {
       console.error("Failed to log audit:", error);
     }
   };
+
+  // Field routes
+  app.get('/api/fields', authenticateToken, async (req: any, res) => {
+    try {
+      const fields = await storage.getAllFields();
+      res.json(fields);
+    } catch (error) {
+      console.error("Error fetching fields:", error);
+      res.status(500).json({ message: "Failed to fetch fields" });
+    }
+  });
+
+  app.post('/api/fields', authenticateToken, requireRole(['admin']), setCurrentUser(), async (req: any, res) => {
+    try {
+      const validatedData = insertFieldSchema.parse(req.body);
+      const field = await storage.createField(validatedData);
+      
+      await logAudit(req.currentUser.id, 'CREATE', 'field', field.id);
+      
+      res.status(201).json(field);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      console.error("Error creating field:", error);
+      res.status(500).json({ message: "Failed to create field" });
+    }
+  });
 
   // Department routes
   app.get('/api/departments', authenticateToken, async (req: any, res) => {
@@ -292,6 +320,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting department:", error);
       res.status(500).json({ message: "Failed to delete department" });
+    }
+  });
+
+  // Department-Field Assignment routes
+  app.get('/api/departments/:id/fields', authenticateToken, async (req: any, res) => {
+    try {
+      const departmentId = parseInt(req.params.id);
+      const fields = await storage.getDepartmentFields(departmentId);
+      res.json(fields);
+    } catch (error) {
+      console.error("Error fetching department fields:", error);
+      res.status(500).json({ message: "Failed to fetch department fields" });
+    }
+  });
+
+  app.put('/api/departments/:id/fields', authenticateToken, requireRole(['admin']), setCurrentUser(), async (req: any, res) => {
+    try {
+      const departmentId = parseInt(req.params.id);
+      const { fieldIds } = req.body;
+      
+      if (!Array.isArray(fieldIds)) {
+        return res.status(400).json({ message: "fieldIds must be an array" });
+      }
+      
+      await storage.updateDepartmentFields(departmentId, fieldIds);
+      
+      await logAudit(req.currentUser.id, 'UPDATE', 'department_fields', departmentId);
+      
+      res.json({ message: "Department fields updated successfully" });
+    } catch (error) {
+      console.error("Error updating department fields:", error);
+      res.status(500).json({ message: "Failed to update department fields" });
     }
   });
 
