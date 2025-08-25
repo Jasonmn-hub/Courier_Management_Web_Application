@@ -472,7 +472,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Parse courier data
       const courierData = {
         ...req.body,
-        createdBy: userId,
+        createdBy: userId.startsWith('temp_') ? null : userId, // Handle temp users
         departmentId: user.departmentId || undefined,
       };
 
@@ -489,7 +489,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validatedData = insertCourierSchema.parse(courierData);
       const courier = await storage.createCourier(validatedData);
       
-      await logAudit(userId, 'CREATE', 'courier', courier.id);
+      // Skip audit logging for temp users (no foreign key constraint)
+      if (!userId.startsWith('temp_')) {
+        await logAudit(userId, 'CREATE', 'courier', courier.id);
+      }
       
       res.status(201).json(courier);
     } catch (error) {
@@ -545,7 +548,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validatedData = insertCourierSchema.partial().parse(updateData);
       const courier = await storage.updateCourier(id, validatedData);
       
-      await logAudit(userId, 'UPDATE', 'courier', id);
+      // Skip audit logging for temp users (no foreign key constraint)
+      if (!userId.startsWith('temp_')) {
+        await logAudit(userId, 'UPDATE', 'courier', id);
+      }
       
       res.json(courier);
     } catch (error) {
