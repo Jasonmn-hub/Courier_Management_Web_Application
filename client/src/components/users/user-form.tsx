@@ -61,7 +61,7 @@ export default function UserForm({ user, onClose, onSuccess }: UserFormProps) {
     mutationFn: async (data: z.infer<typeof userSchema>) => {
       const payload = {
         ...data,
-        departmentId: data.departmentId ? parseInt(data.departmentId) : null,
+        departmentId: data.departmentId && data.departmentId !== "none" ? parseInt(data.departmentId) : null,
       };
 
       if (user) {
@@ -189,8 +189,8 @@ export default function UserForm({ user, onClose, onSuccess }: UserFormProps) {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="">No Department</SelectItem>
-                        {departments?.map((dept: any) => (
+                        <SelectItem value="none">No Department</SelectItem>
+                        {departments && Array.isArray(departments) && departments.map((dept: any) => (
                           <SelectItem key={dept.id} value={dept.id.toString()}>
                             {dept.name}
                           </SelectItem>

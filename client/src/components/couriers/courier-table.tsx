@@ -38,16 +38,16 @@ export default function CourierTable({
   const [search, setSearch] = useState("");
   const [pageSize, setPageSize] = useState(limit || 10);
   const [currentPage, setCurrentPage] = useState(1);
-  const [departmentFilter, setDepartmentFilter] = useState("");
-  const [statusFilter, setStatusFilter] = useState(status || "");
+  const [departmentFilter, setDepartmentFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState(status || "all");
 
   const { data: couriersResult, isLoading } = useQuery({
     queryKey: ['/api/couriers', { 
-      status: statusFilter, 
+      status: statusFilter === "all" ? "" : statusFilter, 
       search, 
       limit: pageSize, 
       offset: (currentPage - 1) * pageSize,
-      departmentId: departmentFilter
+      departmentId: departmentFilter === "all" ? "" : departmentFilter
     }],
   });
 
@@ -144,7 +144,7 @@ export default function CourierTable({
     }
   };
 
-  const totalPages = Math.ceil((couriersResult?.total || 0) / pageSize);
+  const totalPages = Math.ceil(((couriersResult as any)?.total || 0) / pageSize);
 
   return (
     <Card>
@@ -172,8 +172,8 @@ export default function CourierTable({
                 <SelectValue placeholder="All Departments" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Departments</SelectItem>
-                {departments?.map((dept: any) => (
+                <SelectItem value="all">All Departments</SelectItem>
+                {departments && Array.isArray(departments) && departments.map((dept: any) => (
                   <SelectItem key={dept.id} value={dept.id.toString()}>
                     {dept.name}
                   </SelectItem>
@@ -187,7 +187,7 @@ export default function CourierTable({
                   <SelectValue placeholder="All Status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Status</SelectItem>
+                  <SelectItem value="all">All Status</SelectItem>
                   <SelectItem value="on_the_way">On The Way</SelectItem>
                   <SelectItem value="completed">Completed</SelectItem>
                   <SelectItem value="deleted">Deleted</SelectItem>
@@ -230,14 +230,14 @@ export default function CourierTable({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {couriersResult?.couriers?.length === 0 ? (
+                  {((couriersResult as any)?.couriers?.length === 0) ? (
                     <TableRow>
                       <TableCell colSpan={6} className="text-center py-8 text-slate-500">
                         No couriers found. {!status && "Create your first courier to get started."}
                       </TableCell>
                     </TableRow>
                   ) : (
-                    couriersResult?.couriers?.map((courier: any) => (
+                    (couriersResult as any)?.couriers?.map((courier: any) => (
                       <TableRow key={courier.id} className="hover:bg-slate-50">
                         <TableCell className="font-medium" data-testid={`text-pod-${courier.id}`}>
                           {courier.podNo}
@@ -333,9 +333,9 @@ export default function CourierTable({
                     <p className="text-sm text-slate-700">
                       Showing <span className="font-medium">{(currentPage - 1) * pageSize + 1}</span> to{' '}
                       <span className="font-medium">
-                        {Math.min(currentPage * pageSize, couriersResult?.total || 0)}
+                        {Math.min(currentPage * pageSize, (couriersResult as any)?.total || 0)}
                       </span>{' '}
-                      of <span className="font-medium">{couriersResult?.total || 0}</span> results
+                      of <span className="font-medium">{(couriersResult as any)?.total || 0}</span> results
                     </p>
                   </div>
                   

@@ -20,7 +20,7 @@ import {
   type InsertAuditLog,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, ilike, or } from "drizzle-orm";
+import { eq, and, desc, ilike, or, sql } from "drizzle-orm";
 
 export interface IStorage {
   // User operations (required for Replit Auth)
@@ -113,7 +113,7 @@ export class DatabaseStorage implements IStorage {
 
   async deleteDepartment(id: number): Promise<boolean> {
     const result = await db.delete(departments).where(eq(departments.id, id));
-    return result.rowCount > 0;
+    return (result.rowCount ?? 0) > 0;
   }
 
   // Courier operations
@@ -152,12 +152,12 @@ export class DatabaseStorage implements IStorage {
 
     const conditions = [];
 
-    if (filters.status) {
+    if (filters.status && filters.status !== "") {
       conditions.push(eq(couriers.status, filters.status as any));
     }
 
-    if (filters.departmentId) {
-      conditions.push(eq(couriers.departmentId, filters.departmentId));
+    if (filters.departmentId && filters.departmentId !== "") {
+      conditions.push(eq(couriers.departmentId, parseInt(filters.departmentId.toString())));
     }
 
     if (filters.search) {
@@ -188,11 +188,12 @@ export class DatabaseStorage implements IStorage {
     const results = await query;
     
     // Get total count
-    let countQuery = db.select({ count: couriers.id }).from(couriers);
+    let countQuery = db.select({ count: sql`count(*)` }).from(couriers);
     if (conditions.length > 0) {
       countQuery = countQuery.where(and(...conditions));
     }
-    const [{ count }] = await countQuery;
+    const countResult = await countQuery;
+    const count = countResult[0]?.count || 0;
 
     return {
       couriers: results,
@@ -284,7 +285,7 @@ export class DatabaseStorage implements IStorage {
 
   async deleteField(id: number): Promise<boolean> {
     const result = await db.delete(fields).where(eq(fields.id, id));
-    return result.rowCount > 0;
+    return (result.rowCount ?? 0) > 0;
   }
 
   // SMTP operations
@@ -323,7 +324,8 @@ export class DatabaseStorage implements IStorage {
       .limit(limit)
       .offset(offset);
 
-    const [{ count }] = await db.select({ count: auditLogs.id }).from(auditLogs);
+    const countResult = await db.select({ count: sql`count(*)` }).from(auditLogs);
+    const count = countResult[0]?.count || 0;
 
     return {
       logs,
@@ -341,22 +343,24 @@ export class DatabaseStorage implements IStorage {
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-    const [totalResult] = await db.select({ count: couriers.id }).from(couriers).where(eq(couriers.status, 'on_the_way'));
-    const [onTheWayResult] = await db.select({ count: couriers.id }).from(couriers).where(eq(couriers.status, 'on_the_way'));
-    const [completedResult] = await db.select({ count: couriers.id }).from(couriers).where(eq(couriers.status, 'completed'));
-    const [thisMonthResult] = await db.select({ count: couriers.id }).from(couriers).where(
+    const [onTheWayResult] = await db.select({ count: sql`count(*)` }).from(couriers).where(eq(couriers.status, 'on_the_way'));
+    const [completedResult] = await db.select({ count: sql`count(*)` }).from(couriers).where(eq(couriers.status, 'completed'));
+    const [thisMonthResult] = await db.select({ count: sql`count(*)` }).from(couriers).where(
       and(
         eq(couriers.status, 'on_the_way'),
-        // @ts-ignore
         sql`${couriers.createdAt} >= ${startOfMonth}`
       )
     );
 
+    const onTheWayCount = Number(onTheWayResult?.count || 0);
+    const completedCount = Number(completedResult?.count || 0);
+    const thisMonthCount = Number(thisMonthResult?.count || 0);
+
     return {
-      total: Number(totalResult.count) + Number(completedResult.count),
-      onTheWay: Number(onTheWayResult.count),
-      completed: Number(completedResult.count),
-      thisMonth: Number(thisMonthResult.count),
+      total: onTheWayCount + completedCount,
+      onTheWay: onTheWayCount,
+      completed: completedCount,
+      thisMonth: thisMonthCount,
     };
   }
 }
