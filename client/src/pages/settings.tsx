@@ -47,6 +47,7 @@ interface AuditLog {
 }
 
 function AuditLogsTable() {
+  const { toast } = useToast();
   const { data: auditLogs, isLoading } = useQuery({
     queryKey: ['/api/audit-logs'],
   });
@@ -120,7 +121,17 @@ function AuditLogsTable() {
                 </div>
               </TableCell>
               <TableCell>
-                <Button variant="ghost" size="sm">
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => {
+                    toast({
+                      title: "Audit Log Details",
+                      description: `${log.action} action on ${log.entityType} (ID: ${log.entityId}) by ${log.user?.name || 'Unknown'} at ${new Date(log.timestamp).toLocaleString()}`,
+                    });
+                  }}
+                  data-testid={`button-view-details-${log.id}`}
+                >
                   View Details
                 </Button>
               </TableCell>

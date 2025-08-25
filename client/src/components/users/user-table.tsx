@@ -88,7 +88,7 @@ export default function UserTable({ onEdit }: UserTableProps) {
   };
 
   const getDepartmentName = (departmentId: number | null) => {
-    if (!departmentId || !departments) return 'No Department';
+    if (!departmentId || !departments || !Array.isArray(departments)) return 'No Department';
     const dept = departments.find((d: any) => d.id === departmentId);
     return dept?.name || 'Unknown Department';
   };
@@ -115,7 +115,7 @@ export default function UserTable({ onEdit }: UserTableProps) {
       <CardHeader>
         <CardTitle>System Users</CardTitle>
         <p className="text-sm text-slate-500">
-          {users?.length || 0} users registered in the system
+          {Array.isArray(users) ? users.length : 0} users registered in the system
         </p>
       </CardHeader>
       <CardContent>
@@ -131,14 +131,14 @@ export default function UserTable({ onEdit }: UserTableProps) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {users?.length === 0 ? (
+            {!Array.isArray(users) || users.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} className="text-center py-8 text-slate-500">
                   No users found. Add your first user to get started.
                 </TableCell>
               </TableRow>
             ) : (
-              users?.map((user: any) => (
+              users.map((user: any) => (
                 <TableRow key={user.id} className="hover:bg-slate-50">
                   <TableCell className="font-medium" data-testid={`text-name-${user.id}`}>
                     {user.firstName && user.lastName ? 

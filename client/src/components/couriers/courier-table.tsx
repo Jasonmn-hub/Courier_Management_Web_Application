@@ -52,7 +52,13 @@ export default function CourierTable({
       if (departmentFilter !== "all") params.append('departmentId', departmentFilter);
       
       const url = `/api/couriers${params.toString() ? '?' + params.toString() : ''}`;
-      const response = await fetch(url, { credentials: 'include' });
+      const token = localStorage.getItem('auth_token');
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
+      const response = await fetch(url, { headers });
       if (!response.ok) throw new Error(`${response.status}: ${response.statusText}`);
       return response.json();
     },
@@ -180,11 +186,11 @@ export default function CourierTable({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Departments</SelectItem>
-                {departments && Array.isArray(departments) && departments.map((dept: any) => (
+                {Array.isArray(departments) ? departments.map((dept: any) => (
                   <SelectItem key={dept.id} value={dept.id.toString()}>
                     {dept.name}
                   </SelectItem>
-                ))}
+                )) : null}
               </SelectContent>
             </Select>
 

@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
 import { PieChart, Pie, Cell, ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from "recharts";
 
-const COLORS = ['hsl(var(--chart-1))', 'hsl(var(--chart-2))', 'hsl(var(--chart-3))'];
+const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4'];
 
 export default function Charts() {
   const { data: stats, isLoading } = useQuery({
@@ -29,8 +29,8 @@ export default function Charts() {
   }
 
   const pieData = [
-    { name: 'On The Way', value: stats?.onTheWay || 0 },
-    { name: 'Completed', value: stats?.completed || 0 },
+    { name: 'On The Way', value: (stats as any)?.onTheWay || 0 },
+    { name: 'Completed', value: (stats as any)?.completed || 0 },
   ];
 
   // Mock monthly data - in a real app, this would come from the API
@@ -40,7 +40,7 @@ export default function Charts() {
     { month: 'Mar', onTheWay: 15, completed: 42 },
     { month: 'Apr', onTheWay: 22, completed: 38 },
     { month: 'May', onTheWay: 18, completed: 45 },
-    { month: 'Jun', onTheWay: stats?.onTheWay || 0, completed: stats?.completed || 0 },
+    { month: 'Jun', onTheWay: (stats as any)?.onTheWay || 0, completed: (stats as any)?.completed || 0 },
   ];
 
   return (
@@ -60,9 +60,12 @@ export default function Charts() {
                   cy="50%"
                   labelLine={false}
                   label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                  outerRadius={80}
+                  outerRadius={90}
+                  innerRadius={30}
                   fill="#8884d8"
                   dataKey="value"
+                  stroke="#ffffff"
+                  strokeWidth={2}
                 >
                   {pieData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -84,24 +87,35 @@ export default function Charts() {
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={monthlyData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
-                <YAxis />
+                <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
+                <XAxis 
+                  dataKey="month" 
+                  stroke="#64748B"
+                  fontSize={12}
+                />
+                <YAxis 
+                  stroke="#64748B"
+                  fontSize={12}
+                />
                 <Tooltip />
                 <Legend />
                 <Line 
                   type="monotone" 
                   dataKey="onTheWay" 
-                  stroke="hsl(var(--chart-1))" 
-                  strokeWidth={2}
+                  stroke="#F59E0B" 
+                  strokeWidth={3}
                   name="On The Way"
+                  dot={{ fill: '#F59E0B', strokeWidth: 2, r: 4 }}
+                  activeDot={{ r: 6, stroke: '#F59E0B', strokeWidth: 2, fill: '#FBBF24' }}
                 />
                 <Line 
                   type="monotone" 
                   dataKey="completed" 
-                  stroke="hsl(var(--chart-2))" 
-                  strokeWidth={2}
+                  stroke="#10B981" 
+                  strokeWidth={3}
                   name="Completed"
+                  dot={{ fill: '#10B981', strokeWidth: 2, r: 4 }}
+                  activeDot={{ r: 6, stroke: '#10B981', strokeWidth: 2, fill: '#34D399' }}
                 />
               </LineChart>
             </ResponsiveContainer>
