@@ -91,10 +91,17 @@ export default function CourierForm({ courier, onClose, onSuccess }: CourierForm
       const url = courier ? `/api/couriers/${courier.id}` : '/api/couriers';
       const method = courier ? 'PUT' : 'POST';
       
+      // Get auth token for file upload request
+      const token = localStorage.getItem('auth_token');
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
       const response = await fetch(url, {
         method,
+        headers,
         body: formData,
-        credentials: 'include',
       });
 
       if (!response.ok) {
