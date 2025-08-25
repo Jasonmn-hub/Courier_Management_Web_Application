@@ -9,7 +9,10 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 
 export default function Landing() {
-  const [showLogin, setShowLogin] = useState(false);
+  const [showLogin, setShowLogin] = useState(() => {
+    // Auto-open login dialog if redirected from logout
+    return new URLSearchParams(window.location.search).get('showLogin') === 'true';
+  });
   const [loginData, setLoginData] = useState({ email: "", password: "" });
   const [registerData, setRegisterData] = useState({ name: "", email: "", password: "" });
   const [isRegisterMode, setIsRegisterMode] = useState(false);

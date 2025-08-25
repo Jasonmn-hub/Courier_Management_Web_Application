@@ -135,10 +135,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/users', authenticateToken, requireRole(['admin']), setCurrentUser(), async (req: any, res) => {
     try {
-      const { name, email, password = 'defaultpassword123', role = 'user', departmentId } = req.body;
+      const { name, email, password, role = 'user', departmentId } = req.body;
       
       if (!name || !email) {
         return res.status(400).json({ message: 'Name and email are required' });
+      }
+
+      if (!password) {
+        return res.status(400).json({ message: 'Password is required for new users' });
       }
 
       // Check if user already exists
@@ -169,18 +173,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put('/api/users/:id', authenticateToken, requireRole(['admin']), setCurrentUser(), async (req: any, res) => {
     try {
       const userId = req.params.id;
-      const { name, email, role, departmentId } = req.body;
+      const { name, email, role, departmentId, password } = req.body;
       
       if (!name || !email) {
         return res.status(400).json({ message: 'Name and email are required' });
       }
 
-      const updatedUser = await storage.updateUser(userId, {
+      const updateData: any = {
         name,
         email,
         role: role as any,
         departmentId: departmentId || null
-      });
+      };
+
+      // Only update password if provided
+      if (password && password.trim()) {
+        updateData.password = await hashPassword(password);
+      }
+
+      const updatedUser = await storage.updateUser(userId, updateData);
 
       if (!updatedUser) {
         return res.status(404).json({ message: 'User not found' });
