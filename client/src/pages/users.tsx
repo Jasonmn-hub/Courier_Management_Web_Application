@@ -4,11 +4,13 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import UserForm from "@/components/users/user-form";
+import UserTable from "@/components/users/user-table";
 
 export default function Users() {
   const { toast } = useToast();
   const { user, isAuthenticated, isLoading } = useAuth();
   const [showUserForm, setShowUserForm] = useState(false);
+  const [editingUser, setEditingUser] = useState<any>(null);
 
   // Redirect to home if not authenticated or not admin
   useEffect(() => {
@@ -60,27 +62,28 @@ export default function Users() {
 
           {/* User Management Content */}
           <div className="mt-8">
-            <div className="bg-white shadow overflow-hidden sm:rounded-md">
-              <div className="px-4 py-5 sm:px-6">
-                <h3 className="text-lg leading-6 font-medium text-slate-900">Users</h3>
-                <p className="mt-1 max-w-2xl text-sm text-slate-500">
-                  User management functionality will be implemented here
-                </p>
-              </div>
-            </div>
+            <UserTable onEdit={(user) => {
+              setEditingUser(user);
+              setShowUserForm(true);
+            }} />
           </div>
         </div>
       </div>
 
-      {/* Add User Modal */}
+      {/* Add/Edit User Modal */}
       {showUserForm && (
         <UserForm
-          onClose={() => setShowUserForm(false)}
+          user={editingUser}
+          onClose={() => {
+            setShowUserForm(false);
+            setEditingUser(null);
+          }}
           onSuccess={() => {
             setShowUserForm(false);
+            setEditingUser(null);
             toast({
               title: "Success",
-              description: "User created successfully",
+              description: `User ${editingUser ? 'updated' : 'created'} successfully`,
             });
           }}
         />

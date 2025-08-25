@@ -42,13 +42,20 @@ export default function CourierTable({
   const [statusFilter, setStatusFilter] = useState(status || "all");
 
   const { data: couriersResult, isLoading } = useQuery({
-    queryKey: ['/api/couriers', { 
-      status: statusFilter === "all" ? "" : statusFilter, 
-      search, 
-      limit: pageSize, 
-      offset: (currentPage - 1) * pageSize,
-      departmentId: departmentFilter === "all" ? "" : departmentFilter
-    }],
+    queryKey: ['/api/couriers', statusFilter, search, pageSize, currentPage, departmentFilter],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (statusFilter !== "all") params.append('status', statusFilter);
+      if (search) params.append('search', search);
+      params.append('limit', pageSize.toString());
+      params.append('offset', ((currentPage - 1) * pageSize).toString());
+      if (departmentFilter !== "all") params.append('departmentId', departmentFilter);
+      
+      const url = `/api/couriers${params.toString() ? '?' + params.toString() : ''}`;
+      const response = await fetch(url, { credentials: 'include' });
+      if (!response.ok) throw new Error(`${response.status}: ${response.statusText}`);
+      return response.json();
+    },
   });
 
   const { data: departments } = useQuery({
