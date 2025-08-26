@@ -43,6 +43,8 @@ function Router() {
             <Route path="/authority-letter" component={AuthorityLetter} />
             <Route path="/users" component={Users} />
             <Route path="/departments" component={Departments} />
+            <Route path="/custom-fields" component={Settings} />
+            <Route path="/audit-logs" component={Settings} />
             <Route path="/settings" component={Settings} />
             <Route component={NotFound} />
           </Switch>

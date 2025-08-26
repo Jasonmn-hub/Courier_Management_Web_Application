@@ -32,10 +32,10 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   // Add admin-only navigation items
   if ((user as any)?.role === 'admin') {
     navigation.push(
-      { name: "Users", href: "/users", icon: Users, current: location === "/users" },
+      { name: "Users & Roles", href: "/users", icon: Users, current: location === "/users" },
       { name: "Departments", href: "/departments", icon: Building2, current: location === "/departments" },
-      { name: "Custom Fields", href: "/settings", icon: FormInput, current: location === "/settings" },
-      { name: "Audit Logs", href: "/settings", icon: History, current: location === "/settings" },
+      { name: "Custom Fields", href: "/custom-fields", icon: FormInput, current: location === "/custom-fields" },
+      { name: "Audit Logs", href: "/audit-logs", icon: History, current: location === "/audit-logs" },
       { name: "Settings", href: "/settings", icon: Settings, current: location === "/settings" }
     );
   }
@@ -132,7 +132,7 @@ function SidebarContent({ navigation, secondaryNavigation }: any) {
               href={item.href}
               className={cn(
                 item.current
-                  ? "bg-primary bg-opacity-10 text-primary"
+                  ? "bg-primary bg-opacity-10 text-black font-bold"
                   : "text-slate-600 hover:bg-slate-50 hover:text-slate-900",
                 "group flex items-center px-2 py-2 text-sm font-medium rounded-md"
               )}

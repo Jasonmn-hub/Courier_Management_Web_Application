@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -152,8 +153,16 @@ export default function Settings() {
   const { toast } = useToast();
   const { user, isAuthenticated, isLoading } = useAuth();
   const queryClient = useQueryClient();
+  const [location] = useLocation();
   const [newFieldName, setNewFieldName] = useState("");
   const [newFieldType, setNewFieldType] = useState("text");
+
+  // Determine active tab based on route
+  const getActiveTab = () => {
+    if (location === "/custom-fields") return "fields";
+    if (location === "/audit-logs") return "audit";
+    return "smtp";
+  };
 
   // Fetch all fields
   const { data: fields = [], isLoading: fieldsLoading } = useQuery<CustomField[]>({
@@ -234,7 +243,7 @@ export default function Settings() {
           </div>
 
           {/* Settings Tabs */}
-          <Tabs defaultValue="smtp" className="w-full">
+          <Tabs value={getActiveTab()} className="w-full">
             <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="smtp" data-testid="tab-smtp-settings">SMTP Settings</TabsTrigger>
               <TabsTrigger value="fields" data-testid="tab-fields">Fields</TabsTrigger>
