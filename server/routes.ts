@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { authenticateToken, requireRole, hashPassword, comparePassword, generateToken } from "./auth";
-import { insertCourierSchema, insertDepartmentSchema, insertFieldSchema, insertSmtpSettingsSchema } from "@shared/schema";
+import { insertCourierSchema, insertDepartmentSchema, insertFieldSchema, insertSmtpSettingsSchema, insertReceivedCourierSchema } from "@shared/schema";
 import { z } from "zod";
 import multer from "multer";
 import path from "path";
@@ -660,6 +660,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching stats:", error);
       res.status(500).json({ message: "Failed to fetch statistics" });
+    }
+  });
+
+  // Received Couriers endpoints
+  app.get('/api/received-couriers', authenticateToken, async (req: any, res) => {
+    try {
+      const { departmentId, search, limit = 50, offset = 0 } = req.query;
+      
+      const filters: any = {};
+      if (departmentId) filters.departmentId = parseInt(departmentId);
+      if (search) filters.search = search;
+      if (limit) filters.limit = parseInt(limit);
+      if (offset) filters.offset = parseInt(offset);
+      
+      const couriers = await storage.getAllReceivedCouriers(filters);
+      res.json(couriers);
+    } catch (error) {
+      console.error("Error fetching received couriers:", error);
+      res.status(500).json({ message: "Failed to fetch received couriers" });
+    }
+  });
+
+  app.post('/api/received-couriers', authenticateToken, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const user = req.user;
+      
+      if (!user) {
+        return res.status(401).json({ message: "User not found" });
+      }
+
+      // Parse received courier data
+      const courierData = {
+        ...req.body,
+        createdBy: userId.startsWith('temp_') ? null : userId, // Handle temp users
+        departmentId: user.departmentId || null,
+      };
+
+      const validatedData = insertReceivedCourierSchema.parse(courierData);
+      const courier = await storage.createReceivedCourier(validatedData);
+      
+      await logAudit(userId, 'CREATE', 'received_courier', courier.id);
+      
+      res.status(201).json(courier);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      console.error("Error creating received courier:", error);
+      res.status(500).json({ message: "Failed to create received courier" });
     }
   });
 

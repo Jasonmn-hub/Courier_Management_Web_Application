@@ -2,6 +2,7 @@ import {
   users,
   departments,
   couriers,
+  receivedCouriers,
   fields,
   departmentFields,
   smtpSettings,
@@ -12,6 +13,8 @@ import {
   type InsertDepartment,
   type Courier,
   type InsertCourier,
+  type ReceivedCourier,
+  type InsertReceivedCourier,
   type Field,
   type InsertField,
   type SmtpSettings,
@@ -51,6 +54,18 @@ export interface IStorage {
   updateCourier(id: number, courier: Partial<InsertCourier>): Promise<Courier | undefined>;
   deleteCourier(id: number): Promise<boolean>;
   restoreCourier(id: number): Promise<boolean>;
+  
+  // Received Courier operations
+  getAllReceivedCouriers(filters?: {
+    departmentId?: number;
+    search?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<ReceivedCourier[]>;
+  getReceivedCourierById(id: number): Promise<ReceivedCourier | undefined>;
+  createReceivedCourier(courier: InsertReceivedCourier): Promise<ReceivedCourier>;
+  updateReceivedCourier(id: number, courier: Partial<InsertReceivedCourier>): Promise<ReceivedCourier | undefined>;
+  deleteReceivedCourier(id: number): Promise<boolean>;
   
   // Field operations
   getAllFields(): Promise<Field[]>;
@@ -453,6 +468,71 @@ export class DatabaseStorage implements IStorage {
       completed: completedCount,
       thisMonth: thisMonthCount,
     };
+  }
+
+  // Received Courier operations
+  async getAllReceivedCouriers(filters?: {
+    departmentId?: number;
+    search?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<ReceivedCourier[]> {
+    let query = db.select().from(receivedCouriers);
+    
+    const conditions = [];
+    
+    if (filters?.departmentId) {
+      conditions.push(eq(receivedCouriers.departmentId, filters.departmentId));
+    }
+
+    if (filters?.search) {
+      conditions.push(
+        or(
+          ilike(receivedCouriers.podNumber, `%${filters.search}%`),
+          ilike(receivedCouriers.fromLocation, `%${filters.search}%`),
+          ilike(receivedCouriers.courierVendor, `%${filters.search}%`)
+        )
+      );
+    }
+
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions));
+    }
+
+    query = query.orderBy(desc(receivedCouriers.createdAt));
+
+    if (filters?.limit) {
+      query = query.limit(filters.limit);
+    }
+
+    if (filters?.offset) {
+      query = query.offset(filters.offset);
+    }
+
+    return await query;
+  }
+
+  async getReceivedCourierById(id: number): Promise<ReceivedCourier | undefined> {
+    const [courier] = await db.select().from(receivedCouriers).where(eq(receivedCouriers.id, id));
+    return courier;
+  }
+
+  async createReceivedCourier(courier: InsertReceivedCourier): Promise<ReceivedCourier> {
+    const [newCourier] = await db.insert(receivedCouriers).values(courier).returning();
+    return newCourier;
+  }
+
+  async updateReceivedCourier(id: number, courier: Partial<InsertReceivedCourier>): Promise<ReceivedCourier | undefined> {
+    const [updatedCourier] = await db.update(receivedCouriers)
+      .set({ ...courier, updatedAt: new Date() })
+      .where(eq(receivedCouriers.id, id))
+      .returning();
+    return updatedCourier;
+  }
+
+  async deleteReceivedCourier(id: number): Promise<boolean> {
+    const result = await db.delete(receivedCouriers).where(eq(receivedCouriers.id, id));
+    return (result.rowCount || 0) > 0;
   }
 }
 

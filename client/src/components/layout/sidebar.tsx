@@ -23,7 +23,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   const navigation = [
     { name: "Dashboard", href: "/", icon: BarChart3, current: location === "/" },
-    { name: "Couriers", href: "/couriers", icon: Package, current: location === "/couriers" },
+    { name: "Sent Couriers", href: "/couriers", icon: Package, current: location === "/couriers" },
+    { name: "Received Couriers", href: "/received-couriers", icon: Truck, current: location === "/received-couriers" },
   ];
 
   // Add admin-only navigation items

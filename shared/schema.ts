@@ -86,6 +86,19 @@ export const couriers = pgTable("couriers", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+export const receivedCouriers = pgTable("received_couriers", {
+  id: serial("id").primaryKey(),
+  departmentId: integer("department_id").references(() => departments.id),
+  createdBy: varchar("created_by").references(() => users.id),
+  podNumber: varchar("pod_number", { length: 100 }).notNull(),
+  receivedDate: date("received_date").notNull(),
+  fromLocation: varchar("from_location", { length: 200 }).notNull(), // Branch/Other
+  courierVendor: varchar("courier_vendor", { length: 100 }).notNull(),
+  remarks: text("remarks"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 export const smtpSettings = pgTable("smtp_settings", {
   id: serial("id").primaryKey(),
   host: varchar("host", { length: 200 }),
@@ -111,12 +124,25 @@ export const usersRelations = relations(users, ({ one, many }) => ({
     references: [departments.id],
   }),
   couriers: many(couriers),
+  receivedCouriers: many(receivedCouriers),
   auditLogs: many(auditLogs),
+}));
+
+export const receivedCouriersRelations = relations(receivedCouriers, ({ one }) => ({
+  department: one(departments, {
+    fields: [receivedCouriers.departmentId],
+    references: [departments.id],
+  }),
+  createdByUser: one(users, {
+    fields: [receivedCouriers.createdBy],
+    references: [users.id],
+  }),
 }));
 
 export const departmentsRelations = relations(departments, ({ many }) => ({
   users: many(users),
   couriers: many(couriers),
+  receivedCouriers: many(receivedCouriers),
   departmentFields: many(departmentFields),
 }));
 
@@ -198,6 +224,12 @@ export const insertAuditLogSchema = createInsertSchema(auditLogs).omit({
   timestamp: true,
 });
 
+export const insertReceivedCourierSchema = createInsertSchema(receivedCouriers).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Types
 export type UpsertUser = z.infer<typeof upsertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -206,6 +238,8 @@ export type Department = typeof departments.$inferSelect;
 export type InsertDepartment = z.infer<typeof insertDepartmentSchema>;
 export type Courier = typeof couriers.$inferSelect;
 export type InsertCourier = z.infer<typeof insertCourierSchema>;
+export type ReceivedCourier = typeof receivedCouriers.$inferSelect;
+export type InsertReceivedCourier = z.infer<typeof insertReceivedCourierSchema>;
 export type Field = typeof fields.$inferSelect;
 export type InsertField = z.infer<typeof insertFieldSchema>;
 export type SmtpSettings = typeof smtpSettings.$inferSelect;

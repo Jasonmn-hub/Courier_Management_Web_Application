@@ -2,9 +2,11 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import DepartmentForm from "@/components/departments/department-form";
+import PrintAuthorityForm from "@/components/print-authority/print-authority-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -15,6 +17,20 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
+interface User {
+  id: string;
+  role: string;
+  email: string;
+  name: string;
+}
+
+interface Department {
+  id: number;
+  name: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export default function Departments() {
   const { toast } = useToast();
   const { user, isAuthenticated, isLoading } = useAuth();
@@ -23,7 +39,7 @@ export default function Departments() {
 
   // Redirect to home if not authenticated or not admin
   useEffect(() => {
-    if (!isLoading && (!isAuthenticated || (user && 'role' in user && user.role !== 'admin'))) {
+    if (!isLoading && (!isAuthenticated || (user as User)?.role !== 'admin')) {
       toast({
         title: "Unauthorized",
         description: "You need admin privileges to access this page.",
@@ -36,12 +52,12 @@ export default function Departments() {
     }
   }, [isAuthenticated, isLoading, user, toast]);
 
-  const { data: departments = [], isLoading: departmentsLoading } = useQuery<any[]>({
+  const { data: departments = [], isLoading: departmentsLoading } = useQuery<Department[]>({
     queryKey: ['/api/departments'],
-    enabled: isAuthenticated && user && 'role' in user && user.role === 'admin',
+    enabled: isAuthenticated && (user as User)?.role === 'admin',
   });
 
-  if (isLoading || !isAuthenticated || !user || !('role' in user) || user.role !== 'admin') {
+  if (isLoading || !isAuthenticated || (user as User)?.role !== 'admin') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
@@ -63,74 +79,83 @@ export default function Departments() {
                 Manage departments and their field configurations
               </p>
             </div>
-            <div className="mt-4 flex md:mt-0 md:ml-4">
-              <Button 
-                onClick={() => setShowDepartmentForm(true)}
-                data-testid="button-add-department"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Add Department
-              </Button>
-            </div>
           </div>
 
-          {/* Departments List */}
+          {/* Tabs for Departments and Authority Letter */}
           <div className="mt-8">
-            <Card>
-              <CardHeader>
-                <CardTitle>Departments</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {departmentsLoading ? (
-                  <div className="flex justify-center py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                  </div>
-                ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Created At</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {departments.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={3} className="text-center py-8 text-slate-500">
-                            No departments found. Create your first department to get started.
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        departments.map((department: any) => (
-                          <TableRow key={department.id}>
-                            <TableCell className="font-medium" data-testid={`text-department-name-${department.id}`}>
-                              {department.name}
-                            </TableCell>
-                            <TableCell data-testid={`text-department-created-${department.id}`}>
-                              {new Date(department.createdAt).toLocaleDateString()}
-                            </TableCell>
-                            <TableCell>
-                              <Button 
-                                variant="outline" 
-                                size="sm"
-                                onClick={() => {
-                                  setEditingDepartment(department);
-                                  setShowDepartmentForm(true);
-                                }}
-                                data-testid={`button-edit-department-${department.id}`}
-                              >
-                                Edit
-                              </Button>
-                            </TableCell>
+            <Tabs defaultValue="departments" className="w-full">
+              <TabsList className="flex w-full">
+                <TabsTrigger value="departments" data-testid="tab-departments" className="flex-1">Departments</TabsTrigger>
+                <TabsTrigger value="authority_letter" data-testid="tab-authority-letter" className="flex-1">Authority Letter</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="departments" className="mt-6">
+                <div className="mb-6">
+                  <Button 
+                    onClick={() => setShowDepartmentForm(true)}
+                    data-testid="button-add-department"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Department
+                  </Button>
+                </div>
+
+                {/* Department List */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>All Departments</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {departmentsLoading ? (
+                      <div className="flex justify-center py-4">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                      </div>
+                    ) : departments.length === 0 ? (
+                      <div className="text-center py-8 text-slate-500">
+                        No departments found. Add your first department to get started.
+                      </div>
+                    ) : (
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Name</TableHead>
+                            <TableHead>Created</TableHead>
+                            <TableHead>Actions</TableHead>
                           </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
-                )}
-              </CardContent>
-            </Card>
+                        </TableHeader>
+                        <TableBody>
+                          {departments.map((dept) => (
+                            <TableRow key={dept.id}>
+                              <TableCell className="font-medium">{dept.name}</TableCell>
+                              <TableCell>
+                                {new Date(dept.createdAt).toLocaleDateString()}
+                              </TableCell>
+                              <TableCell>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    setEditingDepartment(dept);
+                                    setShowDepartmentForm(true);
+                                  }}
+                                  data-testid={`button-edit-${dept.id}`}
+                                >
+                                  Edit
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+              
+              <TabsContent value="authority_letter" className="mt-6">
+                <PrintAuthorityForm />
+              </TabsContent>
+            </Tabs>
           </div>
         </div>
       </div>
@@ -146,10 +171,6 @@ export default function Departments() {
           onSuccess={() => {
             setShowDepartmentForm(false);
             setEditingDepartment(null);
-            toast({
-              title: "Success",
-              description: editingDepartment ? "Department updated successfully" : "Department created successfully",
-            });
           }}
         />
       )}

@@ -64,7 +64,7 @@ export default function Couriers() {
           <div className="md:flex md:items-center md:justify-between">
             <div className="flex-1 min-w-0">
               <h2 className="text-2xl font-bold leading-7 text-slate-900 sm:text-3xl sm:truncate">
-                Couriers
+                Sent Couriers
               </h2>
               <p className="mt-1 text-sm text-slate-500">
                 Manage all courier shipments and track their status
@@ -89,7 +89,6 @@ export default function Couriers() {
                 <TabsTrigger value="on_the_way" data-testid="tab-on-the-way" className="flex-1">On The Way</TabsTrigger>
                 <TabsTrigger value="received" data-testid="tab-received" className="flex-1">Received</TabsTrigger>
                 <TabsTrigger value="deleted" data-testid="tab-deleted" className="flex-1">Deleted</TabsTrigger>
-                <TabsTrigger value="authority_letter" data-testid="tab-authority-letter" className="flex-1">Authority Letter</TabsTrigger>
               </TabsList>
               
               <TabsContent value="all" className="mt-6">
@@ -108,9 +107,6 @@ export default function Couriers() {
                 <CourierTable status="deleted" onEdit={handleEdit} showRestore />
               </TabsContent>
               
-              <TabsContent value="authority_letter" className="mt-6">
-                <PrintAuthorityForm />
-              </TabsContent>
             </Tabs>
           </div>
         </div>
