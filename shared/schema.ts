@@ -74,6 +74,7 @@ export const couriers = pgTable("couriers", {
   email: varchar("email", { length: 100 }),
   courierDate: date("courier_date"),
   vendor: varchar("vendor", { length: 100 }),
+  customVendor: varchar("custom_vendor", { length: 100 }),
   podNo: varchar("pod_no", { length: 100 }),
   details: text("details"),
   contactDetails: text("contact_details"),
@@ -94,6 +95,7 @@ export const receivedCouriers = pgTable("received_couriers", {
   receivedDate: date("received_date").notNull(),
   fromLocation: varchar("from_location", { length: 200 }).notNull(), // Branch/Other
   courierVendor: varchar("courier_vendor", { length: 100 }).notNull(),
+  customVendor: varchar("custom_vendor", { length: 100 }),
   remarks: text("remarks"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

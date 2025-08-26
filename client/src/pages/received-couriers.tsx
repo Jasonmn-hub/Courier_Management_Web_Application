@@ -24,6 +24,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { CalendarIcon } from "lucide-react";
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue 
+} from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import {
   Popover,
@@ -56,6 +63,7 @@ export default function ReceivedCouriers() {
     receivedDate: "",
     fromLocation: "",
     courierVendor: "",
+    customVendor: "",
     remarks: "",
   });
   const [selectedDate, setSelectedDate] = useState<Date>();
@@ -107,6 +115,7 @@ export default function ReceivedCouriers() {
       receivedDate: "",
       fromLocation: "",
       courierVendor: "",
+      customVendor: "",
       remarks: "",
     });
     setSelectedDate(undefined);
@@ -283,15 +292,40 @@ export default function ReceivedCouriers() {
 
               <div>
                 <Label htmlFor="courierVendor">Courier Vendor *</Label>
-                <Input
-                  id="courierVendor"
+                <Select
                   value={formData.courierVendor || ""}
-                  onChange={(e) => setFormData({ ...formData, courierVendor: e.target.value })}
-                  placeholder="e.g., DHL, FedEx, BlueDart, etc."
-                  required
-                  data-testid="input-courier-vendor"
-                />
+                  onValueChange={(value) => setFormData({ ...formData, courierVendor: value })}
+                >
+                  <SelectTrigger data-testid="select-courier-vendor">
+                    <SelectValue placeholder="Select vendor" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Maruti Courier">Maruti Courier</SelectItem>
+                    <SelectItem value="India Post">India Post</SelectItem>
+                    <SelectItem value="Professional Couriers">Professional Couriers</SelectItem>
+                    <SelectItem value="Blue Dart">Blue Dart</SelectItem>
+                    <SelectItem value="DHL Express">DHL Express</SelectItem>
+                    <SelectItem value="FedEx">FedEx</SelectItem>
+                    <SelectItem value="DTDC">DTDC</SelectItem>
+                    <SelectItem value="Others">Others</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
+
+              {/* Custom Vendor Field (when "Others" is selected) */}
+              {formData.courierVendor === "Others" && (
+                <div>
+                  <Label htmlFor="customVendor">Custom Vendor Name *</Label>
+                  <Input
+                    id="customVendor"
+                    value={formData.customVendor || ""}
+                    onChange={(e) => setFormData({ ...formData, customVendor: e.target.value })}
+                    placeholder="Enter vendor name"
+                    required
+                    data-testid="input-custom-courier-vendor"
+                  />
+                </div>
+              )}
 
               <div>
                 <Label htmlFor="remarks">Remarks</Label>

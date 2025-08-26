@@ -33,6 +33,7 @@ const courierSchema = z.object({
   email: z.string().email("Valid email is required"),
   courierDate: z.string().min(1, "Courier date is required"),
   vendor: z.string().min(1, "Vendor is required"),
+  customVendor: z.string().optional(),
   podNo: z.string().min(1, "POD number is required"),
   contactDetails: z.string().min(1, "Contact details are required"),
   details: z.string().min(1, "Courier details are required"),
@@ -59,6 +60,7 @@ export default function CourierForm({ courier, onClose, onSuccess }: CourierForm
       email: courier?.email || "",
       courierDate: courier?.courierDate || "",
       vendor: courier?.vendor || "",
+      customVendor: courier?.customVendor || "",
       podNo: courier?.podNo || "",
       contactDetails: courier?.contactDetails || "",
       details: courier?.details || "",
@@ -174,14 +176,13 @@ export default function CourierForm({ courier, onClose, onSuccess }: CourierForm
   };
 
   const vendors = [
-    "Blue Dart",
-    "DHL Express", 
-    "FedEx",
-    "DTDC",
-    "Aramex",
+    "Maruti Courier",
     "India Post",
     "Professional Couriers",
-    "Gati",
+    "Blue Dart",
+    "DHL Express",
+    "FedEx",
+    "DTDC",
     "Others"
   ];
 
@@ -280,6 +281,27 @@ export default function CourierForm({ courier, onClose, onSuccess }: CourierForm
                   </FormItem>
                 )}
               />
+
+              {/* Custom Vendor Field (when "Others" is selected) */}
+              {form.watch("vendor") === "Others" && (
+                <FormField
+                  control={form.control}
+                  name="customVendor"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Custom Vendor Name</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="Enter vendor name" 
+                          {...field} 
+                          data-testid="input-custom-vendor"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
 
               {/* POD No. */}
               <FormField

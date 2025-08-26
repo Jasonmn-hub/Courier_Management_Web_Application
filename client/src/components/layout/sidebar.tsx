@@ -10,7 +10,9 @@ import {
   Settings, 
   FileDown, 
   History,
-  FormInput
+  FormInput,
+  User,
+  LogOut
 } from "lucide-react";
 
 interface SidebarProps {
@@ -29,20 +31,20 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     { name: "Authority Letter", href: "/authority-letter", icon: FileDown, current: location === "/authority-letter" },
   ];
 
-  // Add admin-only navigation items
-  if ((user as any)?.role === 'admin') {
-    navigation.push(
-      { name: "Users & Roles", href: "/users", icon: Users, current: location === "/users" },
-      { name: "Departments", href: "/departments", icon: Building2, current: location === "/departments" },
-      { name: "Custom Fields", href: "/custom-fields", icon: FormInput, current: location === "/custom-fields" },
-      { name: "Audit Logs", href: "/audit-logs", icon: History, current: location === "/audit-logs" },
-      { name: "Settings", href: "/settings", icon: Settings, current: location === "/settings" }
-    );
-  }
+  // Admin navigation items with proper grouping
+  const adminNavigation = (user as any)?.role === 'admin' ? [
+    { name: "Users & Roles", href: "/users", icon: Users, current: location === "/users", group: "management" },
+    { name: "Departments", href: "/departments", icon: Building2, current: location === "/departments", group: "management" },
+    { name: "Settings", href: "/settings", icon: Settings, current: location === "/settings", group: "settings" },
+    { name: "Custom Fields", href: "/custom-fields", icon: FormInput, current: location === "/custom-fields", group: "settings" },
+    { name: "Audit Logs", href: "/audit-logs", icon: History, current: location === "/audit-logs", group: "settings" },
+    { name: "Export Data", href: "/export", icon: FileDown, group: "tools" },
+  ] : [];
 
-  const secondaryNavigation = [
-    { name: "Export Data", href: "/export", icon: FileDown },
-  ];
+  const handleLogout = () => {
+    localStorage.removeItem('auth_token');
+    window.location.href = '/';
+  };
 
   return (
     <>
@@ -63,27 +65,19 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
               </svg>
             </button>
           </div>
-          <SidebarContent navigation={navigation} secondaryNavigation={secondaryNavigation} />
+          <SidebarContent navigation={navigation} adminNavigation={adminNavigation} user={user} onLogout={handleLogout} />
         </div>
       </div>
 
       {/* Desktop sidebar */}
       <div className="hidden lg:flex lg:w-64 lg:flex-col">
-        <SidebarContent navigation={navigation} secondaryNavigation={secondaryNavigation} />
+        <SidebarContent navigation={navigation} adminNavigation={adminNavigation} user={user} onLogout={handleLogout} />
       </div>
     </>
   );
 }
 
-function SidebarContent({ navigation, secondaryNavigation }: any) {
-  const handleSecondaryNavigation = (name: string) => {
-    if (name === 'Export Data') {
-      handleExportData();
-    } else if (name === 'Audit Logs') {
-      window.location.href = '/settings';
-    }
-  };
-
+function SidebarContent({ navigation, adminNavigation, user, onLogout }: any) {
   const handleExportData = async () => {
     try {
       const token = localStorage.getItem('auth_token');
@@ -126,6 +120,7 @@ function SidebarContent({ navigation, secondaryNavigation }: any) {
       
       <div className="mt-8 flex-grow flex flex-col">
         <nav className="flex-1 px-4 space-y-1">
+          {/* Main Navigation */}
           {navigation.map((item: any) => (
             <Link
               key={item.name}
@@ -143,21 +138,98 @@ function SidebarContent({ navigation, secondaryNavigation }: any) {
             </Link>
           ))}
 
-          {/* Reports Section */}
-          <div className="pt-4 border-t border-slate-200">
-            {secondaryNavigation.map((item: any) => (
-              <button
-                key={item.name}
-                onClick={() => handleSecondaryNavigation(item.name)}
-                className="w-full text-left text-slate-600 hover:bg-slate-50 hover:text-slate-900 group flex items-center px-2 py-2 text-sm font-medium rounded-md"
-                data-testid={`link-${item.name.toLowerCase().replace(' ', '-')}`}
-              >
-                <item.icon className="mr-3 h-4 w-4" />
-                {item.name}
-              </button>
-            ))}
-          </div>
+          {/* Admin Management Section */}
+          {adminNavigation.filter((item: any) => item.group === "management").length > 0 && (
+            <div className="pt-4 border-t border-slate-200">
+              {adminNavigation
+                .filter((item: any) => item.group === "management")
+                .map((item: any) => (
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    className={cn(
+                      item.current
+                        ? "bg-primary bg-opacity-10 text-black font-bold"
+                        : "text-slate-600 hover:bg-slate-50 hover:text-slate-900",
+                      "group flex items-center px-2 py-2 text-sm font-medium rounded-md"
+                    )}
+                    data-testid={`link-${item.name.toLowerCase().replace(' ', '-')}`}
+                  >
+                    <item.icon className="mr-3 h-4 w-4" />
+                    {item.name}
+                  </Link>
+                ))}
+            </div>
+          )}
+
+          {/* Settings Section */}
+          {adminNavigation.filter((item: any) => item.group === "settings").length > 0 && (
+            <div className="pt-4 border-t border-slate-200">
+              {adminNavigation
+                .filter((item: any) => item.group === "settings")
+                .map((item: any) => (
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    className={cn(
+                      item.current
+                        ? "bg-primary bg-opacity-10 text-black font-bold"
+                        : "text-slate-600 hover:bg-slate-50 hover:text-slate-900",
+                      "group flex items-center px-2 py-2 text-sm font-medium rounded-md"
+                    )}
+                    data-testid={`link-${item.name.toLowerCase().replace(' ', '-')}`}
+                  >
+                    <item.icon className="mr-3 h-4 w-4" />
+                    {item.name}
+                  </Link>
+                ))}
+            </div>
+          )}
+
+          {/* Tools Section */}
+          {adminNavigation.filter((item: any) => item.group === "tools").length > 0 && (
+            <div className="pt-4 border-t border-slate-200">
+              {adminNavigation
+                .filter((item: any) => item.group === "tools")
+                .map((item: any) => (
+                  <button
+                    key={item.name}
+                    onClick={handleExportData}
+                    className="w-full text-left text-slate-600 hover:bg-slate-50 hover:text-slate-900 group flex items-center px-2 py-2 text-sm font-medium rounded-md"
+                    data-testid={`button-${item.name.toLowerCase().replace(' ', '-')}`}
+                  >
+                    <item.icon className="mr-3 h-4 w-4" />
+                    {item.name}
+                  </button>
+                ))}
+            </div>
+          )}
         </nav>
+
+        {/* Account Profile Section */}
+        <div className="px-4 py-4 border-t border-slate-200">
+          <div className="flex items-center space-x-3">
+            <div className="flex-shrink-0">
+              <User className="h-8 w-8 text-slate-400 bg-slate-100 rounded-full p-1" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-slate-900 truncate">
+                {user?.name || user?.email || "User"}
+              </p>
+              <p className="text-xs text-slate-500 truncate">
+                {user?.role || "Role"}
+              </p>
+            </div>
+            <button
+              onClick={onLogout}
+              className="flex-shrink-0 text-slate-400 hover:text-slate-600"
+              data-testid="button-logout"
+              title="Sign Out"
+            >
+              <LogOut className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );

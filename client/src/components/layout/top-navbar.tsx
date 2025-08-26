@@ -9,6 +9,7 @@ import {
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
 import { Menu, Search, Bell, ChevronDown } from "lucide-react";
+import AccountProfile from "./account-profile";
 
 interface TopNavbarProps {
   onMenuClick: () => void;
@@ -30,10 +31,11 @@ export default function TopNavbar({ onMenuClick }: TopNavbarProps) {
   };
 
   const getDisplayName = () => {
-    if (user?.name) return user.name;
-    if (user?.firstName && user?.lastName) return `${user.firstName} ${user.lastName}`;
-    if (user?.firstName) return user.firstName;
-    return user?.email || "User";
+    const userData = user as any;
+    if (userData?.name) return userData.name;
+    if (userData?.firstName && userData?.lastName) return `${userData.firstName} ${userData.lastName}`;
+    if (userData?.firstName) return userData.firstName;
+    return userData?.email || "User";
   };
 
   return (
@@ -79,37 +81,8 @@ export default function TopNavbar({ onMenuClick }: TopNavbarProps) {
             </span>
           </Button>
 
-          {/* User Menu */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button 
-                variant="ghost" 
-                className="flex items-center space-x-3 p-2"
-                data-testid="button-user-menu"
-              >
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src={user?.profileImageUrl || ""} />
-                  <AvatarFallback className="bg-primary text-white text-sm font-medium">
-                    {getInitials(user?.name, user?.firstName, user?.lastName)}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="text-left hidden sm:block">
-                  <p className="text-sm font-medium text-slate-800" data-testid="text-user-name">
-                    {getDisplayName()}
-                  </p>
-                  <p className="text-xs text-slate-500 capitalize" data-testid="text-user-role">
-                    {user?.role || "User"}
-                  </p>
-                </div>
-                <ChevronDown className="h-4 w-4 text-slate-400" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuItem onClick={handleLogout} data-testid="button-logout">
-                Sign out
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {/* Account Profile */}
+          <AccountProfile />
         </div>
       </div>
     </div>

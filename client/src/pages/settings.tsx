@@ -347,11 +347,14 @@ export default function Settings() {
                     </Select>
                     <Button 
                       onClick={() => {
-                        if (newFieldName) {
+                        if (newFieldName.trim()) {
                           createFieldMutation.mutate({ name: newFieldName, type: newFieldType });
+                        } else {
+                          toast({ title: "Error", description: "Please enter a field name", variant: "destructive" });
                         }
                       }}
-                      disabled={createFieldMutation.isPending}
+                      disabled={createFieldMutation.isPending || !newFieldName.trim()}
+                      data-testid="button-add-field"
                     >
                       <Plus className="h-4 w-4 mr-2" />
                       Add Field
