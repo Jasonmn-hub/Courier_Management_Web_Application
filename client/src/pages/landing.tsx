@@ -5,7 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Truck, Package, Users, BarChart3 } from "lucide-react";
+import { Building2, Package, Users, BarChart3 } from "lucide-react";
+// Logo will be added later - using building icon for now
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 
@@ -54,8 +55,8 @@ export default function Landing() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
             <div className="flex items-center">
-              <Truck className="h-8 w-8 text-primary" />
-              <h1 className="ml-3 text-2xl font-bold text-slate-900">CourierTrack</h1>
+              <Building2 className="h-8 w-8 text-primary" />
+              <h1 className="ml-3 text-xl font-bold text-slate-900">Light Microfinance Pvt Ltd</h1>
             </div>
             <Dialog open={showLogin} onOpenChange={setShowLogin}>
               <DialogTrigger asChild>
@@ -159,11 +160,11 @@ export default function Landing() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="text-center">
           <h1 className="text-4xl font-bold tracking-tight text-slate-900 sm:text-6xl">
-            Professional Courier Management System
+            Light Microfinance Document Management System
           </h1>
           <p className="mt-6 text-lg leading-8 text-slate-600">
-            Streamline your courier operations with powerful tracking, role-based access control, 
-            and comprehensive analytics. Built for teams that need reliable delivery management.
+            Streamline your document and courier operations with powerful tracking, role-based access control, 
+            and comprehensive analytics. Built specifically for Light Microfinance Pvt Ltd operations.
           </p>
           <div className="mt-10 flex items-center justify-center gap-x-6">
             <Dialog open={showLogin} onOpenChange={setShowLogin}>
@@ -181,11 +182,11 @@ export default function Landing() {
           <Card>
             <CardHeader className="text-center">
               <Package className="h-12 w-12 text-primary mx-auto" />
-              <CardTitle className="text-lg">Courier Tracking</CardTitle>
+              <CardTitle className="text-lg">Document Tracking</CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-slate-600 text-center">
-                Complete lifecycle management from dispatch to delivery with real-time status updates.
+                Complete lifecycle management of documents and couriers from dispatch to delivery with real-time status updates.
               </p>
             </CardContent>
           </Card>
@@ -216,12 +217,12 @@ export default function Landing() {
 
           <Card>
             <CardHeader className="text-center">
-              <Truck className="h-12 w-12 text-primary mx-auto" />
-              <CardTitle className="text-lg">Multi-Vendor Support</CardTitle>
+              <Building2 className="h-12 w-12 text-primary mx-auto" />
+              <CardTitle className="text-lg">Branch Management</CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-slate-600 text-center">
-                Support for multiple courier vendors with standardized tracking and reporting.
+                Manage documents and communications across multiple Light Microfinance branch locations.
               </p>
             </CardContent>
           </Card>
@@ -230,10 +231,10 @@ export default function Landing() {
         {/* CTA Section */}
         <div className="mt-20 text-center">
           <h2 className="text-3xl font-bold tracking-tight text-slate-900">
-            Ready to transform your courier management?
+            Ready to streamline Light Microfinance operations?
           </h2>
           <p className="mt-6 text-lg leading-8 text-slate-600">
-            Join teams that trust CourierTrack for their delivery operations.
+            Secure and efficient document management system designed for Light Microfinance Pvt Ltd.
           </p>
           <div className="mt-10">
             <Dialog open={showLogin} onOpenChange={setShowLogin}>
@@ -251,7 +252,7 @@ export default function Landing() {
       <footer className="border-t border-slate-200 bg-white mt-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="text-center text-sm text-slate-500">
-            <p>&copy; 2024 CourierTrack. Professional courier management solution.</p>
+            <p>&copy; 2024 Light Microfinance Pvt Ltd. Professional document management system.</p>
           </div>
         </div>
       </footer>
