@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Building2, Package, Users, BarChart3 } from "lucide-react";
-// Logo will be added later - using building icon for now
+import lightLogo from "../assets/light-logo.png";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 
@@ -49,13 +49,13 @@ export default function Landing() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-orange-50">
       {/* Header */}
-      <header className="border-b border-slate-200 bg-white">
+      <header className="border-b border-blue-100 bg-white/80 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
             <div className="flex items-center">
-              <Building2 className="h-8 w-8 text-primary" />
+              <img src={lightLogo} alt="Light Microfinance" className="h-10 w-auto object-contain" />
               <h1 className="ml-3 text-xl font-bold text-slate-900">Light Microfinance Pvt Ltd</h1>
             </div>
             <Dialog open={showLogin} onOpenChange={setShowLogin}>
@@ -64,11 +64,15 @@ export default function Landing() {
                   Sign In
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-md">
-                <DialogHeader>
-                  <DialogTitle>
-                    {isRegisterMode ? "Create Account" : "Sign In"}
+              <DialogContent className="sm:max-w-md bg-gradient-to-br from-white to-blue-50/30 border-blue-200">
+                <DialogHeader className="text-center space-y-2">
+                  <div className="flex justify-center mb-4">
+                    <img src={lightLogo} alt="Light Microfinance" className="h-12 w-auto object-contain" />
+                  </div>
+                  <DialogTitle className="text-xl font-bold text-slate-800">
+                    {isRegisterMode ? "Create Account" : "Welcome Back"}
                   </DialogTitle>
+                  <p className="text-sm text-slate-600">Light Microfinance Pvt Ltd</p>
                 </DialogHeader>
                 <div className="space-y-4">
                   {isRegisterMode && (
@@ -134,7 +138,7 @@ export default function Landing() {
                     <Button
                       onClick={isRegisterMode ? handleRegister : handleLogin}
                       disabled={isLoginLoading || isRegisterLoading}
-                      className="w-full"
+                      className="w-full bg-gradient-to-r from-blue-600 to-orange-500 hover:from-blue-700 hover:to-orange-600 text-white border-0 shadow-lg"
                     >
                       {(isLoginLoading || isRegisterLoading) 
                         ? "Please wait..." 
@@ -160,7 +164,7 @@ export default function Landing() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="text-center">
           <h1 className="text-4xl font-bold tracking-tight text-slate-900 sm:text-6xl">
-            Light Microfinance Document Management System
+            Courier Management System
           </h1>
           <p className="mt-6 text-lg leading-8 text-slate-600">
             Streamline your document and courier operations with powerful tracking, role-based access control, 
@@ -249,10 +253,14 @@ export default function Landing() {
       </div>
 
       {/* Footer */}
-      <footer className="border-t border-slate-200 bg-white mt-20">
+      <footer className="border-t border-blue-100 bg-gradient-to-r from-blue-50 to-orange-50 mt-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="text-center text-sm text-slate-500">
-            <p>&copy; 2024 Light Microfinance Pvt Ltd. Professional document management system.</p>
+          <div className="text-center text-sm text-slate-600">
+            <div className="flex justify-center mb-3">
+              <img src={lightLogo} alt="Light Microfinance" className="h-8 w-auto object-contain" />
+            </div>
+            <p>&copy; 2024 Light Microfinance Pvt Ltd. Professional courier management system.</p>
+            <p className="mt-1 text-xs text-slate-500">Finance. Simple.</p>
           </div>
         </div>
       </footer>
