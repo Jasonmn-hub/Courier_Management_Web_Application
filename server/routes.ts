@@ -560,6 +560,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.patch('/api/couriers/:id', authenticateToken, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const userId = req.user.id;
+      const user = req.user;
+      
+      // Check if courier exists and user has permission
+      const existingCourier = await storage.getCourierById(id);
+      if (!existingCourier) {
+        return res.status(404).json({ message: "Courier not found" });
+      }
+
+      // Check permissions
+      if (user.role === 'user' && existingCourier.createdBy !== userId) {
+        return res.status(403).json({ message: "You can only edit your own couriers" });
+      }
+
+      if (user.role === 'manager' && existingCourier.departmentId !== user.departmentId) {
+        return res.status(403).json({ message: "You can only edit couriers in your department" });
+      }
+
+      const validatedData = insertCourierSchema.partial().parse(req.body);
+      const courier = await storage.updateCourier(id, validatedData);
+      
+      await logAudit(userId, 'UPDATE', 'courier', id);
+      
+      res.json(courier);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      console.error("Error updating courier:", error);
+      res.status(500).json({ message: "Failed to update courier" });
+    }
+  });
+
   app.put('/api/couriers/:id', authenticateToken, upload.single('podCopy'), async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);

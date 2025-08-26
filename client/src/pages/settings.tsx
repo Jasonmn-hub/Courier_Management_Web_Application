@@ -353,7 +353,7 @@ export default function Settings() {
                           toast({ title: "Error", description: "Please enter a field name", variant: "destructive" });
                         }
                       }}
-                      disabled={createFieldMutation.isPending || !newFieldName.trim()}
+                      disabled={createFieldMutation.isPending}
                       data-testid="button-add-field"
                     >
                       <Plus className="h-4 w-4 mr-2" />
