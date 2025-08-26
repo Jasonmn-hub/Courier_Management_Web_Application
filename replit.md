@@ -2,7 +2,32 @@
 
 ## Overview
 
-A comprehensive full-stack Courier Management Web Application built with Node.js (Express.js), PostgreSQL, and React with TailwindCSS. The system provides role-based access control for managing courier operations across departments, with features including courier tracking, email notifications, dashboard analytics, and administrative controls.
+A comprehensive full-stack Courier Management Web Application built with Node.js (Express.js), PostgreSQL, and React with TailwindCSS. The system provides role-based access control for managing courier operations across departments, with features including courier tracking, email notifications, dashboard analytics, administrative controls, and specialized authority letter generation with Word document template processing.
+
+## GitHub Integration & Auto-Setup
+
+This project is configured for seamless GitHub sharing and automatic setup on Replit:
+
+### Auto-Setup Features
+- **Automatic Dependency Installation**: All npm packages install automatically when imported
+- **Database Auto-Migration**: PostgreSQL schema is automatically created and migrated
+- **Environment Auto-Configuration**: All required environment variables are set by Replit
+- **File Structure Auto-Creation**: Upload directories and configurations are automatically created
+- **Development Server Auto-Start**: Application starts automatically after setup
+
+### For New Users Importing from GitHub
+1. Fork or import this repository to Replit
+2. Click "Run" - everything else happens automatically
+3. Login with your Replit account to start using the system
+4. First user becomes admin automatically
+
+### Project Configuration Files
+- `README.md`: Comprehensive setup and usage documentation
+- `SETUP.md`: Detailed setup instructions and troubleshooting
+- `.env.example`: Complete environment variable documentation
+- `replit.json`: Replit-specific configuration for auto-setup
+- `.gitignore`: Comprehensive file exclusion for clean repositories
+- `package.json`: All dependencies and scripts properly configured
 
 ## User Preferences
 
