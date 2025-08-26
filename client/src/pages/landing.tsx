@@ -166,10 +166,6 @@ export default function Landing() {
           <h1 className="text-4xl font-bold tracking-tight text-slate-900 sm:text-6xl">
             Courier Management System
           </h1>
-          <p className="mt-6 text-lg leading-8 text-slate-600">
-            Streamline your document and courier operations with powerful tracking, role-based access control, 
-            and comprehensive analytics. Built specifically for Light Microfinance Pvt Ltd operations.
-          </p>
           <div className="mt-10 flex items-center justify-center gap-x-6">
             <Dialog open={showLogin} onOpenChange={setShowLogin}>
               <DialogTrigger asChild>
@@ -232,24 +228,6 @@ export default function Landing() {
           </Card>
         </div>
 
-        {/* CTA Section */}
-        <div className="mt-20 text-center">
-          <h2 className="text-3xl font-bold tracking-tight text-slate-900">
-            Ready to streamline Light Microfinance operations?
-          </h2>
-          <p className="mt-6 text-lg leading-8 text-slate-600">
-            Secure and efficient document management system designed for Light Microfinance Pvt Ltd.
-          </p>
-          <div className="mt-10">
-            <Dialog open={showLogin} onOpenChange={setShowLogin}>
-              <DialogTrigger asChild>
-                <Button size="lg" data-testid="button-start-now">
-                  Start Now
-                </Button>
-              </DialogTrigger>
-            </Dialog>
-          </div>
-        </div>
       </div>
 
       {/* Footer */}
