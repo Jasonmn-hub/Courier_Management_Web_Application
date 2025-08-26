@@ -1209,7 +1209,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       for (const [fieldName, value] of Object.entries(fieldValues || {})) {
         const field = fields.find(f => f.fieldName === fieldName);
         if (field) {
-          previewContent += `${field.fieldLabel}: ${value || `##${fieldName}##`}\\n`;
+          let displayValue = value || `##${fieldName}##`;
+          
+          // Convert date format from YYYY-MM-DD to DD-MM-YYYY for preview
+          if (fieldName.toLowerCase().includes('date') && typeof value === 'string' && value.match(/^\\d{4}-\\d{2}-\\d{2}$/)) {
+            const [year, month, day] = value.split('-');
+            displayValue = `${day}-${month}-${year}`;
+          }
+          
+          previewContent += `${field.fieldLabel}: ${displayValue}\\n`;
         }
       }
       
@@ -1293,10 +1301,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Replace field placeholders
         for (const [fieldName, value] of Object.entries(fieldValues || {})) {
+          let processedValue = value as string;
+          
+          // Convert date format from YYYY-MM-DD to DD-MM-YYYY for date fields
+          if (fieldName.toLowerCase().includes('date') && typeof value === 'string' && value.match(/^\d{4}-\d{2}-\d{2}$/)) {
+            const [year, month, day] = value.split('-');
+            processedValue = `${day}-${month}-${year}`;
+            console.log(`Converted date from ${value} to ${processedValue}`);
+          }
+          
           const placeholder = `##${fieldName}##`;
           const regex = new RegExp(placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
-          updatedText = updatedText.replace(regex, value as string);
-          console.log(`Replaced ${placeholder} with ${value}`);
+          updatedText = updatedText.replace(regex, processedValue);
+          console.log(`Replaced ${placeholder} with ${processedValue}`);
         }
         
         // Replace current date placeholder if it exists
@@ -1312,6 +1329,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Replace ##field## with {field} format for docxtemplater
         for (const [fieldName, value] of Object.entries(fieldValues || {})) {
+          let processedValue = value as string;
+          
+          // Convert date format from YYYY-MM-DD to DD-MM-YYYY for date fields
+          if (fieldName.toLowerCase().includes('date') && typeof value === 'string' && value.match(/^\d{4}-\d{2}-\d{2}$/)) {
+            const [year, month, day] = value.split('-');
+            processedValue = `${day}-${month}-${year}`;
+          }
+          
+          templateData[fieldName] = processedValue; // Update template data with converted value
+          
           const oldPlaceholder = `##${fieldName}##`;
           const newPlaceholder = `{${fieldName}}`;
           modifiedXmlContent = modifiedXmlContent.replace(new RegExp(oldPlaceholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), newPlaceholder);

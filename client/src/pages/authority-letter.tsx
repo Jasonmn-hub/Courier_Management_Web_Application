@@ -388,15 +388,30 @@ export default function AuthorityLetter() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="bg-white p-6 border rounded-lg min-h-[600px] font-mono text-sm whitespace-pre-line">
-                  {generatedContent || (
-                    <div className="text-slate-500 text-center mt-20">
+                <div className="bg-white p-8 border rounded-lg min-h-[600px] shadow-inner" style={{
+                  fontFamily: 'Times New Roman, serif',
+                  fontSize: '14px',
+                  lineHeight: '1.6',
+                  maxWidth: '210mm',
+                  margin: '0 auto',
+                  backgroundColor: '#ffffff',
+                  boxShadow: '0 0 10px rgba(0,0,0,0.1)'
+                }}>
+                  {generatedContent ? (
+                    <div className="whitespace-pre-line" style={{
+                      letterSpacing: '0.3px',
+                      textAlign: 'left'
+                    }}>
+                      {generatedContent}
+                    </div>
+                  ) : (
+                    <div className="text-slate-500 text-center mt-20" style={{ fontFamily: 'system-ui' }}>
                       {!selectedDepartment ? (
                         "Select a department to begin"
                       ) : fields.length === 0 ? (
                         "No fields configured for this department"
                       ) : (
-                        "Fill the form fields and click Generate to preview the authority letter"
+                        "Fill the form fields to preview the authority letter"
                       )}
                     </div>
                   )}
