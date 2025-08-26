@@ -3,7 +3,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Package, Truck, CheckCircle, Calendar } from "lucide-react";
 
 export default function StatsCards() {
-  const { data: stats, isLoading } = useQuery({
+  const { data: stats, isLoading } = useQuery<{
+    total: number;
+    onTheWay: number;
+    completed: number;
+    thisMonth: number;
+    thisMonthOnTheWay: number;
+    thisMonthCompleted: number;
+  }>({
     queryKey: ['/api/stats'],
   });
 
@@ -53,10 +60,11 @@ export default function StatsCards() {
     },
     {
       name: "This Month",
-      value: stats?.thisMonth || 0,
+      value: `${stats?.thisMonthOnTheWay || 0} / ${stats?.thisMonthCompleted || 0}`,
       icon: Calendar,
       color: "text-primary",
-      testId: "stat-this-month"
+      testId: "stat-this-month",
+      subtitle: "On The Way / Completed"
     },
   ];
 
@@ -80,6 +88,11 @@ export default function StatsCards() {
                   >
                     {stat.value}
                   </dd>
+                  {(stat as any).subtitle && (
+                    <dt className="text-xs text-slate-400 truncate mt-1">
+                      {(stat as any).subtitle}
+                    </dt>
+                  )}
                 </dl>
               </div>
             </div>

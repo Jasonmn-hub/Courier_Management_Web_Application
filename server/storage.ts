@@ -101,6 +101,8 @@ export interface IStorage {
     onTheWay: number;
     completed: number;
     thisMonth: number;
+    thisMonthOnTheWay: number;
+    thisMonthCompleted: number;
   }>;
   
   getMonthlyStats(departmentId?: number): Promise<Array<{
@@ -521,6 +523,8 @@ export class DatabaseStorage implements IStorage {
     onTheWay: number;
     completed: number;
     thisMonth: number;
+    thisMonthOnTheWay: number;
+    thisMonthCompleted: number;
   }> {
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -565,7 +569,7 @@ export class DatabaseStorage implements IStorage {
       .where(receivedConditions.length > 0 ? and(...receivedConditions) : sql`1=1`);
       
     // Get this month's on the way count
-    const [thisMonthResult] = await db.select({ count: sql`count(*)` })
+    const [thisMonthOnTheWayResult] = await db.select({ count: sql`count(*)` })
       .from(couriers)
       .where(
         and(
@@ -573,11 +577,38 @@ export class DatabaseStorage implements IStorage {
           sql`${couriers.createdAt} >= ${startOfMonth}`
         )
       );
+      
+    // Get this month's completed count
+    const [thisMonthCompletedResult] = await db.select({ count: sql`count(*)` })
+      .from(couriers)
+      .where(
+        and(
+          ...completedConditions,
+          sql`${couriers.createdAt} >= ${startOfMonth}`
+        )
+      );
+      
+    // Get this month's received couriers count
+    let thisMonthReceivedConditions = [
+      sql`${receivedCouriers.receivedDate} >= ${startOfMonth}`
+    ];
+    if (departmentId) {
+      thisMonthReceivedConditions.push(eq(receivedCouriers.departmentId, departmentId));
+    }
+    
+    const [thisMonthReceivedResult] = await db.select({ count: sql`count(*)` })
+      .from(receivedCouriers)
+      .where(and(...thisMonthReceivedConditions));
 
     const onTheWayCount = Number(onTheWayResult?.count || 0);
     const completedCount = Number(completedResult?.count || 0);
     const receivedCount = Number(receivedResult?.count || 0);
-    const thisMonthCount = Number(thisMonthResult?.count || 0);
+    const thisMonthOnTheWayCount = Number(thisMonthOnTheWayResult?.count || 0);
+    const thisMonthCompletedCount = Number(thisMonthCompletedResult?.count || 0);
+    const thisMonthReceivedCount = Number(thisMonthReceivedResult?.count || 0);
+    
+    // Total completed this month includes both completed couriers and received couriers
+    const totalThisMonthCompleted = thisMonthCompletedCount + thisMonthReceivedCount;
 
     // Total completed includes both completed couriers and received couriers
     const totalCompleted = completedCount + receivedCount;
@@ -586,7 +617,9 @@ export class DatabaseStorage implements IStorage {
       total: onTheWayCount + totalCompleted,
       onTheWay: onTheWayCount,
       completed: totalCompleted,
-      thisMonth: thisMonthCount,
+      thisMonth: thisMonthOnTheWayCount + totalThisMonthCompleted,
+      thisMonthOnTheWay: thisMonthOnTheWayCount,
+      thisMonthCompleted: totalThisMonthCompleted,
     };
   }
 
@@ -692,8 +725,8 @@ export class DatabaseStorage implements IStorage {
     
     // Also get received courier branches
     let receivedConditions = [
-      sql`${receivedCouriers.toBranch} IS NOT NULL`,
-      sql`${receivedCouriers.toBranch} != ''`
+      sql`${receivedCouriers.fromLocation} IS NOT NULL`,
+      sql`${receivedCouriers.fromLocation} != ''`
     ];
     
     if (departmentId) {
@@ -702,13 +735,13 @@ export class DatabaseStorage implements IStorage {
     
     const receivedBranchStats = await db
       .select({
-        name: receivedCouriers.toBranch,
+        name: receivedCouriers.fromLocation,
         count: sql<number>`count(*)`,
         latestDate: sql<Date>`max(${receivedCouriers.receivedDate})`
       })
       .from(receivedCouriers)
       .where(and(...receivedConditions))
-      .groupBy(receivedCouriers.toBranch)
+      .groupBy(receivedCouriers.fromLocation)
       .orderBy(sql`count(*) DESC`);
     
     // Combine and aggregate branch data

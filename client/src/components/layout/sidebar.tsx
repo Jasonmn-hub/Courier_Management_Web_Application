@@ -95,7 +95,11 @@ function SidebarContent({ navigation, adminNavigation, user, onLogout }: any) {
       <div className="flex items-center flex-shrink-0 px-6">
         <div className="flex items-center">
           <div className="flex-shrink-0">
-            <Truck className="h-8 w-8 text-primary" />
+            <img 
+              src="/attached_assets/Light Microfinance logo.png" 
+              alt="Light Microfinance" 
+              className="h-8 w-8 object-contain" 
+            />
           </div>
           <div className="ml-3">
             <h1 className="text-xl font-bold text-slate-800">CourierTrack</h1>
