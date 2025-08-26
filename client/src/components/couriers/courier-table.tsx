@@ -77,6 +77,7 @@ export default function CourierTable({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/couriers'] });
       queryClient.invalidateQueries({ queryKey: ['/api/stats'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/stats/monthly'] });
       toast({
         title: "Success",
         description: "Courier deleted successfully",
@@ -109,6 +110,7 @@ export default function CourierTable({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/couriers'] });
       queryClient.invalidateQueries({ queryKey: ['/api/stats'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/stats/monthly'] });
       toast({
         title: "Success",
         description: "Courier restored successfully",
@@ -153,6 +155,7 @@ export default function CourierTable({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/couriers'] });
       queryClient.invalidateQueries({ queryKey: ['/api/stats'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/stats/monthly'] });
       toast({
         title: "Success",
         description: "Courier marked as received",

@@ -116,6 +116,7 @@ export default function CourierForm({ courier, onClose, onSuccess }: CourierForm
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/couriers'] });
       queryClient.invalidateQueries({ queryKey: ['/api/stats'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/stats/monthly'] });
       onSuccess();
     },
     onError: (error) => {

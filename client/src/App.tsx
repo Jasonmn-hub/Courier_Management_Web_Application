@@ -12,6 +12,7 @@ import ReceivedCouriers from "@/pages/received-couriers";
 import AuthorityLetter from "@/pages/authority-letter";
 import Users from "@/pages/users";
 import Departments from "@/pages/departments";
+import Branches from "@/pages/branches";
 import Settings from "@/pages/settings";
 import AppLayout from "@/components/layout/app-layout";
 
@@ -43,6 +44,7 @@ function Router() {
             <Route path="/authority-letter" component={AuthorityLetter} />
             <Route path="/users" component={Users} />
             <Route path="/departments" component={Departments} />
+            <Route path="/branches" component={Branches} />
             <Route path="/custom-fields" component={Settings} />
             <Route path="/audit-logs" component={Settings} />
             <Route path="/settings" component={Settings} />

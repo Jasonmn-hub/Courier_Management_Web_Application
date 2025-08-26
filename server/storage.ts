@@ -109,6 +109,12 @@ export interface IStorage {
     completed: number;
   }>>;
   
+  getBranchStats(departmentId?: number): Promise<Array<{
+    name: string;
+    count: number;
+    recentActivity: string;
+  }>>;
+  
   // Authority Letter Template operations
   getAllAuthorityLetterTemplates(departmentId?: number): Promise<AuthorityLetterTemplate[]>;
   getAuthorityLetterTemplate(id: number): Promise<AuthorityLetterTemplate | undefined>;
@@ -648,6 +654,101 @@ export class DatabaseStorage implements IStorage {
     }
     
     return monthlyData;
+  }
+
+  async getBranchStats(departmentId?: number): Promise<Array<{
+    name: string;
+    count: number;
+    recentActivity: string;
+  }>> {
+    // Build base conditions
+    let conditions = [
+      sql`${couriers.toBranch} IS NOT NULL`,
+      sql`${couriers.toBranch} != ''`
+    ];
+    
+    // Add department filter if specified
+    if (departmentId) {
+      conditions.push(eq(couriers.departmentId, departmentId));
+    }
+    
+    // Get branch statistics
+    const branchStats = await db
+      .select({
+        name: couriers.toBranch,
+        count: sql<number>`count(*)`,
+        latestDate: sql<Date>`max(${couriers.createdAt})`
+      })
+      .from(couriers)
+      .where(and(...conditions))
+      .groupBy(couriers.toBranch)
+      .orderBy(sql`count(*) DESC`);
+    
+    // Also get received courier branches
+    let receivedConditions = [
+      sql`${receivedCouriers.toBranch} IS NOT NULL`,
+      sql`${receivedCouriers.toBranch} != ''`
+    ];
+    
+    if (departmentId) {
+      receivedConditions.push(eq(receivedCouriers.departmentId, departmentId));
+    }
+    
+    const receivedBranchStats = await db
+      .select({
+        name: receivedCouriers.toBranch,
+        count: sql<number>`count(*)`,
+        latestDate: sql<Date>`max(${receivedCouriers.receivedDate})`
+      })
+      .from(receivedCouriers)
+      .where(and(...receivedConditions))
+      .groupBy(receivedCouriers.toBranch)
+      .orderBy(sql`count(*) DESC`);
+    
+    // Combine and aggregate branch data
+    const branchMap = new Map<string, { count: number; latestDate: Date | null }>();
+    
+    // Add courier branches
+    branchStats.forEach(branch => {
+      branchMap.set(branch.name!, {
+        count: Number(branch.count),
+        latestDate: branch.latestDate
+      });
+    });
+    
+    // Add received courier branches
+    receivedBranchStats.forEach(branch => {
+      const existing = branchMap.get(branch.name!);
+      if (existing) {
+        existing.count += Number(branch.count);
+        if (branch.latestDate && (!existing.latestDate || branch.latestDate > existing.latestDate)) {
+          existing.latestDate = branch.latestDate;
+        }
+      } else {
+        branchMap.set(branch.name!, {
+          count: Number(branch.count),
+          latestDate: branch.latestDate
+        });
+      }
+    });
+    
+    // Convert to final format
+    const result = Array.from(branchMap.entries()).map(([name, data]) => ({
+      name,
+      count: data.count,
+      recentActivity: data.latestDate 
+        ? new Date(data.latestDate).toLocaleDateString('en', { 
+            month: 'short', 
+            day: 'numeric',
+            year: 'numeric'
+          })
+        : 'No activity'
+    }));
+    
+    // Sort by count descending
+    result.sort((a, b) => b.count - a.count);
+    
+    return result;
   }
 
   // Received Courier operations

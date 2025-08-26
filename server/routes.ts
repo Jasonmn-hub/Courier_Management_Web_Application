@@ -785,6 +785,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Branches route
+  app.get('/api/branches', authenticateToken, setCurrentUser(), async (req: any, res) => {
+    try {
+      const user = req.currentUser;
+      let departmentId: number | undefined = undefined;
+      
+      // Non-admin users can only see their department's branches
+      if (user.role !== 'admin') {
+        departmentId = user.departmentId;
+      }
+      
+      const branches = await storage.getBranchStats(departmentId);
+      res.json(branches);
+    } catch (error) {
+      console.error("Error fetching branches:", error);
+      res.status(500).json({ message: "Failed to fetch branches" });
+    }
+  });
+
   // Received Couriers endpoints
   app.get('/api/received-couriers', authenticateToken, setCurrentUser(), async (req: any, res) => {
     try {

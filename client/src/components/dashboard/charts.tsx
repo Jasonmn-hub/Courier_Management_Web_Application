@@ -34,10 +34,16 @@ export default function Charts() {
     );
   }
 
-  const pieData = [
-    { name: 'On The Way', value: (stats as any)?.onTheWay || 0 },
-    { name: 'Completed', value: (stats as any)?.completed || 0 },
-  ];
+  // Ensure pie chart always shows data, even when all values are 0
+  const onTheWayCount = (stats as any)?.onTheWay || 0;
+  const completedCount = (stats as any)?.completed || 0;
+  
+  const pieData = onTheWayCount === 0 && completedCount === 0 
+    ? [{ name: 'No Data', value: 1 }]
+    : [
+        { name: 'On The Way', value: onTheWayCount },
+        { name: 'Completed', value: completedCount },
+      ].filter(item => item.value > 0);
 
   // Use real monthly data from API
   const monthlyData = monthlyStats.length > 0 ? monthlyStats : [
@@ -60,7 +66,10 @@ export default function Charts() {
                   cx="50%"
                   cy="50%"
                   labelLine={false}
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  label={({ name, percent, value }) => {
+                    if (name === 'No Data') return 'No Couriers';
+                    return `${name} ${value} (${(percent * 100).toFixed(0)}%)`;
+                  }}
                   outerRadius={90}
                   innerRadius={30}
                   fill="#8884d8"
