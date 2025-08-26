@@ -466,14 +466,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Export routes - Must be before :id route to avoid route conflicts
   app.get('/api/couriers/export', authenticateToken, async (req: any, res) => {
     try {
-      const result = await storage.getAllCouriers({ limit: 1000 });
+      const { startDate, endDate } = req.query;
+      
+      // Get sent couriers with date filtering
+      const sentCouriers = await storage.getAllCouriers({ 
+        limit: 10000,
+        startDate,
+        endDate
+      });
+      
+      // Get received couriers with date filtering
+      const receivedCouriers = await storage.getAllReceivedCouriers({
+        limit: 10000,
+        startDate,
+        endDate
+      });
       
       // Create CSV content
-      const headers = ['POD No', 'To Branch', 'Email', 'Vendor', 'Date', 'Status', 'Details', 'Contact Details', 'Remarks', 'Department', 'Created By'];
+      const headers = ['Type', 'POD No', 'To Branch / From Location', 'Email', 'Vendor', 'Date', 'Status', 'Details', 'Contact Details', 'Remarks', 'Department', 'Created By'];
       const csvRows = [headers.join(',')];
       
-      result.couriers.forEach(courier => {
+      // Add sent couriers
+      sentCouriers.couriers.forEach(courier => {
         const row = [
+          'Sent Courier',
           courier.podNo || '',
           courier.toBranch || '',
           courier.email || '',
@@ -489,10 +505,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
         csvRows.push(row.join(','));
       });
       
+      // Add received couriers
+      receivedCouriers.forEach(courier => {
+        const row = [
+          'Received Courier',
+          courier.podNumber || '',
+          courier.fromLocation || '',
+          courier.emailId || '',
+          courier.courierVendor || '',
+          courier.receivedDate ? new Date(courier.receivedDate).toLocaleDateString() : '',
+          'Received',
+          '',
+          '',
+          courier.remarks || '',
+          courier.department?.name || '',
+          courier.creator?.name || ''
+        ].map(field => `"${(field || '').toString().replace(/"/g, '""')}"`);
+        csvRows.push(row.join(','));
+      });
+      
       const csvContent = csvRows.join('\n');
       
+      const dateRange = startDate && endDate ? `_${startDate}_to_${endDate}` : '';
+      const filename = `couriers-export${dateRange}.csv`;
+      
       res.setHeader('Content-Type', 'text/csv');
-      res.setHeader('Content-Disposition', 'attachment; filename="couriers-export.csv"');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
       res.send(csvContent);
     } catch (error) {
       console.error("Error exporting couriers:", error);
@@ -815,6 +853,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching audit logs:", error);
       res.status(500).json({ message: "Failed to fetch audit logs" });
+    }
+  });
+
+  // Audit logs export route
+  app.get('/api/audit-logs/export', authenticateToken, requireRole(['admin']), async (req: any, res) => {
+    try {
+      const { startDate, endDate } = req.query;
+      const result = await storage.getAuditLogs(10000, 0, startDate, endDate);
+      
+      // Create CSV content
+      const headers = ['Action', 'Entity Type', 'Entity ID', 'User Name', 'User Email', 'Date & Time'];
+      const csvRows = [headers.join(',')];
+      
+      result.logs.forEach(log => {
+        const row = [
+          log.action || '',
+          log.entityType || '',
+          log.entityId || '',
+          log.user?.name || 'Unknown',
+          log.user?.email || '',
+          log.timestamp ? new Date(log.timestamp).toLocaleString() : ''
+        ].map(field => `"${(field || '').toString().replace(/"/g, '""')}"`);
+        csvRows.push(row.join(','));
+      });
+      
+      const csvContent = csvRows.join('\n');
+      
+      const dateRange = startDate && endDate ? `_${startDate}_to_${endDate}` : '';
+      const filename = `audit-logs-export${dateRange}.csv`;
+      
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.send(csvContent);
+    } catch (error) {
+      console.error("Error exporting audit logs:", error);
+      res.status(500).json({ message: "Failed to export audit logs" });
     }
   });
 

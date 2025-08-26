@@ -48,6 +48,8 @@ export interface IStorage {
     search?: string;
     limit?: number;
     offset?: number;
+    startDate?: string;
+    endDate?: string;
   }): Promise<{ couriers: (Courier & { department?: Department; creator?: User })[]; total: number }>;
   getCourierById(id: number): Promise<(Courier & { department?: Department; creator?: User }) | undefined>;
   createCourier(courier: InsertCourier): Promise<Courier>;
@@ -61,7 +63,9 @@ export interface IStorage {
     search?: string;
     limit?: number;
     offset?: number;
-  }): Promise<ReceivedCourier[]>;
+    startDate?: string;
+    endDate?: string;
+  }): Promise<(ReceivedCourier & { department?: Department; creator?: User })[]>;
   getReceivedCourierById(id: number): Promise<ReceivedCourier | undefined>;
   createReceivedCourier(courier: InsertReceivedCourier): Promise<ReceivedCourier>;
   updateReceivedCourier(id: number, courier: Partial<InsertReceivedCourier>): Promise<ReceivedCourier | undefined>;
@@ -83,7 +87,7 @@ export interface IStorage {
   
   // Audit log operations
   createAuditLog(log: InsertAuditLog): Promise<AuditLog>;
-  getAuditLogs(limit?: number, offset?: number): Promise<{ logs: (AuditLog & { user?: User })[]; total: number }>;
+  getAuditLogs(limit?: number, offset?: number, startDate?: string, endDate?: string): Promise<{ logs: (AuditLog & { user?: User })[]; total: number }>;
   
   // Statistics
   getCourierStats(): Promise<{
@@ -186,6 +190,8 @@ export class DatabaseStorage implements IStorage {
     search?: string;
     limit?: number;
     offset?: number;
+    startDate?: string;
+    endDate?: string;
   } = {}): Promise<{ couriers: (Courier & { department?: Department; creator?: User })[]; total: number }> {
     let query = db
       .select({
@@ -196,6 +202,7 @@ export class DatabaseStorage implements IStorage {
         email: couriers.email,
         courierDate: couriers.courierDate,
         vendor: couriers.vendor,
+        customVendor: couriers.customVendor,
         podNo: couriers.podNo,
         details: couriers.details,
         contactDetails: couriers.contactDetails,
@@ -232,6 +239,14 @@ export class DatabaseStorage implements IStorage {
           ilike(couriers.email, `%${filters.search}%`)
         )
       );
+    }
+
+    if (filters.startDate) {
+      conditions.push(sql`${couriers.courierDate} >= ${filters.startDate}`);
+    }
+
+    if (filters.endDate) {
+      conditions.push(sql`${couriers.courierDate} <= ${filters.endDate}`);
     }
 
     if (conditions.length > 0) {
@@ -278,6 +293,7 @@ export class DatabaseStorage implements IStorage {
         email: couriers.email,
         courierDate: couriers.courierDate,
         vendor: couriers.vendor,
+        customVendor: couriers.customVendor,
         podNo: couriers.podNo,
         details: couriers.details,
         contactDetails: couriers.contactDetails,
@@ -378,8 +394,8 @@ export class DatabaseStorage implements IStorage {
     return newLog;
   }
 
-  async getAuditLogs(limit = 50, offset = 0): Promise<{ logs: (AuditLog & { user?: User })[]; total: number }> {
-    const logs = await db
+  async getAuditLogs(limit = 50, offset = 0, startDate?: string, endDate?: string): Promise<{ logs: (AuditLog & { user?: User })[]; total: number }> {
+    let query = db
       .select({
         id: auditLogs.id,
         userId: auditLogs.userId,
@@ -390,12 +406,40 @@ export class DatabaseStorage implements IStorage {
         user: users,
       })
       .from(auditLogs)
-      .leftJoin(users, eq(auditLogs.userId, users.id))
-      .orderBy(desc(auditLogs.timestamp))
-      .limit(limit)
-      .offset(offset);
+      .leftJoin(users, eq(auditLogs.userId, users.id));
 
-    const countResult = await db.select({ count: sql`count(*)` }).from(auditLogs);
+    const conditions = [];
+
+    if (startDate) {
+      conditions.push(sql`${auditLogs.timestamp} >= ${startDate}`);
+    }
+
+    if (endDate) {
+      conditions.push(sql`${auditLogs.timestamp} <= ${endDate + ' 23:59:59'}`);
+    }
+
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions)) as any;
+    }
+
+    query = query.orderBy(desc(auditLogs.timestamp)) as any;
+
+    if (limit) {
+      query = query.limit(limit) as any;
+    }
+
+    if (offset) {
+      query = query.offset(offset) as any;
+    }
+
+    const logs = await query;
+
+    // Get count with same filters
+    let countQuery = db.select({ count: sql`count(*)` }).from(auditLogs);
+    if (conditions.length > 0) {
+      countQuery = countQuery.where(and(...conditions)) as any;
+    }
+    const countResult = await countQuery;
     const count = countResult[0]?.count || 0;
 
     return {
@@ -476,8 +520,32 @@ export class DatabaseStorage implements IStorage {
     search?: string;
     limit?: number;
     offset?: number;
-  }): Promise<ReceivedCourier[]> {
-    let query = db.select().from(receivedCouriers);
+    startDate?: string;
+    endDate?: string;
+  }): Promise<(ReceivedCourier & { department?: Department; creator?: User })[]> {
+    let query = db
+      .select({
+        id: receivedCouriers.id,
+        departmentId: receivedCouriers.departmentId,
+        createdBy: receivedCouriers.createdBy,
+        podNumber: receivedCouriers.podNumber,
+        receivedDate: receivedCouriers.receivedDate,
+        fromLocation: receivedCouriers.fromLocation,
+        courierVendor: receivedCouriers.courierVendor,
+        customVendor: receivedCouriers.customVendor,
+        receiverName: receivedCouriers.receiverName,
+        emailId: receivedCouriers.emailId,
+        sendEmailNotification: receivedCouriers.sendEmailNotification,
+        customDepartment: receivedCouriers.customDepartment,
+        remarks: receivedCouriers.remarks,
+        createdAt: receivedCouriers.createdAt,
+        updatedAt: receivedCouriers.updatedAt,
+        department: departments,
+        creator: users,
+      })
+      .from(receivedCouriers)
+      .leftJoin(departments, eq(receivedCouriers.departmentId, departments.id))
+      .leftJoin(users, eq(receivedCouriers.createdBy, users.id));
     
     const conditions = [];
     
@@ -495,21 +563,35 @@ export class DatabaseStorage implements IStorage {
       );
     }
 
-    if (conditions.length > 0) {
-      query = query.where(and(...conditions));
+    if (filters?.startDate) {
+      conditions.push(sql`${receivedCouriers.receivedDate} >= ${filters.startDate}`);
     }
 
-    query = query.orderBy(desc(receivedCouriers.createdAt));
+    if (filters?.endDate) {
+      conditions.push(sql`${receivedCouriers.receivedDate} <= ${filters.endDate}`);
+    }
+
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions)) as any;
+    }
+
+    query = query.orderBy(desc(receivedCouriers.createdAt)) as any;
 
     if (filters?.limit) {
-      query = query.limit(filters.limit);
+      query = query.limit(filters.limit) as any;
     }
 
     if (filters?.offset) {
-      query = query.offset(filters.offset);
+      query = query.offset(filters.offset) as any;
     }
 
-    return await query;
+    const results = await query;
+    
+    return results.map(r => ({
+      ...r,
+      department: r.department || undefined,
+      creator: r.creator || undefined
+    }));
   }
 
   async getReceivedCourierById(id: number): Promise<ReceivedCourier | undefined> {

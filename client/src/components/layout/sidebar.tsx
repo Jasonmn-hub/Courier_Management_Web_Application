@@ -1,6 +1,7 @@
 import { useAuth } from "@/hooks/useAuth";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
+import { ExportDialog } from "@/components/export-dialog";
 import { 
   Truck, 
   BarChart3, 
@@ -78,33 +79,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 }
 
 function SidebarContent({ navigation, adminNavigation, user, onLogout }: any) {
-  const handleExportData = async () => {
-    try {
-      const token = localStorage.getItem('auth_token');
-      const response = await fetch('/api/couriers/export', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      
-      if (response.ok) {
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `couriers-export-${new Date().toISOString().split('T')[0]}.csv`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
-      } else {
-        alert('Export failed. Please try again.');
-      }
-    } catch (error) {
-      console.error('Export error:', error);
-      alert('Export failed. Please try again.');
-    }
-  };
+
   return (
     <div className="flex flex-col flex-grow bg-white border-r border-slate-200 pt-5 pb-4 overflow-y-auto">
       <div className="flex items-center flex-shrink-0 px-6">
@@ -192,15 +167,19 @@ function SidebarContent({ navigation, adminNavigation, user, onLogout }: any) {
               {adminNavigation
                 .filter((item: any) => item.group === "tools")
                 .map((item: any) => (
-                  <button
+                  <ExportDialog
                     key={item.name}
-                    onClick={handleExportData}
-                    className="w-full text-left text-slate-600 hover:bg-slate-50 hover:text-slate-900 group flex items-center px-2 py-2 text-sm font-medium rounded-md"
-                    data-testid={`button-${item.name.toLowerCase().replace(' ', '-')}`}
+                    title="Courier Data"
+                    exportType="couriers"
                   >
-                    <item.icon className="mr-3 h-4 w-4" />
-                    {item.name}
-                  </button>
+                    <button
+                      className="w-full text-left text-slate-600 hover:bg-slate-50 hover:text-slate-900 group flex items-center px-2 py-2 text-sm font-medium rounded-md"
+                      data-testid={`button-${item.name.toLowerCase().replace(' ', '-')}`}
+                    >
+                      <item.icon className="mr-3 h-4 w-4" />
+                      {item.name}
+                    </button>
+                  </ExportDialog>
                 ))}
             </div>
           )}

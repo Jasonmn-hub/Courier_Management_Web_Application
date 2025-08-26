@@ -11,8 +11,9 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Trash2, Mail, User, Calendar, FileText } from "lucide-react";
+import { Plus, Trash2, Mail, User, Calendar, FileText, Download } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
+import { ExportDialog } from "@/components/export-dialog";
 
 interface User {
   id: string;
@@ -79,6 +80,15 @@ function AuditLogsTable() {
 
   return (
     <div className="border rounded-lg">
+      <div className="flex justify-between items-center p-4 border-b">
+        <h3 className="text-lg font-semibold">Audit Logs</h3>
+        <ExportDialog title="Audit Logs" exportType="audit-logs">
+          <Button variant="outline" size="sm" data-testid="button-export-audit-logs">
+            <Download className="h-4 w-4 mr-2" />
+            Export Audit Logs
+          </Button>
+        </ExportDialog>
+      </div>
       <Table>
         <TableHeader>
           <TableRow>
