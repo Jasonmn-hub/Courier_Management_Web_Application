@@ -332,8 +332,7 @@ export default function Settings() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="text">Text</SelectItem>
-                        <SelectItem value="number">Number</SelectItem>
-                        <SelectItem value="date">Date</SelectItem>
+                        <SelectItem value="calendar">Calendar</SelectItem>
                         <SelectItem value="dropdown">Dropdown</SelectItem>
                       </SelectContent>
                     </Select>

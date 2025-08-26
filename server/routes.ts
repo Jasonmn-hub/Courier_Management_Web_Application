@@ -489,7 +489,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         csvRows.push(row.join(','));
       });
       
-      const csvContent = csvRows.join('\\n');
+      const csvContent = csvRows.join('\n');
       
       res.setHeader('Content-Type', 'text/csv');
       res.setHeader('Content-Disposition', 'attachment; filename="couriers-export.csv"');
