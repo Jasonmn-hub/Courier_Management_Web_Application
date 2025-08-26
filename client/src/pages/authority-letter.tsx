@@ -74,7 +74,7 @@ export default function AuthorityLetter() {
   // Generate letter mutation
   const generateMutation = useMutation({
     mutationFn: async (data: { departmentId: number; fieldValues: Record<string, string> }) => {
-      const token = localStorage.getItem('authToken');
+      const token = localStorage.getItem('auth_token');
       if (!token) throw new Error('No auth token');
       
       const response = await fetch('/api/authority-letter/generate-from-department', {
