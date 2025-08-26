@@ -212,7 +212,7 @@ export default function UserForm({ user, onClose, onSuccess }: UserFormProps) {
                           <SelectItem key={dept.id} value={dept.id.toString()}>
                             {dept.name}
                           </SelectItem>
-                        ))}
+                        )) as any}
                       </SelectContent>
                     </Select>
                     <FormMessage />
