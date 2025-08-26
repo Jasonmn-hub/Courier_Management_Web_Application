@@ -135,7 +135,7 @@ export default function Departments() {
         description: "Field created successfully.",
       });
       refetchFields();
-      setNewField({ fieldName: '', fieldLabel: '', fieldType: 'text', isRequired: false });
+      setNewField({ fieldName: '', fieldLabel: '', fieldType: 'text', textTransform: 'none', isRequired: false });
     },
     onError: (error: any) => {
       toast({
@@ -568,7 +568,7 @@ export default function Departments() {
                 onClick={() => {
                   setShowFieldsManager(false);
                   setSelectedDepartmentForFields(null);
-                  setNewField({ fieldName: '', fieldLabel: '', fieldType: 'text', isRequired: false });
+                  setNewField({ fieldName: '', fieldLabel: '', fieldType: 'text', textTransform: 'none', isRequired: false });
                 }}
                 data-testid="button-close-fields-manager"
               >

@@ -49,7 +49,7 @@ export const users = pgTable("users", {
 export const departments = pgTable("departments", {
   id: serial("id").primaryKey(),
   name: varchar("name", { length: 100 }).notNull(),
-  authorityDocumentPath: varchar("authority_document_path", { length: 255 }), // Path to uploaded Word document
+  authorityDocumentPath: varchar("authority_document_path", { length: 255 }), // Legacy - kept for backward compatibility
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -125,13 +125,16 @@ export const auditLogs = pgTable("audit_logs", {
   timestamp: timestamp("timestamp").defaultNow(),
 });
 
-// Authority letter templates table
+// Authority letter templates table - Enhanced for PDF generation
 export const authorityLetterTemplates = pgTable('authority_letter_templates', {
   id: serial('id').primaryKey(),
   departmentId: integer('department_id').references(() => departments.id),
   templateName: varchar('template_name', { length: 255 }).notNull(),
-  templateContent: text('template_content').notNull(),
+  templateContent: text('template_content').notNull(), // HTML template for PDF generation
+  templateDescription: text('template_description'), // Description for users
   isDefault: boolean('is_default').default(false),
+  isActive: boolean('is_active').default(true),
+  wordTemplateUrl: varchar('word_template_url', { length: 255 }), // Optional Word template for reference
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });

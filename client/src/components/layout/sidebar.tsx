@@ -15,7 +15,8 @@ import {
   History,
   FormInput,
   User,
-  LogOut
+  LogOut,
+  FileText
 } from "lucide-react";
 
 interface SidebarProps {
@@ -31,7 +32,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     { name: "Dashboard", href: "/", icon: BarChart3, current: location === "/" },
     { name: "Sent Couriers", href: "/couriers", icon: Package, current: location === "/couriers" },
     { name: "Received Couriers", href: "/received-couriers", icon: Truck, current: location === "/received-couriers" },
-    { name: "Authority Letter", href: "/authority-letter", icon: FileDown, current: location === "/authority-letter" },
+    { name: "PDF Authority Letters", href: "/pdf-authority-letter", icon: FileText, current: location === "/pdf-authority-letter" },
+    { name: "Authority Letter (Legacy)", href: "/authority-letter", icon: FileDown, current: location === "/authority-letter" },
   ];
 
   // Admin and Manager navigation items with proper grouping

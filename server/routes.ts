@@ -9,6 +9,8 @@ import path from "path";
 import fs from "fs";
 import PizZip from "pizzip";
 import Docxtemplater from "docxtemplater";
+import { PDFGenerator } from "./pdf-generator";
+import Papa from "papaparse";
 
 // Configure multer for file uploads
 const uploadDir = path.join(process.cwd(), 'uploads');
@@ -1550,6 +1552,292 @@ Jigar Jodhani
       res.status(500).json({ message: "Failed to generate authority letter" });
     }
   });
+
+  // ===== NEW PDF-BASED AUTHORITY LETTER SYSTEM =====
+
+  // Get all templates for a department
+  app.get('/api/authority-templates/:departmentId', authenticateToken, setCurrentUser(), async (req: any, res) => {
+    try {
+      const departmentId = parseInt(req.params.departmentId);
+      const user = req.currentUser;
+      
+      // Check access
+      if (user.role !== 'admin' && user.departmentId !== departmentId) {
+        return res.status(403).json({ message: "Access denied to this department" });
+      }
+      
+      const templates = await storage.getAllAuthorityLetterTemplates(departmentId);
+      res.json(templates);
+    } catch (error) {
+      console.error("Error fetching authority templates:", error);
+      res.status(500).json({ message: "Failed to fetch templates" });
+    }
+  });
+
+  // Create new template
+  app.post('/api/authority-templates', authenticateToken, requireRole(['admin']), async (req: any, res) => {
+    try {
+      const templateData = insertAuthorityLetterTemplateSchema.parse(req.body);
+      const user = req.currentUser;
+      
+      // If setting as default, unset other defaults in the same department
+      if (templateData.isDefault && templateData.departmentId) {
+        const existingTemplates = await storage.getAllAuthorityLetterTemplates(templateData.departmentId);
+        for (const template of existingTemplates) {
+          if (template.isDefault) {
+            await storage.updateAuthorityLetterTemplate(template.id, { isDefault: false });
+          }
+        }
+      }
+      
+      const newTemplate = await storage.createAuthorityLetterTemplate(templateData);
+      await logAudit(user.id, 'CREATE', 'authority_template', newTemplate.id.toString());
+      
+      res.status(201).json(newTemplate);
+    } catch (error) {
+      console.error("Error creating authority template:", error);
+      res.status(500).json({ message: "Failed to create template" });
+    }
+  });
+
+  // Update template
+  app.put('/api/authority-templates/:id', authenticateToken, requireRole(['admin']), async (req: any, res) => {
+    try {
+      const templateId = parseInt(req.params.id);
+      const updateData = req.body;
+      const user = req.currentUser;
+      
+      // If setting as default, unset other defaults in the same department
+      if (updateData.isDefault) {
+        const template = await storage.getAuthorityLetterTemplate(templateId);
+        if (template && template.departmentId) {
+          const existingTemplates = await storage.getAllAuthorityLetterTemplates(template.departmentId);
+          for (const existingTemplate of existingTemplates) {
+            if (existingTemplate.isDefault && existingTemplate.id !== templateId) {
+              await storage.updateAuthorityLetterTemplate(existingTemplate.id, { isDefault: false });
+            }
+          }
+        }
+      }
+      
+      const updatedTemplate = await storage.updateAuthorityLetterTemplate(templateId, updateData);
+      if (!updatedTemplate) {
+        return res.status(404).json({ message: "Template not found" });
+      }
+      
+      await logAudit(user.id, 'UPDATE', 'authority_template', templateId.toString());
+      res.json(updatedTemplate);
+    } catch (error) {
+      console.error("Error updating authority template:", error);
+      res.status(500).json({ message: "Failed to update template" });
+    }
+  });
+
+  // Delete template
+  app.delete('/api/authority-templates/:id', authenticateToken, requireRole(['admin']), async (req: any, res) => {
+    try {
+      const templateId = parseInt(req.params.id);
+      const user = req.currentUser;
+      
+      const deleted = await storage.deleteAuthorityLetterTemplate(templateId);
+      if (!deleted) {
+        return res.status(404).json({ message: "Template not found" });
+      }
+      
+      await logAudit(user.id, 'DELETE', 'authority_template', templateId.toString());
+      res.json({ message: "Template deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting authority template:", error);
+      res.status(500).json({ message: "Failed to delete template" });
+    }
+  });
+
+  // Generate PDF authority letter
+  app.post('/api/authority-letter/generate-pdf', authenticateToken, setCurrentUser(), async (req: any, res) => {
+    try {
+      const { templateId, fieldValues } = req.body;
+      const user = req.currentUser;
+      
+      // Get template
+      const template = await storage.getAuthorityLetterTemplate(templateId);
+      if (!template) {
+        return res.status(404).json({ message: "Template not found" });
+      }
+      
+      // Check access
+      if (user.role !== 'admin' && template.departmentId !== user.departmentId) {
+        return res.status(403).json({ message: "Access denied to this template" });
+      }
+      
+      // Generate PDF
+      const pdfBuffer = await PDFGenerator.generatePDF({
+        templateContent: template.templateContent,
+        fieldValues,
+        fileName: `authority_letter_${Date.now()}.pdf`
+      });
+      
+      await logAudit(user.id, 'CREATE', 'authority_letter_pdf', template.id.toString());
+      
+      // Set headers for PDF download
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="authority_letter_${template.templateName}_${Date.now()}.pdf"`);
+      res.setHeader('Content-Length', pdfBuffer.length);
+      
+      res.send(pdfBuffer);
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+      res.status(500).json({ message: "Failed to generate PDF" });
+    }
+  });
+
+  // Preview authority letter (HTML)
+  app.post('/api/authority-letter/preview-pdf', authenticateToken, setCurrentUser(), async (req: any, res) => {
+    try {
+      const { templateId, fieldValues } = req.body;
+      const user = req.currentUser;
+      
+      // Get template
+      const template = await storage.getAuthorityLetterTemplate(templateId);
+      if (!template) {
+        return res.status(404).json({ message: "Template not found" });
+      }
+      
+      // Check access
+      if (user.role !== 'admin' && template.departmentId !== user.departmentId) {
+        return res.status(403).json({ message: "Access denied to this template" });
+      }
+      
+      // Replace placeholders for preview
+      let htmlContent = template.templateContent;
+      
+      // Replace ##field## placeholders
+      Object.entries(fieldValues || {}).forEach(([key, value]) => {
+        const placeholder = `##${key}##`;
+        htmlContent = htmlContent.replace(new RegExp(placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), value as string || '');
+      });
+      
+      // Add current date
+      const currentDate = new Date().toLocaleDateString('en-GB');
+      htmlContent = htmlContent.replace(/##currentDate##/g, currentDate);
+      htmlContent = htmlContent.replace(/##current_date##/g, currentDate);
+      
+      res.json({
+        htmlContent,
+        templateName: template.templateName
+      });
+    } catch (error) {
+      console.error("Error generating preview:", error);
+      res.status(500).json({ message: "Failed to generate preview" });
+    }
+  });
+
+  // Generate sample CSV for bulk operations
+  app.get('/api/authority-letter/sample-csv/:departmentId', authenticateToken, setCurrentUser(), async (req: any, res) => {
+    try {
+      const departmentId = parseInt(req.params.departmentId);
+      const user = req.currentUser;
+      
+      // Check access
+      if (user.role !== 'admin' && user.departmentId !== departmentId) {
+        return res.status(403).json({ message: "Access denied to this department" });
+      }
+      
+      // Get department fields
+      const fields = await storage.getAllAuthorityLetterFields(departmentId);
+      
+      // Create CSV headers based on department fields
+      const headers = ['row_id', ...fields.map(f => f.fieldName), 'notes'];
+      
+      // Create sample data
+      const sampleRows = [
+        ['1', ...fields.map(f => `Sample ${f.fieldLabel}`), 'Sample notes for row 1'],
+        ['2', ...fields.map(f => `Example ${f.fieldLabel}`), 'Sample notes for row 2'],
+        ['3', ...fields.map(f => `Test ${f.fieldLabel}`), 'Sample notes for row 3']
+      ];
+      
+      const csvContent = Papa.unparse([headers, ...sampleRows]);
+      
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', `attachment; filename="authority_letter_sample_${departmentId}.csv"`);
+      res.send(csvContent);
+    } catch (error) {
+      console.error("Error generating sample CSV:", error);
+      res.status(500).json({ message: "Failed to generate sample CSV" });
+    }
+  });
+
+  // Bulk generate PDFs from CSV
+  app.post('/api/authority-letter/bulk-generate', authenticateToken, setCurrentUser(), multer().single('csvFile'), async (req: any, res) => {
+    try {
+      const { templateId } = req.body;
+      const user = req.currentUser;
+      
+      if (!req.file) {
+        return res.status(400).json({ message: "CSV file is required" });
+      }
+      
+      // Get template
+      const template = await storage.getAuthorityLetterTemplate(parseInt(templateId));
+      if (!template) {
+        return res.status(404).json({ message: "Template not found" });
+      }
+      
+      // Check access
+      if (user.role !== 'admin' && template.departmentId !== user.departmentId) {
+        return res.status(403).json({ message: "Access denied to this template" });
+      }
+      
+      // Parse CSV
+      const csvContent = req.file.buffer.toString('utf8');
+      const parsedData = Papa.parse(csvContent, { header: true, skipEmptyLines: true });
+      
+      if (parsedData.errors.length > 0) {
+        return res.status(400).json({ message: "CSV parsing error", errors: parsedData.errors });
+      }
+      
+      // Get field mappings (CSV column to template field)
+      const fields = template.departmentId ? await storage.getAllAuthorityLetterFields(template.departmentId) : [];
+      const fieldMappings: Record<string, string> = {};
+      fields.forEach(field => {
+        fieldMappings[field.fieldName] = field.fieldName; // Assuming CSV columns match field names
+      });
+      
+      // Generate bulk PDFs
+      const results = await PDFGenerator.generateBulkPDFs(
+        template.templateContent,
+        parsedData.data as Array<Record<string, any>>,
+        fieldMappings
+      );
+      
+      if (results.length === 0) {
+        return res.status(400).json({ message: "No PDFs could be generated" });
+      }
+      
+      // Create a ZIP file with all PDFs
+      const JSZip = await import('jszip').then(m => m.default);
+      const zip = new JSZip();
+      
+      results.forEach((result, index) => {
+        zip.file(result.fileName, result.data);
+      });
+      
+      const zipBuffer = await zip.generateAsync({ type: 'nodebuffer' });
+      
+      await logAudit(user.id, 'CREATE', 'bulk_authority_letters', `${results.length} PDFs`);
+      
+      // Send ZIP file
+      res.setHeader('Content-Type', 'application/zip');
+      res.setHeader('Content-Disposition', `attachment; filename="authority_letters_bulk_${Date.now()}.zip"`);
+      res.setHeader('Content-Length', zipBuffer.length);
+      
+      res.send(zipBuffer);
+    } catch (error) {
+      console.error("Error in bulk generation:", error);
+      res.status(500).json({ message: "Failed to generate bulk PDFs" });
+    }
+  });
+
+  // ===== END OF NEW PDF SYSTEM =====
 
   const httpServer = createServer(app);
   return httpServer;
