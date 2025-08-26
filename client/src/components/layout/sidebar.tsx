@@ -9,7 +9,8 @@ import {
   Building2, 
   Settings, 
   FileDown, 
-  History 
+  History,
+  FormInput
 } from "lucide-react";
 
 interface SidebarProps {
@@ -33,13 +34,14 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     navigation.push(
       { name: "Users", href: "/users", icon: Users, current: location === "/users" },
       { name: "Departments", href: "/departments", icon: Building2, current: location === "/departments" },
+      { name: "Custom Fields", href: "/settings", icon: FormInput, current: location === "/settings" },
+      { name: "Audit Logs", href: "/settings", icon: History, current: location === "/settings" },
       { name: "Settings", href: "/settings", icon: Settings, current: location === "/settings" }
     );
   }
 
   const secondaryNavigation = [
     { name: "Export Data", href: "/export", icon: FileDown },
-    { name: "Audit Logs", href: "/audit-logs", icon: History },
   ];
 
   return (
