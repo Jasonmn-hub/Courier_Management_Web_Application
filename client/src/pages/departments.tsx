@@ -2,11 +2,9 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import DepartmentForm from "@/components/departments/department-form";
-import PrintAuthorityForm from "@/components/print-authority/print-authority-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -81,81 +79,68 @@ export default function Departments() {
             </div>
           </div>
 
-          {/* Tabs for Departments and Authority Letter */}
+          {/* Department Management */}
           <div className="mt-8">
-            <Tabs defaultValue="departments" className="w-full">
-              <TabsList className="flex w-full">
-                <TabsTrigger value="departments" data-testid="tab-departments" className="flex-1">Departments</TabsTrigger>
-                <TabsTrigger value="authority_letter" data-testid="tab-authority-letter" className="flex-1">Authority Letter</TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="departments" className="mt-6">
-                <div className="mb-6">
-                  <Button 
-                    onClick={() => setShowDepartmentForm(true)}
-                    data-testid="button-add-department"
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Department
-                  </Button>
-                </div>
+            <div className="mb-6">
+              <Button 
+                onClick={() => setShowDepartmentForm(true)}
+                data-testid="button-add-department"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Department
+              </Button>
+            </div>
 
-                {/* Department List */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle>All Departments</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {departmentsLoading ? (
-                      <div className="flex justify-center py-4">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                      </div>
-                    ) : departments.length === 0 ? (
-                      <div className="text-center py-8 text-slate-500">
-                        No departments found. Add your first department to get started.
-                      </div>
-                    ) : (
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Name</TableHead>
-                            <TableHead>Created</TableHead>
-                            <TableHead>Actions</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {departments.map((dept) => (
-                            <TableRow key={dept.id}>
-                              <TableCell className="font-medium">{dept.name}</TableCell>
-                              <TableCell>
-                                {new Date(dept.createdAt).toLocaleDateString()}
-                              </TableCell>
-                              <TableCell>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => {
-                                    setEditingDepartment(dept);
-                                    setShowDepartmentForm(true);
-                                  }}
-                                  data-testid={`button-edit-${dept.id}`}
-                                >
-                                  Edit
-                                </Button>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    )}
-                  </CardContent>
-                </Card>
-              </TabsContent>
-              
-              <TabsContent value="authority_letter" className="mt-6">
-                <PrintAuthorityForm />
-              </TabsContent>
-            </Tabs>
+            {/* Department List */}
+            <Card>
+              <CardHeader>
+                <CardTitle>All Departments</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {departmentsLoading ? (
+                  <div className="flex justify-center py-4">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                  </div>
+                ) : departments.length === 0 ? (
+                  <div className="text-center py-8 text-slate-500">
+                    No departments found. Add your first department to get started.
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Created</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {departments.map((dept) => (
+                        <TableRow key={dept.id}>
+                          <TableCell className="font-medium">{dept.name}</TableCell>
+                          <TableCell>
+                            {new Date(dept.createdAt).toLocaleDateString()}
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setEditingDepartment(dept);
+                                setShowDepartmentForm(true);
+                              }}
+                              data-testid={`button-edit-${dept.id}`}
+                            >
+                              Edit
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
           </div>
         </div>
       </div>

@@ -9,6 +9,7 @@ import Landing from "@/pages/landing";
 import Dashboard from "@/pages/dashboard";
 import Couriers from "@/pages/couriers";
 import ReceivedCouriers from "@/pages/received-couriers";
+import AuthorityLetter from "@/pages/authority-letter";
 import Users from "@/pages/users";
 import Departments from "@/pages/departments";
 import Settings from "@/pages/settings";
@@ -39,6 +40,7 @@ function Router() {
             <Route path="/" component={Dashboard} />
             <Route path="/couriers" component={Couriers} />
             <Route path="/received-couriers" component={ReceivedCouriers} />
+            <Route path="/authority-letter" component={AuthorityLetter} />
             <Route path="/users" component={Users} />
             <Route path="/departments" component={Departments} />
             <Route path="/settings" component={Settings} />

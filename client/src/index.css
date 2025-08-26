@@ -107,8 +107,14 @@
     @apply font-sans antialiased bg-background text-foreground;
   }
   
-  /* Navigation tab styles */
-  [data-state="active"] {
+  /* Navigation tab styles - black text for page tabs */
+  [role="tablist"] [data-state="active"] {
+    color: black !important;
+    font-weight: 600 !important;
+  }
+  
+  /* Sidebar navigation styles - white text for active sidebar items */
+  nav [data-current="true"] {
     color: white !important;
     font-weight: 600 !important;
   }
