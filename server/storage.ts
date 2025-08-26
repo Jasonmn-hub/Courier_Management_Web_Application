@@ -7,6 +7,8 @@ import {
   departmentFields,
   smtpSettings,
   auditLogs,
+  authorityLetterTemplates,
+  authorityLetterFields,
   type User,
   type UpsertUser,
   type Department,
@@ -21,6 +23,10 @@ import {
   type InsertSmtpSettings,
   type AuditLog,
   type InsertAuditLog,
+  type AuthorityLetterTemplate,
+  type InsertAuthorityLetterTemplate,
+  type AuthorityLetterField,
+  type InsertAuthorityLetterField,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, ilike, or, sql } from "drizzle-orm";
@@ -90,12 +96,26 @@ export interface IStorage {
   getAuditLogs(limit?: number, offset?: number, startDate?: string, endDate?: string): Promise<{ logs: (AuditLog & { user?: User })[]; total: number }>;
   
   // Statistics
-  getCourierStats(): Promise<{
+  getCourierStats(departmentId?: number): Promise<{
     total: number;
     onTheWay: number;
     completed: number;
     thisMonth: number;
   }>;
+  
+  // Authority Letter Template operations
+  getAllAuthorityLetterTemplates(departmentId?: number): Promise<AuthorityLetterTemplate[]>;
+  getAuthorityLetterTemplate(id: number): Promise<AuthorityLetterTemplate | undefined>;
+  createAuthorityLetterTemplate(template: InsertAuthorityLetterTemplate): Promise<AuthorityLetterTemplate>;
+  updateAuthorityLetterTemplate(id: number, template: Partial<InsertAuthorityLetterTemplate>): Promise<AuthorityLetterTemplate | undefined>;
+  deleteAuthorityLetterTemplate(id: number): Promise<boolean>;
+  
+  // Authority Letter Field operations
+  getAllAuthorityLetterFields(departmentId?: number): Promise<AuthorityLetterField[]>;
+  getAuthorityLetterField(id: number): Promise<AuthorityLetterField | undefined>;
+  createAuthorityLetterField(field: InsertAuthorityLetterField): Promise<AuthorityLetterField>;
+  updateAuthorityLetterField(id: number, field: Partial<InsertAuthorityLetterField>): Promise<AuthorityLetterField | undefined>;
+  deleteAuthorityLetterField(id: number): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -484,7 +504,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Statistics
-  async getCourierStats(): Promise<{
+  async getCourierStats(departmentId?: number): Promise<{
     total: number;
     onTheWay: number;
     completed: number;
@@ -493,14 +513,37 @@ export class DatabaseStorage implements IStorage {
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-    const [onTheWayResult] = await db.select({ count: sql`count(*)` }).from(couriers).where(eq(couriers.status, 'on_the_way'));
-    const [completedResult] = await db.select({ count: sql`count(*)` }).from(couriers).where(eq(couriers.status, 'completed'));
-    const [thisMonthResult] = await db.select({ count: sql`count(*)` }).from(couriers).where(
-      and(
-        eq(couriers.status, 'on_the_way'),
-        sql`${couriers.createdAt} >= ${startOfMonth}`
-      )
-    );
+    // Build base conditions
+    const baseConditions = [
+      eq(couriers.status, 'on_the_way')
+    ];
+    
+    const completedConditions = [
+      eq(couriers.status, 'completed')
+    ];
+
+    // Add department filter if specified
+    if (departmentId) {
+      baseConditions.push(eq(couriers.departmentId, departmentId));
+      completedConditions.push(eq(couriers.departmentId, departmentId));
+    }
+
+    const [onTheWayResult] = await db.select({ count: sql`count(*)` })
+      .from(couriers)
+      .where(and(...baseConditions));
+      
+    const [completedResult] = await db.select({ count: sql`count(*)` })
+      .from(couriers)
+      .where(and(...completedConditions));
+      
+    const [thisMonthResult] = await db.select({ count: sql`count(*)` })
+      .from(couriers)
+      .where(
+        and(
+          ...baseConditions,
+          sql`${couriers.createdAt} >= ${startOfMonth}`
+        )
+      );
 
     const onTheWayCount = Number(onTheWayResult?.count || 0);
     const completedCount = Number(completedResult?.count || 0);
@@ -614,6 +657,74 @@ export class DatabaseStorage implements IStorage {
 
   async deleteReceivedCourier(id: number): Promise<boolean> {
     const result = await db.delete(receivedCouriers).where(eq(receivedCouriers.id, id));
+    return (result.rowCount || 0) > 0;
+  }
+
+  // Authority Letter Template methods
+  async getAllAuthorityLetterTemplates(departmentId?: number): Promise<AuthorityLetterTemplate[]> {
+    const query = db.select().from(authorityLetterTemplates);
+    
+    if (departmentId) {
+      return await query.where(eq(authorityLetterTemplates.departmentId, departmentId));
+    }
+    
+    return await query;
+  }
+
+  async getAuthorityLetterTemplate(id: number): Promise<AuthorityLetterTemplate | undefined> {
+    const [template] = await db.select().from(authorityLetterTemplates).where(eq(authorityLetterTemplates.id, id));
+    return template;
+  }
+
+  async createAuthorityLetterTemplate(template: InsertAuthorityLetterTemplate): Promise<AuthorityLetterTemplate> {
+    const [newTemplate] = await db.insert(authorityLetterTemplates).values(template).returning();
+    return newTemplate;
+  }
+
+  async updateAuthorityLetterTemplate(id: number, template: Partial<InsertAuthorityLetterTemplate>): Promise<AuthorityLetterTemplate | undefined> {
+    const [updatedTemplate] = await db.update(authorityLetterTemplates)
+      .set({ ...template, updatedAt: new Date() })
+      .where(eq(authorityLetterTemplates.id, id))
+      .returning();
+    return updatedTemplate;
+  }
+
+  async deleteAuthorityLetterTemplate(id: number): Promise<boolean> {
+    const result = await db.delete(authorityLetterTemplates).where(eq(authorityLetterTemplates.id, id));
+    return (result.rowCount || 0) > 0;
+  }
+
+  // Authority Letter Field methods
+  async getAllAuthorityLetterFields(departmentId?: number): Promise<AuthorityLetterField[]> {
+    const query = db.select().from(authorityLetterFields);
+    
+    if (departmentId) {
+      return await query.where(eq(authorityLetterFields.departmentId, departmentId));
+    }
+    
+    return await query;
+  }
+
+  async getAuthorityLetterField(id: number): Promise<AuthorityLetterField | undefined> {
+    const [field] = await db.select().from(authorityLetterFields).where(eq(authorityLetterFields.id, id));
+    return field;
+  }
+
+  async createAuthorityLetterField(field: InsertAuthorityLetterField): Promise<AuthorityLetterField> {
+    const [newField] = await db.insert(authorityLetterFields).values(field).returning();
+    return newField;
+  }
+
+  async updateAuthorityLetterField(id: number, field: Partial<InsertAuthorityLetterField>): Promise<AuthorityLetterField | undefined> {
+    const [updatedField] = await db.update(authorityLetterFields)
+      .set(field)
+      .where(eq(authorityLetterFields.id, id))
+      .returning();
+    return updatedField;
+  }
+
+  async deleteAuthorityLetterField(id: number): Promise<boolean> {
+    const result = await db.delete(authorityLetterFields).where(eq(authorityLetterFields.id, id));
     return (result.rowCount || 0) > 0;
   }
 }

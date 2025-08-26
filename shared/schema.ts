@@ -124,6 +124,28 @@ export const auditLogs = pgTable("audit_logs", {
   timestamp: timestamp("timestamp").defaultNow(),
 });
 
+// Authority letter templates table
+export const authorityLetterTemplates = pgTable('authority_letter_templates', {
+  id: serial('id').primaryKey(),
+  departmentId: integer('department_id').references(() => departments.id),
+  templateName: varchar('template_name', { length: 255 }).notNull(),
+  templateContent: text('template_content').notNull(),
+  isDefault: boolean('is_default').default(false),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// Authority letter fields table (for ##field## placeholders)
+export const authorityLetterFields = pgTable('authority_letter_fields', {
+  id: serial('id').primaryKey(),
+  departmentId: integer('department_id').references(() => departments.id),
+  fieldName: varchar('field_name', { length: 255 }).notNull(),
+  fieldLabel: varchar('field_label', { length: 255 }).notNull(),
+  fieldType: varchar('field_type', { length: 50 }).default('text').notNull(), // text, number, date
+  isRequired: boolean('is_required').default(false),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ one, many }) => ({
   department: one(departments, {
@@ -237,6 +259,17 @@ export const insertReceivedCourierSchema = createInsertSchema(receivedCouriers).
   updatedAt: true,
 });
 
+export const insertAuthorityLetterTemplateSchema = createInsertSchema(authorityLetterTemplates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertAuthorityLetterFieldSchema = createInsertSchema(authorityLetterFields).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Types
 export type UpsertUser = z.infer<typeof upsertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -253,3 +286,7 @@ export type SmtpSettings = typeof smtpSettings.$inferSelect;
 export type InsertSmtpSettings = z.infer<typeof insertSmtpSettingsSchema>;
 export type AuditLog = typeof auditLogs.$inferSelect;
 export type InsertAuditLog = z.infer<typeof insertAuditLogSchema>;
+export type AuthorityLetterTemplate = typeof authorityLetterTemplates.$inferSelect;
+export type InsertAuthorityLetterTemplate = z.infer<typeof insertAuthorityLetterTemplateSchema>;
+export type AuthorityLetterField = typeof authorityLetterFields.$inferSelect;
+export type InsertAuthorityLetterField = z.infer<typeof insertAuthorityLetterFieldSchema>;

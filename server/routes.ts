@@ -444,16 +444,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Courier routes
-  app.get('/api/couriers', authenticateToken, async (req: any, res) => {
+  app.get('/api/couriers', authenticateToken, setCurrentUser(), async (req: any, res) => {
     try {
       const { status, departmentId, search, limit = 10, offset = 0 } = req.query;
+      const user = req.currentUser;
       
       const filters: any = {};
       if (status) filters.status = status;
-      if (departmentId) filters.departmentId = parseInt(departmentId);
       if (search) filters.search = search;
       if (limit) filters.limit = parseInt(limit);
       if (offset) filters.offset = parseInt(offset);
+      
+      // Apply department filtering based on user role
+      if (user.role === 'admin') {
+        // Admin can see all departments or filter by specific department
+        if (departmentId) filters.departmentId = parseInt(departmentId);
+      } else {
+        // Non-admin users can only see their department's couriers
+        filters.departmentId = user.departmentId;
+      }
       
       const result = await storage.getAllCouriers(filters);
       res.json(result);
@@ -464,23 +473,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Export routes - Must be before :id route to avoid route conflicts
-  app.get('/api/couriers/export', authenticateToken, async (req: any, res) => {
+  app.get('/api/couriers/export', authenticateToken, setCurrentUser(), async (req: any, res) => {
     try {
       const { startDate, endDate } = req.query;
+      const user = req.currentUser;
       
-      // Get sent couriers with date filtering
-      const sentCouriers = await storage.getAllCouriers({ 
+      // Build filters based on user role
+      const courierFilters: any = { 
         limit: 10000,
         startDate,
         endDate
-      });
+      };
       
-      // Get received couriers with date filtering
-      const receivedCouriers = await storage.getAllReceivedCouriers({
+      const receivedFilters: any = {
         limit: 10000,
         startDate,
         endDate
-      });
+      };
+      
+      // Non-admin users can only export their department's data
+      if (user.role !== 'admin') {
+        courierFilters.departmentId = user.departmentId;
+        receivedFilters.departmentId = user.departmentId;
+      }
+      
+      // Get sent couriers with date and department filtering
+      const sentCouriers = await storage.getAllCouriers(courierFilters);
+      
+      // Get received couriers with date and department filtering
+      const receivedCouriers = await storage.getAllReceivedCouriers(receivedFilters);
       
       // Create CSV content
       const headers = ['Type', 'POD No', 'To Branch / From Location', 'Email', 'Vendor', 'Date', 'Status', 'Details', 'Contact Details', 'Remarks', 'Department', 'Created By'];
@@ -727,9 +748,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Statistics route
-  app.get('/api/stats', authenticateToken, async (req: any, res) => {
+  app.get('/api/stats', authenticateToken, setCurrentUser(), async (req: any, res) => {
     try {
-      const stats = await storage.getCourierStats();
+      const user = req.currentUser;
+      let departmentId: number | undefined = undefined;
+      
+      // Non-admin users can only see their department's stats
+      if (user.role !== 'admin') {
+        departmentId = user.departmentId;
+      }
+      
+      const stats = await storage.getCourierStats(departmentId);
       res.json(stats);
     } catch (error) {
       console.error("Error fetching stats:", error);
@@ -738,15 +767,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Received Couriers endpoints
-  app.get('/api/received-couriers', authenticateToken, async (req: any, res) => {
+  app.get('/api/received-couriers', authenticateToken, setCurrentUser(), async (req: any, res) => {
     try {
       const { departmentId, search, limit = 50, offset = 0 } = req.query;
+      const user = req.currentUser;
       
       const filters: any = {};
-      if (departmentId) filters.departmentId = parseInt(departmentId);
       if (search) filters.search = search;
       if (limit) filters.limit = parseInt(limit);
       if (offset) filters.offset = parseInt(offset);
+      
+      // Apply department filtering based on user role
+      if (user.role === 'admin') {
+        // Admin can see all departments or filter by specific department
+        if (departmentId) filters.departmentId = parseInt(departmentId);
+      } else {
+        // Non-admin users can only see their department's received couriers
+        filters.departmentId = user.departmentId;
+      }
       
       const couriers = await storage.getAllReceivedCouriers(filters);
       res.json(couriers);
@@ -857,7 +895,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Audit logs export route
-  app.get('/api/audit-logs/export', authenticateToken, requireRole(['admin']), async (req: any, res) => {
+  app.get('/api/audit-logs/export', authenticateToken, requireRole(['admin']), setCurrentUser(), async (req: any, res) => {
     try {
       const { startDate, endDate } = req.query;
       const result = await storage.getAuditLogs(10000, 0, startDate, endDate);
