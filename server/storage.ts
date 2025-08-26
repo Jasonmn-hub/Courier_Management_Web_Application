@@ -530,9 +530,12 @@ export class DatabaseStorage implements IStorage {
       eq(couriers.status, 'on_the_way')
     ];
     
-    // Build conditions for completed couriers (both completed status and received couriers)
+    // Build conditions for completed couriers (both completed status and received status)
     const completedConditions = [
-      eq(couriers.status, 'completed')
+      or(
+        eq(couriers.status, 'completed'),
+        eq(couriers.status, 'received')
+      )
     ];
 
     // Add department filter if specified
@@ -609,7 +612,10 @@ export class DatabaseStorage implements IStorage {
       ];
       
       let completedConditions = [
-        eq(couriers.status, 'completed'),
+        or(
+          eq(couriers.status, 'completed'),
+          eq(couriers.status, 'received')
+        ),
         sql`${couriers.createdAt} >= ${date}`,
         sql`${couriers.createdAt} < ${nextDate}`
       ];
