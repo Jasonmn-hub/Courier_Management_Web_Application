@@ -1284,12 +1284,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log(`Mapping ${fieldName} = ${value}`);
         }
         
-        // Replace placeholders in the document
+        // Read the document content and manually replace ##field## placeholders
+        const docText = doc.getFullText();
+        console.log('Original document contains:', docText.substring(0, 200));
+        
+        // Replace ##field## placeholders manually
+        let updatedText = docText;
+        
+        // Replace field placeholders
+        for (const [fieldName, value] of Object.entries(fieldValues || {})) {
+          const placeholder = `##${fieldName}##`;
+          const regex = new RegExp(placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
+          updatedText = updatedText.replace(regex, value as string);
+          console.log(`Replaced ${placeholder} with ${value}`);
+        }
+        
+        // Replace current date placeholder if it exists
+        updatedText = updatedText.replace(/##Current Date##/g, new Date().toLocaleDateString('en-GB'));
+        updatedText = updatedText.replace(/##currentDate##/g, new Date().toLocaleDateString('en-GB'));
+        
+        console.log('Updated text preview:', updatedText.substring(0, 300));
+        
+        // Since we can't easily modify the Word document text directly,
+        // let's try using docxtemplater's standard format by converting ##field## to {field}
+        const xmlContent = zip.files['word/document.xml'].asText();
+        let modifiedXmlContent = xmlContent;
+        
+        // Replace ##field## with {field} format for docxtemplater
+        for (const [fieldName, value] of Object.entries(fieldValues || {})) {
+          const oldPlaceholder = `##${fieldName}##`;
+          const newPlaceholder = `{${fieldName}}`;
+          modifiedXmlContent = modifiedXmlContent.replace(new RegExp(oldPlaceholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), newPlaceholder);
+        }
+        
+        // Update the zip with modified content
+        zip.file('word/document.xml', modifiedXmlContent);
+        
+        // Create new docxtemplater with updated content
+        const newDoc = new Docxtemplater(zip, {
+          paragraphLoop: true,
+          linebreaks: true,
+        });
+        
         console.log('Template data for rendering:', templateData);
-        doc.render(templateData);
+        newDoc.render(templateData);
         
         // Generate the final document
-        const output = doc.getZip().generate({
+        const output = newDoc.getZip().generate({
           type: 'nodebuffer',
           compression: 'DEFLATE',
         });
