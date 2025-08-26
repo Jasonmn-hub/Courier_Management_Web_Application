@@ -74,12 +74,62 @@ export default function AuthorityLetter() {
   // Generate letter mutation
   const generateMutation = useMutation({
     mutationFn: async (data: { departmentId: number; fieldValues: Record<string, string> }) => {
-      const res = await apiRequest('POST', '/api/authority-letter/generate-from-department', data);
-      return res.json();
+      const token = localStorage.getItem('authToken');
+      if (!token) throw new Error('No auth token');
+      
+      const response = await fetch('/api/authority-letter/generate-from-department', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(data)
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to generate authority letter');
+      }
+      
+      // Check if response is a Word document (binary) or JSON (text fallback)
+      const contentType = response.headers.get('content-type');
+      if (contentType?.includes('application/vnd.openxmlformats-officedocument.wordprocessingml.document')) {
+        // It's a Word document - trigger download directly
+        const blob = await response.blob();
+        const contentDisposition = response.headers.get('content-disposition');
+        const filename = contentDisposition?.match(/filename="(.+)"/)?.[1] || 'authority-letter.docx';
+        
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+        
+        return { isWordDocument: true, filename };
+      } else {
+        // It's JSON (text fallback)
+        return response.json();
+      }
     },
     onSuccess: (data) => {
-      setGeneratedContent(data.content);
-      toast({ title: "Success", description: "Authority letter generated successfully" });
+      if (data.isWordDocument) {
+        toast({ title: "Success", description: `Authority letter downloaded as ${data.filename}` });
+        setGeneratedContent("Word document downloaded successfully");
+      } else {
+        setGeneratedContent(data.content);
+        if (data.isTextFallback) {
+          toast({ 
+            title: "Generated (Text Fallback)", 
+            description: "Word document processing failed. Generated text version instead.",
+            variant: "destructive"
+          });
+        } else {
+          toast({ title: "Success", description: "Authority letter generated successfully" });
+        }
+      }
     },
     onError: (error: any) => {
       toast({ title: "Error", description: error.message || "Failed to generate authority letter", variant: "destructive" });
@@ -120,11 +170,16 @@ export default function AuthorityLetter() {
   };
 
   const handleDownload = () => {
-    if (!generatedContent) {
-      toast({ title: "Error", description: "Please generate a letter first", variant: "destructive" });
+    if (!generatedContent || generatedContent === "Word document downloaded successfully") {
+      toast({ 
+        title: "Info", 
+        description: "Word document was already downloaded automatically when generated",
+        variant: "default"
+      });
       return;
     }
 
+    // This is for text fallback downloads only
     const selectedDeptName = departmentsWithDocuments.find(d => d.id === selectedDepartment)?.name || 'letter';
     const blob = new Blob([generatedContent], { type: 'text/plain' });
     const url = window.URL.createObjectURL(blob);
@@ -136,7 +191,7 @@ export default function AuthorityLetter() {
     document.body.removeChild(a);
     window.URL.revokeObjectURL(url);
     
-    toast({ title: "Success", description: "Authority letter downloaded" });
+    toast({ title: "Success", description: "Authority letter downloaded as text file" });
   };
 
 

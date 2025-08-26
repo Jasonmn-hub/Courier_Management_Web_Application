@@ -7,6 +7,8 @@ import { z } from "zod";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
+import PizZip from "pizzip";
+import Docxtemplater from "docxtemplater";
 
 // Configure multer for file uploads
 const uploadDir = path.join(process.cwd(), 'uploads');
@@ -1205,28 +1207,77 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get department's custom fields
       const fields = await storage.getAllAuthorityLetterFields(departmentId);
       
-      // For now, we'll generate a text-based letter (in real implementation, you'd process the Word document)
-      // This is a placeholder implementation that demonstrates the flow
-      let content = `AUTHORITY LETTER\n\nGenerated on: ${new Date().toLocaleDateString()}\nDepartment: ${department.name}\n\n`;
-      
-      // Add field values
-      for (const [fieldName, value] of Object.entries(fieldValues || {})) {
-        const field = fields.find(f => f.fieldName === fieldName);
-        if (field) {
-          content += `${field.fieldLabel}: ${value}\n`;
-        }
+      // Read the uploaded Word document template
+      const documentPath = department.authorityDocumentPath;
+      if (!fs.existsSync(documentPath)) {
+        return res.status(404).json({ message: "Authority document file not found" });
       }
       
-      content += `\nThis authority letter was generated from ${department.name} department's uploaded Word document template.\n`;
-      content += `Document path: ${department.authorityDocumentPath}\n`;
-      
-      await logAudit(user.id, 'CREATE', 'authority_letter_generated', departmentId);
-      
-      res.json({
-        content,
-        departmentName: department.name,
-        generatedAt: new Date().toISOString()
-      });
+      try {
+        // Read the Word document
+        const content = fs.readFileSync(documentPath, 'binary');
+        const zip = new PizZip(content);
+        const doc = new Docxtemplater(zip, {
+          paragraphLoop: true,
+          linebreaks: true,
+        });
+        
+        // Prepare data for template replacement
+        const templateData: any = {
+          currentDate: new Date().toLocaleDateString('en-GB'), // DD/MM/YYYY format
+          departmentName: department.name,
+          generatedAt: new Date().toISOString(),
+          ...fieldValues
+        };
+        
+        // Replace placeholders in the document
+        doc.render(templateData);
+        
+        // Generate the final document
+        const output = doc.getZip().generate({
+          type: 'nodebuffer',
+          compression: 'DEFLATE',
+        });
+        
+        // Create filename for the generated document
+        const filename = `authority-letter-${department.name.replace(/\s+/g, '-').toLowerCase()}-${new Date().toISOString().split('T')[0]}.docx`;
+        
+        await logAudit(user.id, 'CREATE', 'authority_letter_generated', departmentId);
+        
+        // Set response headers for Word document download
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+        res.setHeader('Content-Length', output.length);
+        
+        // Send the Word document
+        res.send(output);
+        
+      } catch (docError) {
+        console.error("Error processing Word document:", docError);
+        
+        // Fallback to text-based generation if Word processing fails
+        let textContent = `AUTHORITY LETTER\n\nGenerated on: ${new Date().toLocaleDateString()}\nDepartment: ${department.name}\n\n`;
+        
+        // Add field values
+        for (const [fieldName, value] of Object.entries(fieldValues || {})) {
+          const field = fields.find(f => f.fieldName === fieldName);
+          if (field) {
+            textContent += `${field.fieldLabel}: ${value}\n`;
+          }
+        }
+        
+        textContent += `\nThis authority letter was generated from ${department.name} department's uploaded Word document template.\n`;
+        textContent += `Note: Word document processing failed, showing text version. Please check template format.\n`;
+        
+        await logAudit(user.id, 'CREATE', 'authority_letter_generated', departmentId);
+        
+        res.json({
+          content: textContent,
+          departmentName: department.name,
+          generatedAt: new Date().toISOString(),
+          isTextFallback: true
+        });
+      }
     } catch (error) {
       console.error("Error generating authority letter from department:", error);
       res.status(500).json({ message: "Failed to generate authority letter" });
