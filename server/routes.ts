@@ -1181,6 +1181,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Authority Letter Preview from Department Word Document
+  app.post('/api/authority-letter/preview-from-department', authenticateToken, setCurrentUser(), async (req: any, res) => {
+    try {
+      const { departmentId, fieldValues } = req.body;
+      const user = req.currentUser;
+      
+      // Get department
+      const departments = await storage.getAllDepartments();
+      const department = departments.find(d => d.id === departmentId);
+      if (!department) {
+        return res.status(404).json({ message: "Department not found" });
+      }
+      
+      // Check if user has access to this department
+      if (user.role !== 'admin' && user.departmentId !== departmentId) {
+        return res.status(403).json({ message: "Access denied to this department" });
+      }
+      
+      // Get department's custom fields
+      const fields = await storage.getAllAuthorityLetterFields(departmentId);
+      
+      // Generate preview content
+      let previewContent = `AUTHORITY LETTER\\n\\nGenerated on: ${new Date().toLocaleDateString('en-GB')}\\nDepartment: ${department.name}\\n\\n`;
+      
+      // Add field values to preview
+      for (const [fieldName, value] of Object.entries(fieldValues || {})) {
+        const field = fields.find(f => f.fieldName === fieldName);
+        if (field) {
+          previewContent += `${field.fieldLabel}: ${value || `##${fieldName}##`}\\n`;
+        }
+      }
+      
+      previewContent += `\\nThis authority letter will be generated using the uploaded Word document template with proper formatting and letterhead.\\n`;
+      
+      res.json({
+        content: previewContent,
+        departmentName: department.name,
+        generatedAt: new Date().toISOString(),
+        isPreview: true
+      });
+    } catch (error) {
+      console.error("Error generating authority letter preview:", error);
+      res.status(500).json({ message: "Failed to generate preview" });
+    }
+  });
+
   // Authority Letter Generation from Department Word Document
   app.post('/api/authority-letter/generate-from-department', authenticateToken, setCurrentUser(), async (req: any, res) => {
     try {
@@ -1226,11 +1272,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const templateData: any = {
           currentDate: new Date().toLocaleDateString('en-GB'), // DD/MM/YYYY format
           departmentName: department.name,
-          generatedAt: new Date().toISOString(),
-          ...fieldValues
+          generatedAt: new Date().toISOString()
         };
         
+        // Add field values with proper mapping
+        console.log('Field values received:', fieldValues);
+        console.log('Available fields in DB:', fields.map(f => ({ name: f.fieldName, label: f.fieldLabel })));
+        
+        for (const [fieldName, value] of Object.entries(fieldValues || {})) {
+          templateData[fieldName] = value;
+          console.log(`Mapping ${fieldName} = ${value}`);
+        }
+        
         // Replace placeholders in the document
+        console.log('Template data for rendering:', templateData);
         doc.render(templateData);
         
         // Generate the final document

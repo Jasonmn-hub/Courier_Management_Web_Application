@@ -71,8 +71,23 @@ export default function AuthorityLetter() {
     enabled: !!selectedDepartment,
   });
 
-  // Generate letter mutation
-  const generateMutation = useMutation({
+  // Preview letter mutation
+  const previewMutation = useMutation({
+    mutationFn: async (data: { departmentId: number; fieldValues: Record<string, string> }) => {
+      const res = await apiRequest('POST', '/api/authority-letter/preview-from-department', data);
+      return res.json();
+    },
+    onSuccess: (data) => {
+      setGeneratedContent(data.content);
+      toast({ title: "Preview Generated", description: "Authority letter preview updated" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Failed to generate preview", variant: "destructive" });
+    },
+  });
+
+  // Download letter mutation
+  const downloadMutation = useMutation({
     mutationFn: async (data: { departmentId: number; fieldValues: Record<string, string> }) => {
       const token = localStorage.getItem('auth_token');
       if (!token) throw new Error('No auth token');
@@ -116,23 +131,21 @@ export default function AuthorityLetter() {
     },
     onSuccess: (data) => {
       if (data.isWordDocument) {
-        toast({ title: "Success", description: `Authority letter downloaded as ${data.filename}` });
-        setGeneratedContent("Word document downloaded successfully");
+        toast({ title: "Success", description: `Word document downloaded: ${data.filename}` });
       } else {
-        setGeneratedContent(data.content);
         if (data.isTextFallback) {
           toast({ 
-            title: "Generated (Text Fallback)", 
-            description: "Word document processing failed. Generated text version instead.",
+            title: "Downloaded (Text Fallback)", 
+            description: "Word document processing failed. Downloaded text version instead.",
             variant: "destructive"
           });
         } else {
-          toast({ title: "Success", description: "Authority letter generated successfully" });
+          toast({ title: "Success", description: "Authority letter downloaded successfully" });
         }
       }
     },
     onError: (error: any) => {
-      toast({ title: "Error", description: error.message || "Failed to generate authority letter", variant: "destructive" });
+      toast({ title: "Error", description: error.message || "Failed to download authority letter", variant: "destructive" });
     },
   });
 
@@ -144,7 +157,19 @@ export default function AuthorityLetter() {
     }));
   };
 
-  const handleGenerate = () => {
+  const handlePreview = () => {
+    if (!selectedDepartment) {
+      toast({ title: "Error", description: "Please select a department", variant: "destructive" });
+      return;
+    }
+
+    previewMutation.mutate({
+      departmentId: selectedDepartment,
+      fieldValues
+    });
+  };
+
+  const handleDownloadWord = () => {
     if (!selectedDepartment) {
       toast({ title: "Error", description: "Please select a department", variant: "destructive" });
       return;
@@ -163,36 +188,22 @@ export default function AuthorityLetter() {
       return;
     }
     
-    generateMutation.mutate({
+    downloadMutation.mutate({
       departmentId: selectedDepartment,
       fieldValues
     });
   };
 
-  const handleDownload = () => {
-    if (!generatedContent || generatedContent === "Word document downloaded successfully") {
-      toast({ 
-        title: "Info", 
-        description: "Word document was already downloaded automatically when generated",
-        variant: "default"
-      });
-      return;
+  // Auto-preview when field values change
+  useEffect(() => {
+    if (selectedDepartment && fields.length > 0) {
+      const timer = setTimeout(() => {
+        handlePreview();
+      }, 500);
+      return () => clearTimeout(timer);
     }
+  }, [fieldValues, selectedDepartment, fields]);
 
-    // This is for text fallback downloads only
-    const selectedDeptName = departmentsWithDocuments.find(d => d.id === selectedDepartment)?.name || 'letter';
-    const blob = new Blob([generatedContent], { type: 'text/plain' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${selectedDeptName}-authority-letter-${new Date().toISOString().split('T')[0]}.txt`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
-    
-    toast({ title: "Success", description: "Authority letter downloaded as text file" });
-  };
 
 
   useEffect(() => {
@@ -348,21 +359,21 @@ export default function AuthorityLetter() {
 
                 <div className="flex gap-4 pt-4">
                   <Button 
-                    onClick={handleGenerate} 
-                    className="flex-1"
-                    disabled={generateMutation.isPending || !selectedDepartment || fields.length === 0}
-                    data-testid="button-generate"
+                    onClick={handlePreview} 
+                    variant="outline"
+                    disabled={previewMutation.isPending || !selectedDepartment || fields.length === 0}
+                    data-testid="button-preview"
                   >
-                    {generateMutation.isPending ? "Generating..." : "Generate Letter"}
+                    {previewMutation.isPending ? "Updating..." : "Update Preview"}
                   </Button>
                   <Button 
-                    onClick={handleDownload} 
-                    variant="outline" 
-                    disabled={!generatedContent}
-                    data-testid="button-download"
+                    onClick={handleDownloadWord} 
+                    className="flex-1"
+                    disabled={downloadMutation.isPending || !selectedDepartment || fields.length === 0}
+                    data-testid="button-download-word"
                   >
                     <FileDown className="h-4 w-4 mr-2" />
-                    Download
+                    {downloadMutation.isPending ? "Generating..." : "Download Word Document"}
                   </Button>
                 </div>
               </CardContent>
