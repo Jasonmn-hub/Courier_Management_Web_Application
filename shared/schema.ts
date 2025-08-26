@@ -9,6 +9,7 @@ import {
   text,
   date,
   integer,
+  boolean,
   pgEnum,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
@@ -96,6 +97,10 @@ export const receivedCouriers = pgTable("received_couriers", {
   fromLocation: varchar("from_location", { length: 200 }).notNull(), // Branch/Other
   courierVendor: varchar("courier_vendor", { length: 100 }).notNull(),
   customVendor: varchar("custom_vendor", { length: 100 }),
+  receiverName: varchar("receiver_name", { length: 100 }),
+  emailId: varchar("email_id", { length: 100 }),
+  sendEmailNotification: boolean("send_email_notification").default(false),
+  customDepartment: varchar("custom_department", { length: 100 }),
   remarks: text("remarks"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

@@ -31,6 +31,7 @@ import {
   SelectTrigger,
   SelectValue 
 } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Calendar } from "@/components/ui/calendar";
 import {
   Popover,
@@ -64,6 +65,11 @@ export default function ReceivedCouriers() {
     fromLocation: "",
     courierVendor: "",
     customVendor: "",
+    departmentId: undefined,
+    customDepartment: "",
+    receiverName: "",
+    emailId: "",
+    sendEmailNotification: false,
     remarks: "",
   });
   const [selectedDate, setSelectedDate] = useState<Date>();
@@ -116,6 +122,11 @@ export default function ReceivedCouriers() {
       fromLocation: "",
       courierVendor: "",
       customVendor: "",
+      departmentId: undefined,
+      customDepartment: "",
+      receiverName: "",
+      emailId: "",
+      sendEmailNotification: false,
       remarks: "",
     });
     setSelectedDate(undefined);
@@ -193,9 +204,11 @@ export default function ReceivedCouriers() {
                         <TableHead>POD Number</TableHead>
                         <TableHead>Received Date</TableHead>
                         <TableHead>From</TableHead>
+                        <TableHead>Department</TableHead>
+                        <TableHead>Receiver</TableHead>
                         <TableHead>Courier Vendor</TableHead>
+                        <TableHead>Email</TableHead>
                         <TableHead>Remarks</TableHead>
-                        <TableHead>Created</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -210,14 +223,25 @@ export default function ReceivedCouriers() {
                           <TableCell data-testid={`text-from-${courier.id}`}>
                             {courier.fromLocation}
                           </TableCell>
+                          <TableCell data-testid={`text-department-${courier.id}`}>
+                            {(courier as any).departmentName || (courier as any).customDepartment || '-'}
+                          </TableCell>
+                          <TableCell data-testid={`text-receiver-${courier.id}`}>
+                            {(courier as any).receiverName || '-'}
+                          </TableCell>
                           <TableCell data-testid={`text-vendor-${courier.id}`}>
-                            {courier.courierVendor}
+                            {courier.courierVendor === 'Others' && (courier as any).customVendor 
+                              ? (courier as any).customVendor 
+                              : courier.courierVendor}
+                          </TableCell>
+                          <TableCell data-testid={`text-email-${courier.id}`}>
+                            {(courier as any).emailId || '-'}
+                            {(courier as any).sendEmailNotification && (courier as any).emailId && (
+                              <span className="ml-1 text-green-600">📧</span>
+                            )}
                           </TableCell>
                           <TableCell data-testid={`text-remarks-${courier.id}`}>
                             {courier.remarks || '-'}
-                          </TableCell>
-                          <TableCell data-testid={`text-created-${courier.id}`}>
-                            {courier.createdAt ? new Date(courier.createdAt).toLocaleDateString() : '-'}
                           </TableCell>
                         </TableRow>
                       ))}
@@ -291,6 +315,58 @@ export default function ReceivedCouriers() {
               </div>
 
               <div>
+                <Label htmlFor="department">Related Department *</Label>
+                <Select
+                  value={formData.departmentId?.toString() || ""}
+                  onValueChange={(value) => {
+                    if (value === "other") {
+                      setFormData({ ...formData, departmentId: undefined });
+                    } else {
+                      setFormData({ ...formData, departmentId: parseInt(value), customDepartment: "" });
+                    }
+                  }}
+                >
+                  <SelectTrigger data-testid="select-department">
+                    <SelectValue placeholder="Select department" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {departments.map((dept) => (
+                      <SelectItem key={dept.id} value={dept.id.toString()}>
+                        {dept.name}
+                      </SelectItem>
+                    ))}
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Custom Department Field (when "Other" is selected) */}
+              {formData.departmentId === undefined && (
+                <div>
+                  <Label htmlFor="customDepartment">Custom Department Name *</Label>
+                  <Input
+                    id="customDepartment"
+                    value={formData.customDepartment || ""}
+                    onChange={(e) => setFormData({ ...formData, customDepartment: e.target.value })}
+                    placeholder="Enter department name"
+                    required
+                    data-testid="input-custom-department"
+                  />
+                </div>
+              )}
+
+              <div>
+                <Label htmlFor="receiverName">Receiver Name</Label>
+                <Input
+                  id="receiverName"
+                  value={formData.receiverName || ""}
+                  onChange={(e) => setFormData({ ...formData, receiverName: e.target.value })}
+                  placeholder="Name of person who received"
+                  data-testid="input-receiver-name"
+                />
+              </div>
+
+              <div>
                 <Label htmlFor="courierVendor">Courier Vendor *</Label>
                 <Select
                   value={formData.courierVendor || ""}
@@ -324,6 +400,35 @@ export default function ReceivedCouriers() {
                     required
                     data-testid="input-custom-courier-vendor"
                   />
+                </div>
+              )}
+
+              <div>
+                <Label htmlFor="emailId">Email ID</Label>
+                <Input
+                  id="emailId"
+                  type="email"
+                  value={formData.emailId || ""}
+                  onChange={(e) => setFormData({ ...formData, emailId: e.target.value })}
+                  placeholder="email@example.com"
+                  data-testid="input-email-id"
+                />
+              </div>
+
+              {/* Email Notification Checkbox */}
+              {formData.emailId && (
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="sendNotification"
+                    checked={formData.sendEmailNotification || false}
+                    onCheckedChange={(checked) => 
+                      setFormData({ ...formData, sendEmailNotification: !!checked })
+                    }
+                    data-testid="checkbox-send-notification"
+                  />
+                  <Label htmlFor="sendNotification" className="text-sm">
+                    Send email notification to this address
+                  </Label>
                 </div>
               )}
 
