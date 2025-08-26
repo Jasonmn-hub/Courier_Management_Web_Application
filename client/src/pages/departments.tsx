@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Plus, FileText, Upload, Edit, Trash2 } from "lucide-react";
+import { Plus, FileText, Upload, Edit, Trash2, Settings } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import DepartmentForm from "@/components/departments/department-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -42,6 +42,8 @@ export default function Departments() {
   const [showDocumentUpload, setShowDocumentUpload] = useState(false);
   const [selectedDepartmentForUpload, setSelectedDepartmentForUpload] = useState<Department | null>(null);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [showFieldsManager, setShowFieldsManager] = useState(false);
+  const [selectedDepartmentForFields, setSelectedDepartmentForFields] = useState<Department | null>(null);
 
   // Redirect to home if not authenticated or not admin
   useEffect(() => {
@@ -63,6 +65,19 @@ export default function Departments() {
     enabled: isAuthenticated && (user as User)?.role === 'admin',
   });
 
+  // Fetch authority letter fields for selected department
+  const { data: departmentFields = [], isLoading: fieldsLoading, refetch: refetchFields } = useQuery<any[]>({
+    queryKey: ['/api/authority-letter-fields'],
+    queryFn: async () => {
+      if (!selectedDepartmentForFields) return [];
+      const response = await apiRequest('GET', `/api/authority-letter-fields?departmentId=${selectedDepartmentForFields.id}`);
+      return response.json();
+    },
+    enabled: !!selectedDepartmentForFields,
+  });
+
+  const [newField, setNewField] = useState({ fieldName: '', fieldLabel: '', fieldType: 'text', isRequired: false });
+
   // Upload document mutation
   const uploadDocumentMutation = useMutation({
     mutationFn: async ({ departmentId, file }: { departmentId: number; file: File }) => {
@@ -70,16 +85,18 @@ export default function Departments() {
       formData.append('document', file);
       formData.append('departmentId', departmentId.toString());
 
+      const token = localStorage.getItem('auth_token');
       const response = await fetch('/api/departments/upload-document', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+          'Authorization': `Bearer ${token}`
         },
         body: formData,
       });
 
       if (!response.ok) {
-        throw new Error('Failed to upload document');
+        const errorText = await response.text();
+        throw new Error(errorText || 'Failed to upload document');
       }
 
       return response.json();
@@ -102,6 +119,67 @@ export default function Departments() {
       });
     },
   });
+
+  // Create field mutation
+  const createFieldMutation = useMutation({
+    mutationFn: async (fieldData: any) => {
+      const response = await apiRequest('POST', '/api/authority-letter-fields', {
+        ...fieldData,
+        departmentId: selectedDepartmentForFields?.id
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Field created successfully.",
+      });
+      refetchFields();
+      setNewField({ fieldName: '', fieldLabel: '', fieldType: 'text', isRequired: false });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create field.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Delete field mutation
+  const deleteFieldMutation = useMutation({
+    mutationFn: async (fieldId: number) => {
+      const response = await apiRequest('DELETE', `/api/authority-letter-fields/${fieldId}`);
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Field deleted successfully.",
+      });
+      refetchFields();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete field.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleCreateField = () => {
+    if (!newField.fieldName.trim() || !newField.fieldLabel.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Field name and label are required.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    createFieldMutation.mutate(newField);
+  };
 
   const handleFileUpload = () => {
     if (!uploadFile || !selectedDepartmentForUpload) return;
@@ -226,18 +304,35 @@ export default function Departments() {
                             {new Date(dept.createdAt).toLocaleDateString()}
                           </TableCell>
                           <TableCell>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                setEditingDepartment(dept);
-                                setShowDepartmentForm(true);
-                              }}
-                              data-testid={`button-edit-${dept.id}`}
-                            >
-                              <Edit className="h-3 w-3 mr-1" />
-                              Edit
-                            </Button>
+                            <div className="flex space-x-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setEditingDepartment(dept);
+                                  setShowDepartmentForm(true);
+                                }}
+                                data-testid={`button-edit-${dept.id}`}
+                              >
+                                <Edit className="h-3 w-3 mr-1" />
+                                Edit
+                              </Button>
+                              {dept.authorityDocumentPath && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    setSelectedDepartmentForFields(dept);
+                                    setShowFieldsManager(true);
+                                  }}
+                                  className="text-blue-600 hover:text-blue-800"
+                                  data-testid={`button-manage-fields-${dept.id}`}
+                                >
+                                  <Settings className="h-3 w-3 mr-1" />
+                                  Manage Fields
+                                </Button>
+                              )}
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -337,6 +432,131 @@ export default function Departments() {
                     Upload Document
                   </>
                 )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Fields Manager Modal */}
+      {showFieldsManager && selectedDepartmentForFields && (
+        <Dialog open={showFieldsManager} onOpenChange={setShowFieldsManager}>
+          <DialogContent className="sm:max-w-[600px]">
+            <DialogHeader>
+              <DialogTitle>Manage Custom Fields - {selectedDepartmentForFields.name}</DialogTitle>
+              <DialogDescription>
+                Create custom fields for ## ## placeholders in your Word document. Users will fill these fields when generating authority letters.
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="grid gap-4 py-4">
+              {/* Add New Field */}
+              <div className="space-y-4 p-4 border rounded-lg">
+                <h4 className="font-semibold">Add New Field</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium">Field Name (for ##name##)</label>
+                    <Input
+                      placeholder="e.g., employee_name"
+                      value={newField.fieldName}
+                      onChange={(e) => setNewField({...newField, fieldName: e.target.value})}
+                      data-testid="input-field-name"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Field Label (for users)</label>
+                    <Input
+                      placeholder="e.g., Employee Name"
+                      value={newField.fieldLabel}
+                      onChange={(e) => setNewField({...newField, fieldLabel: e.target.value})}
+                      data-testid="input-field-label"
+                    />
+                  </div>
+                </div>
+                <div className="flex items-center space-x-4">
+                  <div>
+                    <label className="text-sm font-medium">Type</label>
+                    <select
+                      value={newField.fieldType}
+                      onChange={(e) => setNewField({...newField, fieldType: e.target.value})}
+                      className="w-24 h-9 px-3 border border-input bg-background text-sm rounded-md"
+                      data-testid="select-field-type"
+                    >
+                      <option value="text">Text</option>
+                      <option value="number">Number</option>
+                      <option value="date">Date</option>
+                    </select>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="required-field"
+                      checked={newField.isRequired}
+                      onChange={(e) => setNewField({...newField, isRequired: e.target.checked})}
+                      data-testid="checkbox-field-required"
+                    />
+                    <label htmlFor="required-field" className="text-sm">Required</label>
+                  </div>
+                  <Button
+                    onClick={handleCreateField}
+                    disabled={createFieldMutation.isPending}
+                    size="sm"
+                    data-testid="button-add-field"
+                  >
+                    {createFieldMutation.isPending ? 'Adding...' : 'Add Field'}
+                  </Button>
+                </div>
+              </div>
+
+              {/* Existing Fields */}
+              <div className="space-y-4">
+                <h4 className="font-semibold">Existing Fields</h4>
+                {fieldsLoading ? (
+                  <div className="text-center py-4">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto"></div>
+                  </div>
+                ) : departmentFields.length === 0 ? (
+                  <p className="text-slate-500 text-center py-4">No fields created yet. Add your first field above.</p>
+                ) : (
+                  <div className="space-y-2 max-h-64 overflow-y-auto">
+                    {departmentFields.map((field: any) => (
+                      <div key={field.id} className="flex items-center justify-between p-3 border rounded">
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-4">
+                            <span className="font-mono text-sm bg-slate-100 px-2 py-1 rounded">##${field.fieldName}##</span>
+                            <span className="font-medium">{field.fieldLabel}</span>
+                            <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">{field.fieldType}</span>
+                            {field.isRequired && <span className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded">Required</span>}
+                          </div>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => deleteFieldMutation.mutate(field.id)}
+                          disabled={deleteFieldMutation.isPending}
+                          className="text-red-600 hover:text-red-800"
+                          data-testid={`button-delete-field-${field.id}`}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowFieldsManager(false);
+                  setSelectedDepartmentForFields(null);
+                  setNewField({ fieldName: '', fieldLabel: '', fieldType: 'text', isRequired: false });
+                }}
+                data-testid="button-close-fields-manager"
+              >
+                Close
               </Button>
             </DialogFooter>
           </DialogContent>

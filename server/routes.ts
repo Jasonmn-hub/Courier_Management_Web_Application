@@ -1126,8 +1126,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = req.currentUser;
       let departmentId: number | undefined = undefined;
       
-      // Non-admin users can only see their department's fields
-      if (user.role !== 'admin') {
+      // Handle department filtering from query parameter
+      const queryDepartmentId = req.query.departmentId;
+      if (queryDepartmentId) {
+        departmentId = parseInt(queryDepartmentId);
+      } else if (user.role !== 'admin') {
+        // Non-admin users can only see their department's fields
         departmentId = user.departmentId;
       }
       
@@ -1153,6 +1157,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       console.error("Error creating authority letter field:", error);
       res.status(500).json({ message: "Failed to create field" });
+    }
+  });
+
+  // Delete authority letter field
+  app.delete('/api/authority-letter-fields/:id', authenticateToken, requireRole(['admin']), setCurrentUser(), async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteAuthorityLetterField(id);
+      
+      if (!success) {
+        return res.status(404).json({ message: "Field not found" });
+      }
+      
+      await logAudit(req.currentUser.id, 'DELETE', 'authority_letter_field', id);
+      
+      res.json({ message: "Field deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting authority letter field:", error);
+      res.status(500).json({ message: "Failed to delete field" });
     }
   });
 
