@@ -513,46 +513,64 @@ export class DatabaseStorage implements IStorage {
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-    // Build base conditions
-    const baseConditions = [
+    // Build base conditions for on the way couriers
+    const onTheWayConditions = [
       eq(couriers.status, 'on_the_way')
     ];
     
+    // Build conditions for completed couriers (both completed status and received couriers)
     const completedConditions = [
       eq(couriers.status, 'completed')
     ];
 
     // Add department filter if specified
     if (departmentId) {
-      baseConditions.push(eq(couriers.departmentId, departmentId));
+      onTheWayConditions.push(eq(couriers.departmentId, departmentId));
       completedConditions.push(eq(couriers.departmentId, departmentId));
     }
 
+    // Get on the way count
     const [onTheWayResult] = await db.select({ count: sql`count(*)` })
       .from(couriers)
-      .where(and(...baseConditions));
+      .where(and(...onTheWayConditions));
       
+    // Get completed count from couriers table
     const [completedResult] = await db.select({ count: sql`count(*)` })
       .from(couriers)
       .where(and(...completedConditions));
+
+    // Get received couriers count (these are also "completed")
+    let receivedConditions = [];
+    if (departmentId) {
+      receivedConditions.push(eq(receivedCouriers.departmentId, departmentId));
+    }
+
+    const [receivedResult] = await db.select({ count: sql`count(*)` })
+      .from(receivedCouriers)
+      .where(receivedConditions.length > 0 ? and(...receivedConditions) : sql`1=1`);
       
+    // Get this month's on the way count
     const [thisMonthResult] = await db.select({ count: sql`count(*)` })
       .from(couriers)
       .where(
         and(
-          ...baseConditions,
+          ...onTheWayConditions,
           sql`${couriers.createdAt} >= ${startOfMonth}`
         )
       );
 
     const onTheWayCount = Number(onTheWayResult?.count || 0);
     const completedCount = Number(completedResult?.count || 0);
+    const receivedCount = Number(receivedResult?.count || 0);
     const thisMonthCount = Number(thisMonthResult?.count || 0);
 
+    // Total completed includes both completed couriers and received couriers
+    const totalCompleted = completedCount + receivedCount;
+
     return {
-      total: onTheWayCount + completedCount,
+      total: onTheWayCount + totalCompleted,
       onTheWay: onTheWayCount,
-      completed: completedCount,
+      completed: totalCompleted,
       thisMonth: thisMonthCount,
     };
   }

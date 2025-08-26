@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { authenticateToken, requireRole, hashPassword, comparePassword, generateToken } from "./auth";
-import { insertCourierSchema, insertDepartmentSchema, insertFieldSchema, insertSmtpSettingsSchema, insertReceivedCourierSchema } from "@shared/schema";
+import { insertCourierSchema, insertDepartmentSchema, insertFieldSchema, insertSmtpSettingsSchema, insertReceivedCourierSchema, insertAuthorityLetterTemplateSchema, insertAuthorityLetterFieldSchema } from "@shared/schema";
 import { z } from "zod";
 import multer from "multer";
 import path from "path";
@@ -939,6 +939,159 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.sendFile(filePath);
     } else {
       res.status(404).json({ message: "File not found" });
+    }
+  });
+
+  // Authority Letter Template routes
+  app.get('/api/authority-letter-templates', authenticateToken, setCurrentUser(), async (req: any, res) => {
+    try {
+      const user = req.currentUser;
+      let departmentId: number | undefined = undefined;
+      
+      // Non-admin users can only see their department's templates
+      if (user.role !== 'admin') {
+        departmentId = user.departmentId;
+      }
+      
+      const templates = await storage.getAllAuthorityLetterTemplates(departmentId);
+      res.json(templates);
+    } catch (error) {
+      console.error("Error fetching authority letter templates:", error);
+      res.status(500).json({ message: "Failed to fetch templates" });
+    }
+  });
+
+  app.post('/api/authority-letter-templates', authenticateToken, requireRole(['admin']), setCurrentUser(), async (req: any, res) => {
+    try {
+      const validatedData = insertAuthorityLetterTemplateSchema.parse(req.body);
+      const template = await storage.createAuthorityLetterTemplate(validatedData);
+      
+      await logAudit(req.currentUser.id, 'CREATE', 'authority_letter_template', template.id);
+      
+      res.status(201).json(template);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      console.error("Error creating authority letter template:", error);
+      res.status(500).json({ message: "Failed to create template" });
+    }
+  });
+
+  app.put('/api/authority-letter-templates/:id', authenticateToken, requireRole(['admin']), setCurrentUser(), async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const validatedData = insertAuthorityLetterTemplateSchema.partial().parse(req.body);
+      
+      const template = await storage.updateAuthorityLetterTemplate(id, validatedData);
+      if (!template) {
+        return res.status(404).json({ message: "Template not found" });
+      }
+      
+      await logAudit(req.currentUser.id, 'UPDATE', 'authority_letter_template', template.id);
+      
+      res.json(template);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      console.error("Error updating authority letter template:", error);
+      res.status(500).json({ message: "Failed to update template" });
+    }
+  });
+
+  app.delete('/api/authority-letter-templates/:id', authenticateToken, requireRole(['admin']), setCurrentUser(), async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteAuthorityLetterTemplate(id);
+      
+      if (!success) {
+        return res.status(404).json({ message: "Template not found" });
+      }
+      
+      await logAudit(req.currentUser.id, 'DELETE', 'authority_letter_template', id);
+      
+      res.json({ message: "Template deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting authority letter template:", error);
+      res.status(500).json({ message: "Failed to delete template" });
+    }
+  });
+
+  // Authority Letter Field routes
+  app.get('/api/authority-letter-fields', authenticateToken, setCurrentUser(), async (req: any, res) => {
+    try {
+      const user = req.currentUser;
+      let departmentId: number | undefined = undefined;
+      
+      // Non-admin users can only see their department's fields
+      if (user.role !== 'admin') {
+        departmentId = user.departmentId;
+      }
+      
+      const fields = await storage.getAllAuthorityLetterFields(departmentId);
+      res.json(fields);
+    } catch (error) {
+      console.error("Error fetching authority letter fields:", error);
+      res.status(500).json({ message: "Failed to fetch fields" });
+    }
+  });
+
+  app.post('/api/authority-letter-fields', authenticateToken, requireRole(['admin']), setCurrentUser(), async (req: any, res) => {
+    try {
+      const validatedData = insertAuthorityLetterFieldSchema.parse(req.body);
+      const field = await storage.createAuthorityLetterField(validatedData);
+      
+      await logAudit(req.currentUser.id, 'CREATE', 'authority_letter_field', field.id);
+      
+      res.status(201).json(field);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      console.error("Error creating authority letter field:", error);
+      res.status(500).json({ message: "Failed to create field" });
+    }
+  });
+
+  // Authority Letter Generation route
+  app.post('/api/authority-letter/generate', authenticateToken, setCurrentUser(), async (req: any, res) => {
+    try {
+      const { templateId, fieldValues } = req.body;
+      const user = req.currentUser;
+      
+      const template = await storage.getAuthorityLetterTemplate(templateId);
+      if (!template) {
+        return res.status(404).json({ message: "Template not found" });
+      }
+      
+      // Check if user has access to this department's template
+      if (user.role !== 'admin' && template.departmentId !== user.departmentId) {
+        return res.status(403).json({ message: "Access denied to this template" });
+      }
+      
+      // Replace placeholders in template content
+      let content = template.templateContent;
+      
+      // Replace ##field## placeholders with actual values
+      for (const [fieldName, value] of Object.entries(fieldValues || {})) {
+        const placeholder = `##${fieldName}##`;
+        content = content.replace(new RegExp(placeholder, 'g'), value as string);
+      }
+      
+      // Add current date
+      content = content.replace(/##Current Date##/g, new Date().toLocaleDateString());
+      
+      await logAudit(user.id, 'CREATE', 'authority_letter_generated', templateId);
+      
+      res.json({
+        content,
+        templateName: template.templateName,
+        generatedAt: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error("Error generating authority letter:", error);
+      res.status(500).json({ message: "Failed to generate authority letter" });
     }
   });
 

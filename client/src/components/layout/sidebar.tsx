@@ -32,7 +32,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     { name: "Authority Letter", href: "/authority-letter", icon: FileDown, current: location === "/authority-letter" },
   ];
 
-  // Admin navigation items with proper grouping
+  // Admin and Manager navigation items with proper grouping
   const adminNavigation = (user as any)?.role === 'admin' ? [
     { name: "Users & Roles", href: "/users", icon: Users, current: location === "/users", group: "management" },
     { name: "Departments", href: "/departments", icon: Building2, current: location === "/departments", group: "management" },
@@ -41,6 +41,14 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     { name: "Audit Logs", href: "/audit-logs", icon: History, current: location === "/audit-logs", group: "settings" },
     { name: "Export Data", href: "/export", icon: FileDown, group: "tools" },
   ] : [];
+
+  // Manager navigation items (export access)
+  const managerNavigation = ((user as any)?.role === 'manager') ? [
+    { name: "Export Data", href: "/export", icon: FileDown, group: "tools" },
+  ] : [];
+
+  // Combine admin and manager navigation
+  const privilegedNavigation = [...adminNavigation, ...managerNavigation];
 
   const handleLogout = () => {
     localStorage.removeItem('auth_token');
@@ -66,13 +74,13 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
               </svg>
             </button>
           </div>
-          <SidebarContent navigation={navigation} adminNavigation={adminNavigation} user={user} onLogout={handleLogout} />
+          <SidebarContent navigation={navigation} adminNavigation={privilegedNavigation} user={user} onLogout={handleLogout} />
         </div>
       </div>
 
       {/* Desktop sidebar */}
       <div className="hidden lg:flex lg:w-64 lg:flex-col">
-        <SidebarContent navigation={navigation} adminNavigation={adminNavigation} user={user} onLogout={handleLogout} />
+        <SidebarContent navigation={navigation} adminNavigation={privilegedNavigation} user={user} onLogout={handleLogout} />
       </div>
     </>
   );
