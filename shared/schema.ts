@@ -143,6 +143,7 @@ export const authorityLetterFields = pgTable('authority_letter_fields', {
   fieldName: varchar('field_name', { length: 255 }).notNull(),
   fieldLabel: varchar('field_label', { length: 255 }).notNull(),
   fieldType: varchar('field_type', { length: 50 }).default('text').notNull(), // text, number, date
+  textTransform: varchar('text_transform', { length: 20 }).default('none'), // none, uppercase, capitalize, toggle
   isRequired: boolean('is_required').default(false),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });

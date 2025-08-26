@@ -76,7 +76,7 @@ export default function Departments() {
     enabled: !!selectedDepartmentForFields,
   });
 
-  const [newField, setNewField] = useState({ fieldName: '', fieldLabel: '', fieldType: 'text', isRequired: false });
+  const [newField, setNewField] = useState({ fieldName: '', fieldLabel: '', fieldType: 'text', textTransform: 'none', isRequired: false });
 
   // Upload document mutation
   const uploadDocumentMutation = useMutation({
@@ -179,6 +179,8 @@ export default function Departments() {
     }
 
     createFieldMutation.mutate(newField);
+    // Reset form after successful mutation
+    setNewField({ fieldName: '', fieldLabel: '', fieldType: 'text', textTransform: 'none', isRequired: false });
   };
 
   const handleFileUpload = () => {
@@ -485,6 +487,20 @@ export default function Departments() {
                       <option value="text">Text</option>
                       <option value="number">Number</option>
                       <option value="date">Date</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Text Format</label>
+                    <select
+                      value={newField.textTransform}
+                      onChange={(e) => setNewField({...newField, textTransform: e.target.value})}
+                      className="w-36 h-9 px-3 border border-input bg-background text-sm rounded-md"
+                      data-testid="select-text-transform"
+                    >
+                      <option value="none">Normal</option>
+                      <option value="uppercase">UPPERCASE</option>
+                      <option value="capitalize">Capitalize Each Word</option>
+                      <option value="toggle">tOGGLE cASE</option>
                     </select>
                   </div>
                   <div className="flex items-center space-x-2">

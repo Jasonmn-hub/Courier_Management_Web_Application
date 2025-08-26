@@ -1202,26 +1202,97 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get department's custom fields
       const fields = await storage.getAllAuthorityLetterFields(departmentId);
       
-      // Generate preview content
-      let previewContent = `AUTHORITY LETTER\\n\\nGenerated on: ${new Date().toLocaleDateString('en-GB')}\\nDepartment: ${department.name}\\n\\n`;
-      
-      // Add field values to preview
-      for (const [fieldName, value] of Object.entries(fieldValues || {})) {
-        const field = fields.find(f => f.fieldName === fieldName);
-        if (field) {
-          let displayValue = value || `##${fieldName}##`;
-          
-          // Convert date format from YYYY-MM-DD to DD-MM-YYYY for preview
-          if (fieldName.toLowerCase().includes('date') && typeof value === 'string' && value.match(/^\\d{4}-\\d{2}-\\d{2}$/)) {
-            const [year, month, day] = value.split('-');
-            displayValue = `${day}-${month}-${year}`;
-          }
-          
-          previewContent += `${field.fieldLabel}: ${displayValue}\\n`;
+      // Helper function to apply text transformations
+      const applyTextTransform = (text: string, transform: string): string => {
+        switch (transform) {
+          case 'uppercase':
+            return text.toUpperCase();
+          case 'capitalize':
+            return text.split(' ').map(word => 
+              word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+            ).join(' ');
+          case 'toggle':
+            return text.split('').map(char => 
+              char === char.toUpperCase() ? char.toLowerCase() : char.toUpperCase()
+            ).join('');
+          default:
+            return text;
         }
+      };
+
+      // Generate preview content that matches the actual letter format
+      let dateValue = fieldValues['Currunt Date'] || '##Currunt Date##';
+      if (fieldValues['Currunt Date'] && typeof fieldValues['Currunt Date'] === 'string' && fieldValues['Currunt Date'].match(/^\\d{4}-\\d{2}-\\d{2}$/)) {
+        const [year, month, day] = fieldValues['Currunt Date'].split('-');
+        dateValue = `${day}-${month}-${year}`;
       }
       
-      previewContent += `\\nThis authority letter will be generated using the uploaded Word document template with proper formatting and letterhead.\\n`;
+      // Apply text transform to address field
+      const addressField = fields.find(f => f.fieldName === 'Address');
+      let addressValue = fieldValues['Address'] || '##Address##';
+      if (addressField?.textTransform && fieldValues['Address']) {
+        addressValue = applyTextTransform(fieldValues['Address'], addressField.textTransform);
+      }
+      
+      // Apply text transform to asset name field
+      const assetNameField = fields.find(f => f.fieldName === 'Asset Name');
+      let assetNameValue = fieldValues['Asset Name'] || '##Asset Name##';
+      if (assetNameField?.textTransform && fieldValues['Asset Name']) {
+        assetNameValue = applyTextTransform(fieldValues['Asset Name'], assetNameField.textTransform);
+      } else if (fieldValues['Asset Name']) {
+        assetNameValue = fieldValues['Asset Name'].toUpperCase(); // Default behavior for Asset Name
+      }
+      
+      // Apply text transform to value field
+      const valueField = fields.find(f => f.fieldName === 'Value');
+      let valueValue = fieldValues['Value'] || '##Value##';
+      if (valueField?.textTransform && fieldValues['Value']) {
+        valueValue = applyTextTransform(fieldValues['Value'], valueField.textTransform);
+      }
+      
+      let previewContent = `AUTHORITY LETTER
+
+${dateValue}
+
+To,
+
+Maruti Courier
+
+UF-16, Sanskar-1 Complex
+
+Nr Ketav Petrol Pump
+
+Polytechnic Road Ambawadi
+
+Ahmedabad -380015
+
+
+
+SUB- LETTER AUTHORISING M/S MARUTI COURIER
+
+Dear Sir/Ma'am,
+
+We hereby authorize M/s. Maruti Courier to provide the services of transporting the System of Light Microfinance Pvt. Ltd. from Head Office Ahmedabad to its branch office Light Microfinance "${addressValue}" said authority is only for transporting the computer system to the above-mentioned branch address and not any other purpose.
+
+
+
+*NOTE: - NOT FOR SALE THIS ${assetNameValue} ARE FOR ONLY OFFICE USE. (Asset Value ${valueValue} /-)
+
+
+
+Thanking you,
+
+
+
+FOR LIGHT MICROFINANCE PVT. LTD
+
+
+
+_____________________________
+
+Jigar Jodhani
+
+[Manager - IT]`;
       
       res.json({
         content: previewContent,
@@ -1299,6 +1370,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Replace ##field## placeholders manually
         let updatedText = docText;
         
+        // Helper function to apply text transformations
+        const applyTextTransform = (text: string, transform: string): string => {
+          switch (transform) {
+            case 'uppercase':
+              return text.toUpperCase();
+            case 'capitalize':
+              return text.split(' ').map(word => 
+                word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+              ).join(' ');
+            case 'toggle':
+              return text.split('').map(char => 
+                char === char.toUpperCase() ? char.toLowerCase() : char.toUpperCase()
+              ).join('');
+            default:
+              return text;
+          }
+        };
+        
         // Replace field placeholders
         for (const [fieldName, value] of Object.entries(fieldValues || {})) {
           let processedValue = value as string;
@@ -1308,6 +1397,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const [year, month, day] = value.split('-');
             processedValue = `${day}-${month}-${year}`;
             console.log(`Converted date from ${value} to ${processedValue}`);
+          } else {
+            // Apply text transformation based on field settings
+            const field = fields.find(f => f.fieldName === fieldName);
+            if (field?.textTransform && field.textTransform !== 'none') {
+              processedValue = applyTextTransform(processedValue, field.textTransform);
+              console.log(`Applied ${field.textTransform} transform to ${fieldName}: ${value} -> ${processedValue}`);
+            }
           }
           
           const placeholder = `##${fieldName}##`;
@@ -1335,6 +1431,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (fieldName.toLowerCase().includes('date') && typeof value === 'string' && value.match(/^\d{4}-\d{2}-\d{2}$/)) {
             const [year, month, day] = value.split('-');
             processedValue = `${day}-${month}-${year}`;
+          } else {
+            // Apply text transformation based on field settings
+            const field = fields.find(f => f.fieldName === fieldName);
+            if (field?.textTransform && field.textTransform !== 'none') {
+              processedValue = applyTextTransform(processedValue, field.textTransform);
+              console.log(`Applied ${field.textTransform} transform to ${fieldName}: ${value} -> ${processedValue}`);
+            }
           }
           
           templateData[fieldName] = processedValue; // Update template data with converted value
