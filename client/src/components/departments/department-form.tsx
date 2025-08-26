@@ -75,9 +75,8 @@ export default function DepartmentForm({ department, onClose, onSuccess }: Depar
     mutationFn: async (data: z.infer<typeof departmentSchema>) => {
       if (department) {
         const result = await apiRequest('PUT', `/api/departments/${department.id}`, { name: data.name });
-        if (data.fieldIds && data.fieldIds.length > 0) {
-          await apiRequest('PUT', `/api/departments/${department.id}/fields`, { fieldIds: data.fieldIds });
-        }
+        // Always update field assignments (even if empty array to remove all fields)
+        await apiRequest('PUT', `/api/departments/${department.id}/fields`, { fieldIds: data.fieldIds || [] });
         return result;
       } else {
         const result = await apiRequest('POST', '/api/departments', { name: data.name }) as any;

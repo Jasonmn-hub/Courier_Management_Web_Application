@@ -8,8 +8,14 @@ export default function Charts() {
   const { data: stats, isLoading } = useQuery({
     queryKey: ['/api/stats'],
   });
+  
+  const { data: monthlyStats = [], isLoading: isMonthlyLoading } = useQuery<Array<{
+    month: string;
+    onTheWay: number;
+    completed: number;
+  }>>({ queryKey: ['/api/stats/monthly'] });
 
-  if (isLoading) {
+  if (isLoading || isMonthlyLoading) {
     return (
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         {[...Array(2)].map((_, i) => (
@@ -33,14 +39,9 @@ export default function Charts() {
     { name: 'Completed', value: (stats as any)?.completed || 0 },
   ];
 
-  // Mock monthly data - in a real app, this would come from the API
-  const monthlyData = [
-    { month: 'Jan', onTheWay: 12, completed: 28 },
-    { month: 'Feb', onTheWay: 19, completed: 35 },
-    { month: 'Mar', onTheWay: 15, completed: 42 },
-    { month: 'Apr', onTheWay: 22, completed: 38 },
-    { month: 'May', onTheWay: 18, completed: 45 },
-    { month: 'Jun', onTheWay: (stats as any)?.onTheWay || 0, completed: (stats as any)?.completed || 0 },
+  // Use real monthly data from API
+  const monthlyData = monthlyStats.length > 0 ? monthlyStats : [
+    { month: 'No Data', onTheWay: 0, completed: 0 }
   ];
 
   return (

@@ -766,6 +766,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Monthly trends route
+  app.get('/api/stats/monthly', authenticateToken, setCurrentUser(), async (req: any, res) => {
+    try {
+      const user = req.currentUser;
+      let departmentId: number | undefined = undefined;
+      
+      // Non-admin users can only see their department's stats
+      if (user.role !== 'admin') {
+        departmentId = user.departmentId;
+      }
+      
+      const monthlyStats = await storage.getMonthlyStats(departmentId);
+      res.json(monthlyStats);
+    } catch (error) {
+      console.error("Error fetching monthly stats:", error);
+      res.status(500).json({ message: "Failed to fetch monthly statistics" });
+    }
+  });
+
   // Received Couriers endpoints
   app.get('/api/received-couriers', authenticateToken, setCurrentUser(), async (req: any, res) => {
     try {

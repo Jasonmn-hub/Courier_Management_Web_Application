@@ -103,6 +103,12 @@ export interface IStorage {
     thisMonth: number;
   }>;
   
+  getMonthlyStats(departmentId?: number): Promise<Array<{
+    month: string;
+    onTheWay: number;
+    completed: number;
+  }>>;
+  
   // Authority Letter Template operations
   getAllAuthorityLetterTemplates(departmentId?: number): Promise<AuthorityLetterTemplate[]>;
   getAuthorityLetterTemplate(id: number): Promise<AuthorityLetterTemplate | undefined>;
@@ -573,6 +579,75 @@ export class DatabaseStorage implements IStorage {
       completed: totalCompleted,
       thisMonth: thisMonthCount,
     };
+  }
+
+  async getMonthlyStats(departmentId?: number): Promise<Array<{
+    month: string;
+    onTheWay: number;
+    completed: number;
+  }>> {
+    const now = new Date();
+    const monthlyData = [];
+    
+    // Get data for last 6 months
+    for (let i = 5; i >= 0; i--) {
+      const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const nextDate = new Date(now.getFullYear(), now.getMonth() - i + 1, 1);
+      const monthName = date.toLocaleDateString('en', { month: 'short' });
+      
+      // Build conditions for the month range
+      let onTheWayConditions = [
+        eq(couriers.status, 'on_the_way'),
+        sql`${couriers.createdAt} >= ${date}`,
+        sql`${couriers.createdAt} < ${nextDate}`
+      ];
+      
+      let completedConditions = [
+        eq(couriers.status, 'completed'),
+        sql`${couriers.createdAt} >= ${date}`,
+        sql`${couriers.createdAt} < ${nextDate}`
+      ];
+      
+      // Add department filter if specified
+      if (departmentId) {
+        onTheWayConditions.push(eq(couriers.departmentId, departmentId));
+        completedConditions.push(eq(couriers.departmentId, departmentId));
+      }
+      
+      // Get counts for this month
+      const [onTheWayResult] = await db.select({ count: sql`count(*)` })
+        .from(couriers)
+        .where(and(...onTheWayConditions));
+        
+      const [completedResult] = await db.select({ count: sql`count(*)` })
+        .from(couriers)
+        .where(and(...completedConditions));
+      
+      // Also get received couriers for this month
+      let receivedConditions = [
+        sql`${receivedCouriers.receivedDate} >= ${date}`,
+        sql`${receivedCouriers.receivedDate} < ${nextDate}`
+      ];
+      
+      if (departmentId) {
+        receivedConditions.push(eq(receivedCouriers.departmentId, departmentId));
+      }
+      
+      const [receivedResult] = await db.select({ count: sql`count(*)` })
+        .from(receivedCouriers)
+        .where(and(...receivedConditions));
+      
+      const onTheWayCount = Number(onTheWayResult?.count || 0);
+      const completedCount = Number(completedResult?.count || 0) + Number(receivedResult?.count || 0);
+      
+      monthlyData.push({
+        month: monthName,
+        onTheWay: onTheWayCount,
+        completed: completedCount
+      });
+    }
+    
+    return monthlyData;
   }
 
   // Received Courier operations
