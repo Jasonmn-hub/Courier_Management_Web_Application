@@ -2,6 +2,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { ExportDialog } from "@/components/export-dialog";
+import lightLogo from "@/assets/light-logo.png";
 import { 
   Truck, 
   BarChart3, 
@@ -96,7 +97,7 @@ function SidebarContent({ navigation, adminNavigation, user, onLogout }: any) {
         <div className="flex items-center">
           <div className="flex-shrink-0">
             <img 
-              src="/attached_assets/Light Microfinance logo.png" 
+              src={lightLogo} 
               alt="Light Microfinance" 
               className="h-8 w-8 object-contain" 
             />

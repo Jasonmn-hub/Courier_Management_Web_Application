@@ -32,6 +32,26 @@ const upload = multer({
   },
 });
 
+// Document upload specifically for Word documents
+const documentUpload = multer({
+  dest: uploadDir,
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = /\.(doc|docx)$/i;
+    const extname = allowedTypes.test(path.extname(file.originalname));
+    const mimetype = file.mimetype === 'application/msword' || 
+                     file.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+    
+    if (mimetype || extname) {
+      return cb(null, true);
+    } else {
+      cb(new Error('Only Word documents (.doc, .docx) are allowed'));
+    }
+  },
+});
+
 // CSV helper function
 const readTempUsersFromCSV = (): Array<{email: string, name: string, firstName: string, lastName: string, password: string, role: string}> => {
   try {
@@ -408,6 +428,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting department:", error);
       res.status(500).json({ message: "Failed to delete department" });
+    }
+  });
+
+  // Upload authority document for department
+  app.post('/api/departments/upload-document', authenticateToken, requireRole(['admin']), documentUpload.single('document'), setCurrentUser(), async (req: any, res) => {
+    try {
+      const { departmentId } = req.body;
+      const file = req.file;
+      
+      if (!file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+      
+      if (!departmentId) {
+        return res.status(400).json({ message: "Department ID is required" });
+      }
+
+      // Create a proper filename with extension
+      const originalExtension = path.extname(file.originalname);
+      const newFilename = `authority_template_dept_${departmentId}_${Date.now()}${originalExtension}`;
+      const newFilePath = path.join(uploadDir, newFilename);
+      
+      // Move file to new location with proper name
+      fs.renameSync(file.path, newFilePath);
+      
+      // Update department with document path
+      const department = await storage.updateDepartment(parseInt(departmentId), {
+        authorityDocumentPath: newFilePath
+      });
+      
+      if (!department) {
+        return res.status(404).json({ message: "Department not found" });
+      }
+      
+      await logAudit(req.currentUser.id, 'UPLOAD', 'authority_document', departmentId);
+      
+      res.json({ 
+        message: "Document uploaded successfully",
+        documentPath: newFilePath,
+        department 
+      });
+    } catch (error) {
+      console.error("Error uploading document:", error);
+      res.status(500).json({ message: "Failed to upload document" });
     }
   });
 

@@ -49,6 +49,7 @@ export const users = pgTable("users", {
 export const departments = pgTable("departments", {
   id: serial("id").primaryKey(),
   name: varchar("name", { length: 100 }).notNull(),
+  authorityDocumentPath: varchar("authority_document_path", { length: 255 }), // Path to uploaded Word document
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

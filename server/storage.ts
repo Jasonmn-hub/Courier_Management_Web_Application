@@ -44,7 +44,7 @@ export interface IStorage {
   // Department operations
   getAllDepartments(): Promise<Department[]>;
   createDepartment(department: InsertDepartment): Promise<Department>;
-  updateDepartment(id: number, department: Partial<InsertDepartment>): Promise<Department | undefined>;
+  updateDepartment(id: number, department: Partial<InsertDepartment> & { authorityDocumentPath?: string }): Promise<Department | undefined>;
   deleteDepartment(id: number): Promise<boolean>;
   
   // Courier operations
