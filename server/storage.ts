@@ -9,6 +9,7 @@ import {
   auditLogs,
   authorityLetterTemplates,
   authorityLetterFields,
+  branches,
   type User,
   type UpsertUser,
   type Department,
@@ -27,6 +28,8 @@ import {
   type InsertAuthorityLetterTemplate,
   type AuthorityLetterField,
   type InsertAuthorityLetterField,
+  type Branch,
+  type InsertBranch,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, ilike, or, sql } from "drizzle-orm";
@@ -130,6 +133,21 @@ export interface IStorage {
   createAuthorityLetterField(field: InsertAuthorityLetterField): Promise<AuthorityLetterField>;
   updateAuthorityLetterField(id: number, field: Partial<InsertAuthorityLetterField>): Promise<AuthorityLetterField | undefined>;
   deleteAuthorityLetterField(id: number): Promise<boolean>;
+  
+  // Branch operations
+  getAllBranches(filters?: {
+    status?: string;
+    search?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<{ branches: Branch[]; total: number }>;
+  getBranchById(id: number): Promise<Branch | undefined>;
+  createBranch(branch: InsertBranch): Promise<Branch>;
+  updateBranch(id: number, branch: Partial<InsertBranch>): Promise<Branch | undefined>;
+  deleteBranch(id: number): Promise<boolean>;
+  updateBranchStatus(id: number, status: string): Promise<Branch | undefined>;
+  createBulkBranches(branches: InsertBranch[]): Promise<Branch[]>;
+  exportBranches(status?: string): Promise<Branch[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -959,6 +977,106 @@ export class DatabaseStorage implements IStorage {
   async deleteAuthorityLetterField(id: number): Promise<boolean> {
     const result = await db.delete(authorityLetterFields).where(eq(authorityLetterFields.id, id));
     return (result.rowCount || 0) > 0;
+  }
+
+  // Branch methods
+  async getAllBranches(filters?: {
+    status?: string;
+    search?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<{ branches: Branch[]; total: number }> {
+    let query = db.select().from(branches);
+    let countQuery = db.select({ count: sql`count(*)` }).from(branches);
+
+    const conditions: any[] = [];
+
+    if (filters?.status) {
+      conditions.push(eq(branches.status, filters.status));
+    }
+
+    if (filters?.search) {
+      conditions.push(
+        or(
+          ilike(branches.branchName, `%${filters.search}%`),
+          ilike(branches.branchCode, `%${filters.search}%`),
+          ilike(branches.branchAddress, `%${filters.search}%`),
+          ilike(branches.state, `%${filters.search}%`)
+        )
+      );
+    }
+
+    if (conditions.length > 0) {
+      const whereClause = and(...conditions);
+      query = query.where(whereClause) as any;
+      countQuery = countQuery.where(whereClause) as any;
+    }
+
+    query = query.orderBy(desc(branches.createdAt)) as any;
+
+    if (filters?.limit) {
+      query = query.limit(filters.limit) as any;
+    }
+
+    if (filters?.offset) {
+      query = query.offset(filters.offset) as any;
+    }
+
+    const [branchesResult, countResult] = await Promise.all([
+      query,
+      countQuery
+    ]);
+
+    return {
+      branches: branchesResult,
+      total: Number((countResult[0] as any).count)
+    };
+  }
+
+  async getBranchById(id: number): Promise<Branch | undefined> {
+    const [branch] = await db.select().from(branches).where(eq(branches.id, id));
+    return branch;
+  }
+
+  async createBranch(branch: InsertBranch): Promise<Branch> {
+    const [newBranch] = await db.insert(branches).values(branch).returning();
+    return newBranch;
+  }
+
+  async updateBranch(id: number, branch: Partial<InsertBranch>): Promise<Branch | undefined> {
+    const [updatedBranch] = await db.update(branches)
+      .set({ ...branch, updatedAt: new Date() })
+      .where(eq(branches.id, id))
+      .returning();
+    return updatedBranch;
+  }
+
+  async deleteBranch(id: number): Promise<boolean> {
+    const result = await db.delete(branches).where(eq(branches.id, id));
+    return (result.rowCount || 0) > 0;
+  }
+
+  async updateBranchStatus(id: number, status: string): Promise<Branch | undefined> {
+    const [updatedBranch] = await db.update(branches)
+      .set({ status, updatedAt: new Date() })
+      .where(eq(branches.id, id))
+      .returning();
+    return updatedBranch;
+  }
+
+  async createBulkBranches(branchList: InsertBranch[]): Promise<Branch[]> {
+    const newBranches = await db.insert(branches).values(branchList).returning();
+    return newBranches;
+  }
+
+  async exportBranches(status?: string): Promise<Branch[]> {
+    let query = db.select().from(branches);
+    
+    if (status) {
+      query = query.where(eq(branches.status, status)) as any;
+    }
+    
+    return await (query as any).orderBy(branches.srNo, branches.branchName);
   }
 }
 

@@ -125,6 +125,22 @@ export const auditLogs = pgTable("audit_logs", {
   timestamp: timestamp("timestamp").defaultNow(),
 });
 
+// Branches table for comprehensive branch management
+export const branches = pgTable("branches", {
+  id: serial("id").primaryKey(),
+  srNo: integer("sr_no"), // Serial number
+  branchName: varchar("branch_name", { length: 255 }).notNull(),
+  branchCode: varchar("branch_code", { length: 50 }).notNull().unique(),
+  branchAddress: text("branch_address").notNull(),
+  pincode: varchar("pincode", { length: 10 }).notNull(),
+  state: varchar("state", { length: 100 }).notNull(),
+  latitude: varchar("latitude", { length: 50 }),
+  longitude: varchar("longitude", { length: 50 }),
+  status: varchar("status", { length: 20 }).default('active').notNull(), // 'active' or 'closed'
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Authority letter templates table - Enhanced for PDF generation
 export const authorityLetterTemplates = pgTable('authority_letter_templates', {
   id: serial('id').primaryKey(),
@@ -213,6 +229,10 @@ export const auditLogsRelations = relations(auditLogs, ({ one }) => ({
   }),
 }));
 
+export const branchesRelations = relations(branches, ({ many }) => ({
+  // Future relations with couriers if needed
+}));
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -275,6 +295,12 @@ export const insertAuthorityLetterFieldSchema = createInsertSchema(authorityLett
   createdAt: true,
 });
 
+export const insertBranchSchema = createInsertSchema(branches).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Types
 export type UpsertUser = z.infer<typeof upsertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -295,3 +321,5 @@ export type AuthorityLetterTemplate = typeof authorityLetterTemplates.$inferSele
 export type InsertAuthorityLetterTemplate = z.infer<typeof insertAuthorityLetterTemplateSchema>;
 export type AuthorityLetterField = typeof authorityLetterFields.$inferSelect;
 export type InsertAuthorityLetterField = z.infer<typeof insertAuthorityLetterFieldSchema>;
+export type Branch = typeof branches.$inferSelect;
+export type InsertBranch = z.infer<typeof insertBranchSchema>;

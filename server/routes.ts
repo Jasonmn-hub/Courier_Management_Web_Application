@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { authenticateToken, requireRole, hashPassword, comparePassword, generateToken } from "./auth";
-import { insertCourierSchema, insertDepartmentSchema, insertFieldSchema, insertSmtpSettingsSchema, insertReceivedCourierSchema, insertAuthorityLetterTemplateSchema, insertAuthorityLetterFieldSchema } from "@shared/schema";
+import { insertCourierSchema, insertDepartmentSchema, insertFieldSchema, insertSmtpSettingsSchema, insertReceivedCourierSchema, insertAuthorityLetterTemplateSchema, insertAuthorityLetterFieldSchema, insertBranchSchema, type InsertBranch } from "@shared/schema";
 import { z } from "zod";
 import multer from "multer";
 import path from "path";
@@ -854,7 +854,280 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Branches route
-  app.get('/api/branches', authenticateToken, setCurrentUser(), async (req: any, res) => {
+  // ============= BRANCH MANAGEMENT ROUTES =============
+  
+  app.get('/api/branches', authenticateToken, async (req: any, res) => {
+    try {
+      const { status, search, page = "1", limit = "50" } = req.query;
+      const offset = (parseInt(page) - 1) * parseInt(limit);
+      
+      const filters = {
+        status: status || undefined,
+        search: search || undefined,
+        limit: parseInt(limit),
+        offset
+      };
+      
+      const result = await storage.getAllBranches(filters);
+      res.json(result);
+    } catch (error) {
+      console.error("Error fetching branches:", error);
+      res.status(500).json({ message: "Failed to fetch branches" });
+    }
+  });
+
+  app.get('/api/branches/:id', authenticateToken, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const branch = await storage.getBranchById(id);
+      
+      if (!branch) {
+        return res.status(404).json({ message: "Branch not found" });
+      }
+      
+      res.json(branch);
+    } catch (error) {
+      console.error("Error fetching branch:", error);
+      res.status(500).json({ message: "Failed to fetch branch" });
+    }
+  });
+
+  app.post('/api/branches', authenticateToken, requireRole(['admin']), setCurrentUser(), async (req: any, res) => {
+    try {
+      const validatedData = insertBranchSchema.parse(req.body);
+      const branch = await storage.createBranch(validatedData);
+      
+      await logAudit(req.currentUser.id, 'CREATE', 'branch', branch.id);
+      
+      res.status(201).json(branch);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      console.error("Error creating branch:", error);
+      res.status(500).json({ message: "Failed to create branch" });
+    }
+  });
+
+  app.put('/api/branches/:id', authenticateToken, requireRole(['admin']), setCurrentUser(), async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const validatedData = insertBranchSchema.partial().parse(req.body);
+      
+      const branch = await storage.updateBranch(id, validatedData);
+      if (!branch) {
+        return res.status(404).json({ message: "Branch not found" });
+      }
+      
+      await logAudit(req.currentUser.id, 'UPDATE', 'branch', branch.id);
+      
+      res.json(branch);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      console.error("Error updating branch:", error);
+      res.status(500).json({ message: "Failed to update branch" });
+    }
+  });
+
+  app.delete('/api/branches/:id', authenticateToken, requireRole(['admin']), setCurrentUser(), async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteBranch(id);
+      
+      if (!success) {
+        return res.status(404).json({ message: "Branch not found" });
+      }
+      
+      await logAudit(req.currentUser.id, 'DELETE', 'branch', id);
+      
+      res.json({ message: "Branch deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting branch:", error);
+      res.status(500).json({ message: "Failed to delete branch" });
+    }
+  });
+
+  app.patch('/api/branches/:id/status', authenticateToken, requireRole(['admin']), setCurrentUser(), async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { status } = req.body;
+      
+      if (!['active', 'closed'].includes(status)) {
+        return res.status(400).json({ message: "Status must be 'active' or 'closed'" });
+      }
+      
+      const branch = await storage.updateBranchStatus(id, status);
+      if (!branch) {
+        return res.status(404).json({ message: "Branch not found" });
+      }
+      
+      await logAudit(req.currentUser.id, 'UPDATE', 'branch', branch.id);
+      
+      res.json(branch);
+    } catch (error) {
+      console.error("Error updating branch status:", error);
+      res.status(500).json({ message: "Failed to update branch status" });
+    }
+  });
+
+  // Bulk upload branches from CSV
+  app.post('/api/branches/bulk-upload', authenticateToken, requireRole(['admin']), setCurrentUser(), upload.single('csvFile'), async (req: any, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "CSV file is required" });
+      }
+
+      const csvContent = req.file.buffer.toString('utf-8');
+      const parsed = Papa.parse(csvContent, { 
+        header: true, 
+        skipEmptyLines: true,
+        transformHeader: (header: string) => header.trim()
+      });
+
+      if (parsed.errors.length > 0) {
+        return res.status(400).json({ 
+          message: "CSV parsing error", 
+          errors: parsed.errors 
+        });
+      }
+
+      const branches: InsertBranch[] = [];
+      const validationErrors: any[] = [];
+
+      parsed.data.forEach((row: any, index: number) => {
+        try {
+          const branchData = insertBranchSchema.parse({
+            srNo: row.srNo ? parseInt(row.srNo) : undefined,
+            branchName: row.branchName?.trim(),
+            branchCode: row.branchCode?.trim(),
+            branchAddress: row.branchAddress?.trim(),
+            pincode: row.pincode?.trim(),
+            state: row.state?.trim(),
+            latitude: row.latitude?.trim() || undefined,
+            longitude: row.longitude?.trim() || undefined,
+            status: row.status?.trim() || 'active'
+          });
+          branches.push(branchData);
+        } catch (error) {
+          if (error instanceof z.ZodError) {
+            validationErrors.push({
+              row: index + 1,
+              errors: error.errors.map(e => `${e.path.join('.')}: ${e.message}`)
+            });
+          }
+        }
+      });
+
+      if (validationErrors.length > 0) {
+        return res.status(400).json({
+          message: "Validation errors in CSV data",
+          errors: validationErrors
+        });
+      }
+
+      if (branches.length === 0) {
+        return res.status(400).json({ message: "No valid branch data found in CSV" });
+      }
+
+      const createdBranches = await storage.createBulkBranches(branches);
+      
+      await logAudit(req.currentUser.id, 'CREATE', 'branch', createdBranches.length);
+
+      res.status(201).json({
+        message: `Successfully created ${createdBranches.length} branches`,
+        branches: createdBranches
+      });
+    } catch (error) {
+      console.error("Error in bulk branch upload:", error);
+      res.status(500).json({ message: "Failed to process bulk upload" });
+    }
+  });
+
+  // Download sample CSV for branches
+  app.get('/api/branches/sample-csv', authenticateToken, async (req: any, res) => {
+    try {
+      const sampleData = [
+        {
+          srNo: 1,
+          branchName: 'Main Branch',
+          branchCode: 'MB001',
+          branchAddress: '123 Main Street, City Center',
+          pincode: '110001',
+          state: 'Delhi',
+          latitude: '28.6139',
+          longitude: '77.2090',
+          status: 'active'
+        },
+        {
+          srNo: 2,
+          branchName: 'Secondary Branch',
+          branchCode: 'SB002',
+          branchAddress: '456 Market Street, Commercial Area',
+          pincode: '110002',
+          state: 'Delhi',
+          latitude: '28.6304',
+          longitude: '77.2177',
+          status: 'active'
+        }
+      ];
+
+      const csv = Papa.unparse(sampleData, {
+        header: true
+      });
+
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', 'attachment; filename="branch_sample.csv"');
+      res.send(csv);
+    } catch (error) {
+      console.error("Error generating sample CSV:", error);
+      res.status(500).json({ message: "Failed to generate sample CSV" });
+    }
+  });
+
+  // Export branches (All, Active, or Closed)
+  app.get('/api/branches/export', authenticateToken, requireRole(['admin', 'manager']), async (req: any, res) => {
+    try {
+      const { status } = req.query; // 'all', 'active', or 'closed'
+      
+      let filterStatus: string | undefined;
+      if (status === 'active') filterStatus = 'active';
+      if (status === 'closed') filterStatus = 'closed';
+      // if status === 'all' or undefined, filterStatus remains undefined (gets all)
+      
+      const branches = await storage.exportBranches(filterStatus);
+      
+      const csvData = branches.map(branch => ({
+        'Sr. No': branch.srNo || '',
+        'Branch Name': branch.branchName,
+        'Branch Code': branch.branchCode,
+        'Branch Address': branch.branchAddress,
+        'Pincode': branch.pincode,
+        'State': branch.state,
+        'Latitude': branch.latitude || '',
+        'Longitude': branch.longitude || '',
+        'Status': branch.status,
+        'Created Date': branch.createdAt ? new Date(branch.createdAt).toLocaleDateString() : ''
+      }));
+
+      const csv = Papa.unparse(csvData, { header: true });
+      
+      const filename = status === 'all' || !status 
+        ? 'all_branches.csv' 
+        : `${status}_branches.csv`;
+      
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.send(csv);
+    } catch (error) {
+      console.error("Error exporting branches:", error);
+      res.status(500).json({ message: "Failed to export branches" });
+    }
+  });
+
+  // Legacy branch stats route for backward compatibility
+  app.get('/api/branch-stats', authenticateToken, setCurrentUser(), async (req: any, res) => {
     try {
       const user = req.currentUser;
       let departmentId: number | undefined = undefined;
@@ -867,8 +1140,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const branches = await storage.getBranchStats(departmentId);
       res.json(branches);
     } catch (error) {
-      console.error("Error fetching branches:", error);
-      res.status(500).json({ message: "Failed to fetch branches" });
+      console.error("Error fetching branch stats:", error);
+      res.status(500).json({ message: "Failed to fetch branch stats" });
     }
   });
 
