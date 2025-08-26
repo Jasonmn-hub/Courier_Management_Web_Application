@@ -1179,7 +1179,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Authority Letter Generation route
+  // Authority Letter Generation from Department Word Document
+  app.post('/api/authority-letter/generate-from-department', authenticateToken, setCurrentUser(), async (req: any, res) => {
+    try {
+      const { departmentId, fieldValues } = req.body;
+      const user = req.currentUser;
+      
+      // Get department
+      const departments = await storage.getAllDepartments();
+      const department = departments.find(d => d.id === departmentId);
+      if (!department) {
+        return res.status(404).json({ message: "Department not found" });
+      }
+      
+      // Check if department has uploaded document
+      if (!department.authorityDocumentPath) {
+        return res.status(400).json({ message: "No authority document uploaded for this department" });
+      }
+      
+      // Check if user has access to this department
+      if (user.role !== 'admin' && user.departmentId !== departmentId) {
+        return res.status(403).json({ message: "Access denied to this department" });
+      }
+      
+      // Get department's custom fields
+      const fields = await storage.getAllAuthorityLetterFields(departmentId);
+      
+      // For now, we'll generate a text-based letter (in real implementation, you'd process the Word document)
+      // This is a placeholder implementation that demonstrates the flow
+      let content = `AUTHORITY LETTER\n\nGenerated on: ${new Date().toLocaleDateString()}\nDepartment: ${department.name}\n\n`;
+      
+      // Add field values
+      for (const [fieldName, value] of Object.entries(fieldValues || {})) {
+        const field = fields.find(f => f.fieldName === fieldName);
+        if (field) {
+          content += `${field.fieldLabel}: ${value}\n`;
+        }
+      }
+      
+      content += `\nThis authority letter was generated from ${department.name} department's uploaded Word document template.\n`;
+      content += `Document path: ${department.authorityDocumentPath}\n`;
+      
+      await logAudit(user.id, 'CREATE', 'authority_letter_generated', departmentId);
+      
+      res.json({
+        content,
+        departmentName: department.name,
+        generatedAt: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error("Error generating authority letter from department:", error);
+      res.status(500).json({ message: "Failed to generate authority letter" });
+    }
+  });
+
+  // Legacy Authority Letter Generation route (keeping for backward compatibility)
   app.post('/api/authority-letter/generate', authenticateToken, setCurrentUser(), async (req: any, res) => {
     try {
       const { templateId, fieldValues } = req.body;

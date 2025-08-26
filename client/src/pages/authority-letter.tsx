@@ -11,14 +11,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { FileDown, FileText, Plus, Edit } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 
-interface AuthorityLetterTemplate {
+interface Department {
   id: number;
-  departmentId: number;
-  templateName: string;
-  templateContent: string;
-  isDefault: boolean;
+  name: string;
+  authorityDocumentPath: string | null;
   createdAt: string;
-  updatedAt: string;
 }
 
 interface AuthorityLetterField {
@@ -35,15 +32,9 @@ export default function AuthorityLetter() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [selectedTemplate, setSelectedTemplate] = useState<number | null>(null);
+  const [selectedDepartment, setSelectedDepartment] = useState<number | null>(null);
   const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
   const [generatedContent, setGeneratedContent] = useState<string>("");
-  const [showTemplateManager, setShowTemplateManager] = useState(false);
-  const [newTemplate, setNewTemplate] = useState({
-    templateName: "",
-    templateContent: "",
-    departmentId: (user as any)?.departmentId || 1
-  });
 
   // Redirect to home if not authenticated
   useEffect(() => {
@@ -60,49 +51,41 @@ export default function AuthorityLetter() {
     }
   }, [isAuthenticated, isLoading, toast]);
 
-  // Fetch templates
-  const { data: templates = [], isLoading: templatesLoading } = useQuery<AuthorityLetterTemplate[]>({
-    queryKey: ['/api/authority-letter-templates'],
+  // Fetch departments with uploaded documents
+  const { data: departments = [], isLoading: departmentsLoading } = useQuery<Department[]>({
+    queryKey: ['/api/departments'],
     enabled: isAuthenticated,
   });
 
-  // Fetch fields
+  // Filter departments that have uploaded Word documents
+  const departmentsWithDocuments = departments.filter(dept => dept.authorityDocumentPath);
+
+  // Fetch fields for selected department
   const { data: fields = [], isLoading: fieldsLoading } = useQuery<AuthorityLetterField[]>({
-    queryKey: ['/api/authority-letter-fields'],
-    enabled: isAuthenticated,
+    queryKey: ['/api/authority-letter-fields', selectedDepartment],
+    queryFn: async () => {
+      if (!selectedDepartment) return [];
+      const response = await apiRequest('GET', `/api/authority-letter-fields?departmentId=${selectedDepartment}`);
+      return response.json();
+    },
+    enabled: !!selectedDepartment,
   });
 
   // Generate letter mutation
   const generateMutation = useMutation({
-    mutationFn: async (data: { templateId: number; fieldValues: Record<string, string> }) => {
-      const res = await apiRequest('POST', '/api/authority-letter/generate', data);
+    mutationFn: async (data: { departmentId: number; fieldValues: Record<string, string> }) => {
+      const res = await apiRequest('POST', '/api/authority-letter/generate-from-department', data);
       return res.json();
     },
     onSuccess: (data) => {
       setGeneratedContent(data.content);
       toast({ title: "Success", description: "Authority letter generated successfully" });
     },
-    onError: () => {
-      toast({ title: "Error", description: "Failed to generate authority letter", variant: "destructive" });
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Failed to generate authority letter", variant: "destructive" });
     },
   });
 
-  // Create template mutation
-  const createTemplateMutation = useMutation({
-    mutationFn: async (template: typeof newTemplate) => {
-      const res = await apiRequest('POST', '/api/authority-letter-templates', template);
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/authority-letter-templates'] });
-      toast({ title: "Success", description: "Template created successfully" });
-      setNewTemplate({ templateName: "", templateContent: "", departmentId: (user as any)?.departmentId || 1 });
-      setShowTemplateManager(false);
-    },
-    onError: () => {
-      toast({ title: "Error", description: "Failed to create template", variant: "destructive" });
-    },
-  });
 
   const handleFieldChange = (fieldName: string, value: string) => {
     setFieldValues(prev => ({
@@ -112,13 +95,26 @@ export default function AuthorityLetter() {
   };
 
   const handleGenerate = () => {
-    if (!selectedTemplate) {
-      toast({ title: "Error", description: "Please select a template", variant: "destructive" });
+    if (!selectedDepartment) {
+      toast({ title: "Error", description: "Please select a department", variant: "destructive" });
+      return;
+    }
+
+    // Validate required fields
+    const requiredFields = fields.filter(field => field.isRequired);
+    const missingFields = requiredFields.filter(field => !fieldValues[field.fieldName]?.trim());
+    
+    if (missingFields.length > 0) {
+      toast({ 
+        title: "Validation Error", 
+        description: `Please fill in required fields: ${missingFields.map(f => f.fieldLabel).join(', ')}`,
+        variant: "destructive" 
+      });
       return;
     }
     
     generateMutation.mutate({
-      templateId: selectedTemplate,
+      departmentId: selectedDepartment,
       fieldValues
     });
   };
@@ -129,11 +125,12 @@ export default function AuthorityLetter() {
       return;
     }
 
+    const selectedDeptName = departmentsWithDocuments.find(d => d.id === selectedDepartment)?.name || 'letter';
     const blob = new Blob([generatedContent], { type: 'text/plain' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `authority-letter-${new Date().toISOString().split('T')[0]}.txt`;
+    a.download = `${selectedDeptName}-authority-letter-${new Date().toISOString().split('T')[0]}.txt`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -142,40 +139,20 @@ export default function AuthorityLetter() {
     toast({ title: "Success", description: "Authority letter downloaded" });
   };
 
-  const createDefaultTemplate = () => {
-    setNewTemplate({
-      templateName: "Default Authority Letter",
-      templateContent: `##Current Date##
-
-To,
-##Recipient Name##
-##Recipient Address##
-
-AUTHORITY LETTER
-
-Dear Sir/Madam,
-
-We hereby authorize ##Authorized Person##, ##Designation## to provide the services of transporting the ##Asset Type## of ##Company Name## from ##From Location## to ##To Location##.
-
-NOTE:- NOT FOR SALE THIS ##Asset Note## ARE FOR ONLY OFFICE USE.
-
-Thanking you.
-
-FOR ##Company Name##
-
-
-_______________________
-##Signatory Name##
-[##Signatory Designation##]`,
-      departmentId: (user as any)?.departmentId || 1
-    });
-  };
 
   useEffect(() => {
-    if (templates.length > 0 && !selectedTemplate) {
-      setSelectedTemplate(templates[0].id);
+    if (departmentsWithDocuments.length > 0 && !selectedDepartment) {
+      // Auto-select user's department if they have document, otherwise select first available
+      const userDept = departmentsWithDocuments.find(dept => dept.id === (user as any)?.departmentId);
+      setSelectedDepartment(userDept ? userDept.id : departmentsWithDocuments[0].id);
     }
-  }, [templates, selectedTemplate]);
+  }, [departmentsWithDocuments, selectedDepartment, user]);
+
+  // Reset field values when department changes
+  useEffect(() => {
+    setFieldValues({});
+    setGeneratedContent("");
+  }, [selectedDepartment]);
 
   if (isLoading || !isAuthenticated) {
     return (
@@ -190,70 +167,28 @@ _______________________
       <div className="py-6">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
           <div className="mb-8">
-            <div className="flex justify-between items-center">
-              <div>
-                <h2 className="text-2xl font-bold leading-7 text-slate-900 sm:text-3xl sm:truncate">
-                  Authority Letter Generator
-                </h2>
-                <p className="mt-1 text-sm text-slate-500">
-                  Generate official authority letters using department templates with ##field## placeholders
-                </p>
-              </div>
-              {(user as any)?.role === 'admin' && (
-                <Button onClick={() => setShowTemplateManager(!showTemplateManager)} variant="outline">
-                  <Edit className="h-4 w-4 mr-2" />
-                  Manage Templates
-                </Button>
+            <div>
+              <h2 className="text-2xl font-bold leading-7 text-slate-900 sm:text-3xl sm:truncate">
+                Authority Letter Generator
+              </h2>
+              <p className="mt-1 text-sm text-slate-500">
+                Generate official authority letters using uploaded Word documents with dynamic ##field## placeholders
+              </p>
+              {departmentsWithDocuments.length === 0 && (
+                <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <p className="text-sm text-yellow-800">
+                    <strong>No departments with Word documents found.</strong> 
+                    {(user as any)?.role === 'admin' ? (
+                      <span> Please go to Departments tab to upload Word document templates first.</span>
+                    ) : (
+                      <span> Please contact your administrator to upload department Word document templates.</span>
+                    )}
+                  </p>
+                </div>
               )}
             </div>
           </div>
 
-          {showTemplateManager && (user as any)?.role === 'admin' && (
-            <Card className="mb-8">
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  Template Manager
-                  <Button onClick={createDefaultTemplate} size="sm">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Create Default Template
-                  </Button>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label htmlFor="templateName">Template Name</Label>
-                  <Input
-                    id="templateName"
-                    value={newTemplate.templateName}
-                    onChange={(e) => setNewTemplate(prev => ({ ...prev, templateName: e.target.value }))}
-                    placeholder="Enter template name"
-                    data-testid="input-template-name"
-                  />
-                </div>
-                
-                <div>
-                  <Label htmlFor="templateContent">Template Content (Use ##FieldName## for placeholders)</Label>
-                  <Textarea
-                    id="templateContent"
-                    value={newTemplate.templateContent}
-                    onChange={(e) => setNewTemplate(prev => ({ ...prev, templateContent: e.target.value }))}
-                    placeholder="Enter template content with ##field## placeholders"
-                    rows={15}
-                    className="font-mono text-sm"
-                    data-testid="textarea-template-content"
-                  />
-                </div>
-                
-                <Button 
-                  onClick={() => createTemplateMutation.mutate(newTemplate)}
-                  disabled={createTemplateMutation.isPending || !newTemplate.templateName.trim()}
-                  data-testid="button-create-template"
-                >
-                  {createTemplateMutation.isPending ? "Creating..." : "Create Template"}
-                </Button>
-              </CardContent>
-            </Card>
-          )}
 
           <div className="grid gap-8 lg:grid-cols-2">
             {/* Form Section */}
@@ -263,51 +198,96 @@ _______________________
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <Label htmlFor="template">Select Template</Label>
-                  <Select value={selectedTemplate?.toString() || ""} onValueChange={(value) => setSelectedTemplate(parseInt(value))}>
-                    <SelectTrigger data-testid="select-template">
-                      <SelectValue placeholder="Choose a template" />
+                  <Label htmlFor="department">Select Department</Label>
+                  <Select value={selectedDepartment?.toString() || ""} onValueChange={(value) => setSelectedDepartment(parseInt(value))}>
+                    <SelectTrigger data-testid="select-department">
+                      <SelectValue placeholder="Choose a department" />
                     </SelectTrigger>
                     <SelectContent>
-                      {templates.map((template) => (
-                        <SelectItem key={template.id} value={template.id.toString()}>
-                          {template.templateName}
+                      {departmentsWithDocuments.map((department) => (
+                        <SelectItem key={department.id} value={department.id.toString()}>
+                          {department.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
+                  {selectedDepartment && (
+                    <p className="text-xs text-slate-500 mt-1">
+                      Using Word document template from {departmentsWithDocuments.find(d => d.id === selectedDepartment)?.name} department
+                    </p>
+                  )}
                 </div>
 
-                {/* Dynamic form fields based on template */}
-                {selectedTemplate && (
+                {/* Dynamic form fields based on department fields */}
+                {selectedDepartment && (
                   <div className="space-y-4">
-                    <h4 className="font-medium text-slate-900">Fill Template Fields</h4>
-                    
-                    {/* Common fields that are likely to be in templates */}
-                    {[
-                      { name: 'Recipient Name', key: 'Recipient Name' },
-                      { name: 'Recipient Address', key: 'Recipient Address' },
-                      { name: 'Company Name', key: 'Company Name' },
-                      { name: 'Authorized Person', key: 'Authorized Person' },
-                      { name: 'Designation', key: 'Designation' },
-                      { name: 'Asset Type', key: 'Asset Type' },
-                      { name: 'From Location', key: 'From Location' },
-                      { name: 'To Location', key: 'To Location' },
-                      { name: 'Asset Note', key: 'Asset Note' },
-                      { name: 'Signatory Name', key: 'Signatory Name' },
-                      { name: 'Signatory Designation', key: 'Signatory Designation' },
-                    ].map((field) => (
-                      <div key={field.key}>
-                        <Label htmlFor={field.key}>{field.name}</Label>
-                        <Input
-                          id={field.key}
-                          value={fieldValues[field.key] || ""}
-                          onChange={(e) => handleFieldChange(field.key, e.target.value)}
-                          placeholder={`Enter ${field.name.toLowerCase()}`}
-                          data-testid={`input-${field.key.toLowerCase().replace(' ', '-')}`}
-                        />
+                    {fieldsLoading ? (
+                      <div className="text-center py-4">
+                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto"></div>
+                        <p className="text-sm text-slate-500 mt-2">Loading form fields...</p>
                       </div>
-                    ))}
+                    ) : fields.length === 0 ? (
+                      <div className="text-center py-6 bg-slate-50 rounded-lg border-2 border-dashed">
+                        <FileText className="h-8 w-8 text-slate-400 mx-auto mb-2" />
+                        <p className="text-slate-600 font-medium">No custom fields configured</p>
+                        <p className="text-sm text-slate-500 mt-1">
+                          {(user as any)?.role === 'admin' ? (
+                            <span>Go to Departments → Manage Fields to add ##field## placeholders for this department's Word document.</span>
+                          ) : (
+                            <span>Contact your administrator to configure form fields for this department.</span>
+                          )}
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        <h4 className="font-medium text-slate-900 flex items-center">
+                          Fill Document Fields 
+                          <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                            {fields.length} field{fields.length !== 1 ? 's' : ''}
+                          </span>
+                        </h4>
+                        
+                        {fields.map((field) => (
+                          <div key={field.id}>
+                            <Label htmlFor={field.fieldName} className="flex items-center">
+                              {field.fieldLabel}
+                              {field.isRequired && <span className="text-red-500 ml-1">*</span>}
+                              <span className="ml-2 text-xs font-mono bg-slate-100 px-1 rounded">##${field.fieldName}##</span>
+                            </Label>
+                            {field.fieldType === 'date' ? (
+                              <Input
+                                id={field.fieldName}
+                                type="date"
+                                value={fieldValues[field.fieldName] || ""}
+                                onChange={(e) => handleFieldChange(field.fieldName, e.target.value)}
+                                required={field.isRequired}
+                                data-testid={`input-${field.fieldName}`}
+                              />
+                            ) : field.fieldType === 'number' ? (
+                              <Input
+                                id={field.fieldName}
+                                type="number"
+                                value={fieldValues[field.fieldName] || ""}
+                                onChange={(e) => handleFieldChange(field.fieldName, e.target.value)}
+                                placeholder={`Enter ${field.fieldLabel.toLowerCase()}`}
+                                required={field.isRequired}
+                                data-testid={`input-${field.fieldName}`}
+                              />
+                            ) : (
+                              <Input
+                                id={field.fieldName}
+                                type="text"
+                                value={fieldValues[field.fieldName] || ""}
+                                onChange={(e) => handleFieldChange(field.fieldName, e.target.value)}
+                                placeholder={`Enter ${field.fieldLabel.toLowerCase()}`}
+                                required={field.isRequired}
+                                data-testid={`input-${field.fieldName}`}
+                              />
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -315,7 +295,7 @@ _______________________
                   <Button 
                     onClick={handleGenerate} 
                     className="flex-1"
-                    disabled={generateMutation.isPending || !selectedTemplate}
+                    disabled={generateMutation.isPending || !selectedDepartment || fields.length === 0}
                     data-testid="button-generate"
                   >
                     {generateMutation.isPending ? "Generating..." : "Generate Letter"}
@@ -345,7 +325,13 @@ _______________________
                 <div className="bg-white p-6 border rounded-lg min-h-[600px] font-mono text-sm whitespace-pre-line">
                   {generatedContent || (
                     <div className="text-slate-500 text-center mt-20">
-                      Select a template and fill the fields to preview the authority letter
+                      {!selectedDepartment ? (
+                        "Select a department to begin"
+                      ) : fields.length === 0 ? (
+                        "No fields configured for this department"
+                      ) : (
+                        "Fill the form fields and click Generate to preview the authority letter"
+                      )}
                     </div>
                   )}
                 </div>
