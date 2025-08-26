@@ -84,12 +84,12 @@ export default function Couriers() {
           {/* Tabs for different courier statuses */}
           <div className="mt-8">
             <Tabs defaultValue="all" className="w-full">
-              <TabsList className="grid w-full grid-cols-5">
-                <TabsTrigger value="all" data-testid="tab-all-couriers">All Couriers</TabsTrigger>
-                <TabsTrigger value="on_the_way" data-testid="tab-on-the-way">On The Way</TabsTrigger>
-                <TabsTrigger value="received" data-testid="tab-received">Received</TabsTrigger>
-                <TabsTrigger value="deleted" data-testid="tab-deleted">Deleted</TabsTrigger>
-                <TabsTrigger value="print_authority" data-testid="tab-print-authority">Print Authority Later</TabsTrigger>
+              <TabsList className="flex w-full">
+                <TabsTrigger value="all" data-testid="tab-all-couriers" className="flex-1">All Couriers</TabsTrigger>
+                <TabsTrigger value="on_the_way" data-testid="tab-on-the-way" className="flex-1">On The Way</TabsTrigger>
+                <TabsTrigger value="received" data-testid="tab-received" className="flex-1">Received</TabsTrigger>
+                <TabsTrigger value="deleted" data-testid="tab-deleted" className="flex-1">Deleted</TabsTrigger>
+                <TabsTrigger value="authority_letter" data-testid="tab-authority-letter" className="flex-1">Authority Letter</TabsTrigger>
               </TabsList>
               
               <TabsContent value="all" className="mt-6">
@@ -108,7 +108,7 @@ export default function Couriers() {
                 <CourierTable status="deleted" onEdit={handleEdit} showRestore />
               </TabsContent>
               
-              <TabsContent value="print_authority" className="mt-6">
+              <TabsContent value="authority_letter" className="mt-6">
                 <PrintAuthorityForm />
               </TabsContent>
             </Tabs>
