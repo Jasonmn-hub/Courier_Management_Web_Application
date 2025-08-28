@@ -71,7 +71,6 @@ export default function Branches() {
   const [exportType, setExportType] = useState<'all' | 'active' | 'closed'>('all');
 
   const [formData, setFormData] = useState({
-    srNo: '',
     branchName: '',
     branchCode: '',
     branchAddress: '',
@@ -216,7 +215,6 @@ export default function Branches() {
 
   const resetForm = () => {
     setFormData({
-      srNo: '',
       branchName: '',
       branchCode: '',
       branchAddress: '',
@@ -232,7 +230,6 @@ export default function Branches() {
   const handleEdit = (branch: Branch) => {
     setEditingBranch(branch);
     setFormData({
-      srNo: branch.srNo?.toString() || '',
       branchName: branch.branchName,
       branchCode: branch.branchCode,
       branchAddress: branch.branchAddress,
@@ -248,7 +245,6 @@ export default function Branches() {
   const handleSubmit = () => {
     const branchData = {
       ...formData,
-      srNo: formData.srNo ? parseInt(formData.srNo) : undefined,
     };
 
     if (editingBranch) {
@@ -411,13 +407,11 @@ export default function Branches() {
             </DialogHeader>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="srNo">Sr. No</Label>
+                <Label>Sr. No</Label>
                 <Input
-                  id="srNo"
-                  type="number"
-                  value={formData.srNo}
-                  onChange={(e) => setFormData({...formData, srNo: e.target.value})}
-                  placeholder="Serial number"
+                  value="Auto-generated"
+                  disabled
+                  className="bg-slate-50 text-slate-500"
                   data-testid="input-sr-no"
                 />
               </div>

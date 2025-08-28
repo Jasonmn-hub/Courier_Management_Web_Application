@@ -43,7 +43,6 @@ function Router() {
             <Route path="/couriers" component={Couriers} />
             <Route path="/received-couriers" component={ReceivedCouriers} />
             <Route path="/authority-letter" component={AuthorityLetter} />
-            <Route path="/pdf-authority-letter" component={AuthorityLetterNew} />
             <Route path="/users" component={Users} />
             <Route path="/departments" component={Departments} />
             <Route path="/branches" component={Branches} />

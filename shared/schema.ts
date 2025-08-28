@@ -141,6 +141,16 @@ export const branches = pgTable("branches", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// User policies for department-based tab permissions
+export const userPolicies = pgTable("user_policies", {
+  id: serial("id").primaryKey(),
+  departmentId: integer("department_id").references(() => departments.id),
+  tabName: varchar("tab_name", { length: 100 }).notNull(), // 'branches', 'couriers', etc.
+  isEnabled: boolean("is_enabled").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Authority letter templates table - Enhanced for PDF generation
 export const authorityLetterTemplates = pgTable('authority_letter_templates', {
   id: serial('id').primaryKey(),
@@ -301,6 +311,12 @@ export const insertBranchSchema = createInsertSchema(branches).omit({
   updatedAt: true,
 });
 
+export const insertUserPolicySchema = createInsertSchema(userPolicies).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Types
 export type UpsertUser = z.infer<typeof upsertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -323,3 +339,5 @@ export type AuthorityLetterField = typeof authorityLetterFields.$inferSelect;
 export type InsertAuthorityLetterField = z.infer<typeof insertAuthorityLetterFieldSchema>;
 export type Branch = typeof branches.$inferSelect;
 export type InsertBranch = z.infer<typeof insertBranchSchema>;
+export type UserPolicy = typeof userPolicies.$inferSelect;
+export type InsertUserPolicy = z.infer<typeof insertUserPolicySchema>;

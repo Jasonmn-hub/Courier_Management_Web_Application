@@ -16,7 +16,8 @@ import {
   FormInput,
   User,
   LogOut,
-  FileText
+  FileText,
+  Shield
 } from "lucide-react";
 
 interface SidebarProps {
@@ -32,18 +33,22 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     { name: "Dashboard", href: "/", icon: BarChart3, current: location === "/" },
     { name: "Sent Couriers", href: "/couriers", icon: Package, current: location === "/couriers" },
     { name: "Received Couriers", href: "/received-couriers", icon: Truck, current: location === "/received-couriers" },
-    { name: "PDF Authority Letters", href: "/pdf-authority-letter", icon: FileText, current: location === "/pdf-authority-letter" },
     { name: "Authority Letter (Legacy)", href: "/authority-letter", icon: FileDown, current: location === "/authority-letter" },
   ];
+
+  // Check if branches tab should be shown based on user policy
+  const shouldShowBranches = (user as any)?.role === 'admin' || 
+    (user as any)?.departmentPolicies?.includes('branches');
 
   // Admin and Manager navigation items with proper grouping
   const adminNavigation = (user as any)?.role === 'admin' ? [
     { name: "Users & Roles", href: "/users", icon: Users, current: location === "/users", group: "management" },
     { name: "Departments", href: "/departments", icon: Building2, current: location === "/departments", group: "management" },
-    { name: "Branch List", href: "/branches", icon: MapPin, current: location === "/branches", group: "management" },
+    ...(shouldShowBranches ? [{ name: "Branch List", href: "/branches", icon: MapPin, current: location === "/branches", group: "management" }] : []),
     { name: "Settings", href: "/settings", icon: Settings, current: location === "/settings", group: "settings" },
     { name: "Custom Fields", href: "/custom-fields", icon: FormInput, current: location === "/custom-fields", group: "settings" },
     { name: "Audit Logs", href: "/audit-logs", icon: History, current: location === "/audit-logs", group: "settings" },
+    { name: "User Policies", href: "/user-policies", icon: Shield, current: location === "/user-policies", group: "settings" },
     { name: "Export Data", href: "/export", icon: FileDown, group: "tools" },
   ] : [];
 
