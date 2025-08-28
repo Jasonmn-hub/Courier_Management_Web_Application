@@ -160,17 +160,12 @@ export default function Landing() {
                         if (isRegisterMode) {
                           setIsRegisterMode(false);
                         } else {
-                          // Forget password functionality
-                          toast({
-                            title: "Password Reset",
-                            description: "Please contact your system administrator to reset your password.",
-                            duration: 5000,
-                          });
+                          window.location.href = "/forgot-password";
                         }
                       }}
                       className="w-full"
                     >
-                      {isRegisterMode ? "Already have an account? Sign In" : "Forget Password"}
+                      {isRegisterMode ? "Already have an account? Sign In" : "Forgot Password?"}
                     </Button>
                   </div>
                 </div>

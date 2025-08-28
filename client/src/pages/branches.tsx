@@ -66,9 +66,11 @@ export default function Branches() {
   const [showBranchForm, setShowBranchForm] = useState(false);
   const [showBulkUpload, setShowBulkUpload] = useState(false);
   const [showExportDialog, setShowExportDialog] = useState(false);
+  const [showDuplicateDialog, setShowDuplicateDialog] = useState(false);
   const [editingBranch, setEditingBranch] = useState<Branch | null>(null);
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [exportType, setExportType] = useState<'all' | 'active' | 'closed'>('all');
+  const [duplicateData, setDuplicateData] = useState<any>(null);
 
   const [formData, setFormData] = useState({
     branchName: '',
@@ -95,6 +97,16 @@ export default function Branches() {
       return;
     }
   }, [isAuthenticated, isLoading, user, toast]);
+
+  // Fetch Indian states
+  const { data: statesData } = useQuery({
+    queryKey: ['/api/states'],
+    queryFn: async () => {
+      const response = await apiRequest('GET', '/api/states');
+      return response.json();
+    },
+    enabled: isAuthenticated,
+  });
 
   // Fetch branches
   const { data: branchesData, isLoading: branchesLoading, refetch: refetchBranches } = useQuery({
@@ -183,9 +195,12 @@ export default function Branches() {
 
   // Bulk upload mutation
   const bulkUploadMutation = useMutation({
-    mutationFn: async (file: File) => {
+    mutationFn: async ({ file, adminApproval = false }: { file: File; adminApproval?: boolean }) => {
       const formData = new FormData();
       formData.append('csvFile', file);
+      if (adminApproval) {
+        formData.append('adminApproval', 'true');
+      }
 
       const token = localStorage.getItem('auth_token');
       const response = await fetch('/api/branches/bulk-upload', {
@@ -196,20 +211,32 @@ export default function Branches() {
         body: formData,
       });
 
+      const data = await response.json();
+      
       if (!response.ok) {
-        throw new Error('Failed to upload branches');
+        if (response.status === 409 && data.requiresApproval) {
+          // Duplicate entries found, return data for admin approval
+          return { requiresApproval: true, ...data };
+        }
+        throw new Error(data.message || 'Failed to upload branches');
       }
 
-      return response.json();
+      return data;
     },
     onSuccess: (data) => {
-      toast({ title: "Success", description: data.message });
-      refetchBranches();
-      setShowBulkUpload(false);
-      setCsvFile(null);
+      if (data.requiresApproval) {
+        // Show duplicate confirmation dialog
+        setDuplicateData(data);
+        setShowDuplicateDialog(true);
+      } else {
+        toast({ title: "Success", description: data.message });
+        refetchBranches();
+        setShowBulkUpload(false);
+        setCsvFile(null);
+      }
     },
     onError: (error: any) => {
-      toast({ title: "Error", description: "Failed to upload branches", variant: "destructive" });
+      toast({ title: "Error", description: error.message || "Failed to upload branches", variant: "destructive" });
     },
   });
 
@@ -439,14 +466,21 @@ export default function Branches() {
               </div>
               <div>
                 <Label htmlFor="state">State *</Label>
-                <Input
-                  id="state"
+                <Select
                   value={formData.state}
-                  onChange={(e) => setFormData({...formData, state: e.target.value})}
-                  placeholder="State"
-                  required
-                  data-testid="input-state"
-                />
+                  onValueChange={(value) => setFormData({...formData, state: value})}
+                >
+                  <SelectTrigger data-testid="select-state">
+                    <SelectValue placeholder="Select state" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {statesData?.states?.map((state: string) => (
+                      <SelectItem key={state} value={state}>
+                        {state}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="col-span-2">
                 <Label htmlFor="branchAddress">Branch Address *</Label>
@@ -569,7 +603,7 @@ export default function Branches() {
                 Cancel
               </Button>
               <Button 
-                onClick={() => csvFile && bulkUploadMutation.mutate(csvFile)}
+                onClick={() => csvFile && bulkUploadMutation.mutate({ file: csvFile })}
                 disabled={!csvFile || bulkUploadMutation.isPending}
                 data-testid="button-upload-csv"
               >
@@ -612,6 +646,68 @@ export default function Branches() {
               <Button onClick={handleExport} data-testid="button-confirm-export">
                 <Download className="h-4 w-4 mr-2" />
                 Export CSV
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Duplicate Confirmation Dialog */}
+      {showDuplicateDialog && duplicateData && (
+        <Dialog open={showDuplicateDialog} onOpenChange={setShowDuplicateDialog}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Duplicate Entries Found</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <p className="text-sm text-slate-600">
+                The following duplicate entries were found in your CSV file. Do you want to proceed anyway?
+              </p>
+              
+              <div className="max-h-60 overflow-y-auto border rounded-lg p-4 bg-slate-50">
+                {duplicateData.duplicates?.map((duplicate: any, index: number) => (
+                  <div key={index} className="mb-2 p-2 bg-white border rounded text-sm">
+                    <span className="font-medium text-red-600">Row {duplicate.row}:</span> 
+                    <span className="ml-2">{duplicate.message}</span>
+                    <div className="text-slate-500 mt-1">
+                      {duplicate.field}: {duplicate.value}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {duplicateData.validationErrors?.length > 0 && (
+                <div>
+                  <p className="text-sm font-medium text-slate-700 mb-2">Validation Errors:</p>
+                  <div className="max-h-40 overflow-y-auto border rounded-lg p-4 bg-red-50">
+                    {duplicateData.validationErrors.map((error: any, index: number) => (
+                      <div key={index} className="mb-2 text-sm text-red-700">
+                        <span className="font-medium">Row {error.row}:</span>
+                        <ul className="ml-4 list-disc">
+                          {error.errors.map((err: string, errIndex: number) => (
+                            <li key={errIndex}>{err}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowDuplicateDialog(false)}>
+                Cancel
+              </Button>
+              <Button 
+                onClick={() => {
+                  if (csvFile) {
+                    bulkUploadMutation.mutate({ file: csvFile, adminApproval: true });
+                  }
+                  setShowDuplicateDialog(false);
+                }}
+                variant="destructive"
+              >
+                Proceed with Duplicates
               </Button>
             </DialogFooter>
           </DialogContent>

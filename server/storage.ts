@@ -12,6 +12,7 @@ import {
   branches,
   userPolicies,
   userDepartments,
+  passwordResetTokens,
   type User,
   type UpsertUser,
   type Department,
@@ -36,7 +37,7 @@ import {
   type InsertUserPolicy,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, ilike, or, sql } from "drizzle-orm";
+import { eq, and, desc, ilike, or, sql, lt, gt } from "drizzle-orm";
 
 export interface IStorage {
   // User operations
@@ -515,6 +516,58 @@ export class DatabaseStorage implements IStorage {
     await db.delete(smtpSettings);
     const [newSettings] = await db.insert(smtpSettings).values(settings).returning();
     return newSettings;
+  }
+
+  // Password reset token operations
+  async createPasswordResetToken(email: string, token: string, expiresAt: Date): Promise<void> {
+    // Clean up expired tokens for this email first
+    await db.delete(passwordResetTokens)
+      .where(and(
+        eq(passwordResetTokens.email, email),
+        lt(passwordResetTokens.expiresAt, new Date())
+      ));
+
+    // Insert new token
+    await db.insert(passwordResetTokens).values({
+      email,
+      token,
+      expiresAt,
+      isUsed: false
+    });
+  }
+
+  async verifyPasswordResetToken(email: string, token: string): Promise<boolean> {
+    const [resetToken] = await db
+      .select()
+      .from(passwordResetTokens)
+      .where(and(
+        eq(passwordResetTokens.email, email),
+        eq(passwordResetTokens.token, token),
+        eq(passwordResetTokens.isUsed, false),
+        gt(passwordResetTokens.expiresAt, new Date())
+      ))
+      .limit(1);
+
+    return !!resetToken;
+  }
+
+  async markPasswordResetTokenAsUsed(email: string, token: string): Promise<void> {
+    await db
+      .update(passwordResetTokens)
+      .set({ isUsed: true })
+      .where(and(
+        eq(passwordResetTokens.email, email),
+        eq(passwordResetTokens.token, token)
+      ));
+  }
+
+  async updateUserPassword(email: string, hashedPassword: string): Promise<boolean> {
+    const result = await db
+      .update(users)
+      .set({ password: hashedPassword, updatedAt: new Date() })
+      .where(eq(users.email, email));
+    
+    return (result.rowCount ?? 0) > 0;
   }
 
   // Audit log operations
@@ -1121,6 +1174,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createBranch(branch: InsertBranch): Promise<Branch> {
+    // Auto-assign Sr. No if not provided
+    if (!branch.srNo) {
+      const [maxSrNoResult] = await db.select({ maxSrNo: sql`COALESCE(MAX(${branches.srNo}), 0)` }).from(branches);
+      branch.srNo = (Number(maxSrNoResult?.maxSrNo) || 0) + 1;
+    }
+    
     const [newBranch] = await db.insert(branches).values(branch).returning();
     return newBranch;
   }
@@ -1147,7 +1206,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createBulkBranches(branchList: InsertBranch[]): Promise<Branch[]> {
-    const newBranches = await db.insert(branches).values(branchList).returning();
+    // Auto-assign Sr. No for branches without one
+    const [maxSrNoResult] = await db.select({ maxSrNo: sql`COALESCE(MAX(${branches.srNo}), 0)` }).from(branches);
+    let nextSrNo = (Number(maxSrNoResult?.maxSrNo) || 0) + 1;
+    
+    const branchesWithSrNo = branchList.map(branch => ({
+      ...branch,
+      srNo: branch.srNo || nextSrNo++
+    }));
+    
+    const newBranches = await db.insert(branches).values(branchesWithSrNo).returning();
     return newBranches;
   }
 

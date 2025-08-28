@@ -226,14 +226,14 @@ export default function Settings() {
 
   // Load existing SMTP settings
   useEffect(() => {
-    if (existingSmtpSettings) {
+    if (existingSmtpSettings && typeof existingSmtpSettings === 'object') {
       setSmtpData({
-        host: existingSmtpSettings.host || "",
-        port: existingSmtpSettings.port || 587,
-        useTLS: existingSmtpSettings.useTLS || false,
-        useSSL: existingSmtpSettings.useSSL || false,
-        username: existingSmtpSettings.username || "",
-        password: existingSmtpSettings.password || ""
+        host: (existingSmtpSettings as any).host || "",
+        port: (existingSmtpSettings as any).port || 587,
+        useTLS: (existingSmtpSettings as any).useTLS || false,
+        useSSL: (existingSmtpSettings as any).useSSL || false,
+        username: (existingSmtpSettings as any).username || "",
+        password: (existingSmtpSettings as any).password || ""
       });
     }
   }, [existingSmtpSettings]);

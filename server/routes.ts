@@ -11,6 +11,7 @@ import PizZip from "pizzip";
 import Docxtemplater from "docxtemplater";
 import { PDFGenerator } from "./pdf-generator";
 import Papa from "papaparse";
+import nodemailer from "nodemailer";
 
 // Configure multer for file uploads
 const uploadDir = path.join(process.cwd(), 'uploads');
@@ -35,6 +36,16 @@ const upload = multer({
     }
   },
 });
+
+// Indian states list for dropdowns
+const INDIAN_STATES = [
+  'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh', 'Goa', 'Gujarat', 'Haryana',
+  'Himachal Pradesh', 'Jharkhand', 'Karnataka', 'Kerala', 'Madhya Pradesh', 'Maharashtra', 'Manipur',
+  'Meghalaya', 'Mizoram', 'Nagaland', 'Odisha', 'Punjab', 'Rajasthan', 'Sikkim', 'Tamil Nadu',
+  'Telangana', 'Tripura', 'Uttar Pradesh', 'Uttarakhand', 'West Bengal', 'Andaman and Nicobar Islands',
+  'Chandigarh', 'Dadra and Nagar Haveli and Daman and Diu', 'Delhi', 'Jammu and Kashmir', 'Ladakh',
+  'Lakshadweep', 'Puducherry'
+];
 
 // Document upload specifically for Word documents
 const documentUpload = multer({
@@ -90,6 +101,16 @@ const readTempUsersFromCSV = (): Array<{email: string, name: string, firstName: 
 };
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Get Indian states endpoint
+  app.get('/api/states', authenticateToken, async (req: any, res) => {
+    try {
+      res.json({ states: INDIAN_STATES });
+    } catch (error) {
+      console.error("Error fetching states:", error);
+      res.status(500).json({ message: "Failed to fetch states" });
+    }
+  });
+
   // Login endpoint
   app.post('/api/auth/login', async (req, res) => {
     try {
@@ -179,6 +200,133 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Registration error:', error);
       res.status(500).json({ message: 'Registration failed' });
+    }
+  });
+
+  // Forgot password endpoint
+  app.post('/api/auth/forgot-password', async (req, res) => {
+    try {
+      const { email } = req.body;
+      
+      if (!email || !email.includes('@')) {
+        return res.status(400).json({ message: 'Valid email is required' });
+      }
+
+      // Check if user exists
+      const user = await storage.getUserByEmail(email);
+      if (!user) {
+        // Don't reveal if user exists or not for security
+        return res.json({ message: 'If an account with that email exists, you will receive a password reset code.' });
+      }
+
+      // Generate 6-digit OTP
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      
+      // Set expiry to 15 minutes from now
+      const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+      
+      // Save OTP to database
+      await storage.createPasswordResetToken(email, otp, expiresAt);
+
+      // Get SMTP settings for sending email
+      const smtpSettings = await storage.getSmtpSettings();
+      if (!smtpSettings || !smtpSettings.host) {
+        return res.status(500).json({ message: 'Email service is not configured. Please contact your administrator.' });
+      }
+
+      // Send OTP email
+      try {
+        const transportConfig: any = {
+          host: smtpSettings.host,
+          port: smtpSettings.port || 587,
+          auth: {
+            user: smtpSettings.username,
+            pass: smtpSettings.password,
+          }
+        };
+
+        if (smtpSettings.useSSL) {
+          transportConfig.secure = true;
+        } else if (smtpSettings.useTLS) {
+          transportConfig.secure = false;
+          transportConfig.requireTLS = true;
+        } else {
+          transportConfig.secure = false;
+        }
+
+        const transporter = nodemailer.createTransporter(transportConfig);
+
+        const mailOptions = {
+          from: smtpSettings.fromEmail || smtpSettings.username,
+          to: email,
+          subject: 'Password Reset Code - Courier Management System',
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+              <h2 style="color: #333;">Password Reset Request</h2>
+              <p>You have requested to reset your password for the Courier Management System.</p>
+              <p>Your password reset code is:</p>
+              <div style="background-color: #f8f9fa; padding: 20px; text-align: center; margin: 20px 0; border-radius: 8px;">
+                <h1 style="color: #007bff; font-size: 36px; letter-spacing: 5px; margin: 0;">${otp}</h1>
+              </div>
+              <p><strong>Important:</strong></p>
+              <ul>
+                <li>This code will expire in 15 minutes</li>
+                <li>If you didn't request this reset, please ignore this email</li>
+                <li>Do not share this code with anyone</li>
+              </ul>
+              <p>Thank you!</p>
+            </div>
+          `
+        };
+
+        await transporter.sendMail(mailOptions);
+      } catch (emailError) {
+        console.error('Error sending reset email:', emailError);
+        return res.status(500).json({ message: 'Failed to send password reset email. Please try again later.' });
+      }
+
+      res.json({ message: 'If an account with that email exists, you will receive a password reset code.' });
+    } catch (error) {
+      console.error('Forgot password error:', error);
+      res.status(500).json({ message: 'Password reset request failed' });
+    }
+  });
+
+  // Reset password endpoint
+  app.post('/api/auth/reset-password', async (req, res) => {
+    try {
+      const { email, otp, newPassword } = req.body;
+      
+      if (!email || !otp || !newPassword) {
+        return res.status(400).json({ message: 'Email, OTP, and new password are required' });
+      }
+
+      if (newPassword.length < 6) {
+        return res.status(400).json({ message: 'Password must be at least 6 characters long' });
+      }
+
+      // Verify OTP
+      const isValidOtp = await storage.verifyPasswordResetToken(email, otp);
+      if (!isValidOtp) {
+        return res.status(400).json({ message: 'Invalid or expired reset code' });
+      }
+
+      // Hash new password
+      const hashedPassword = await hashPassword(newPassword);
+
+      // Update user password
+      const passwordUpdated = await storage.updateUserPassword(email, hashedPassword);
+      if (!passwordUpdated) {
+        return res.status(400).json({ message: 'Failed to update password' });
+      }
+
+      // Mark OTP as used
+      await storage.markPasswordResetTokenAsUsed(email, otp);
+
+      res.json({ message: 'Password has been reset successfully' });
+    } catch (error) {
+      console.error('Reset password error:', error);
+      res.status(500).json({ message: 'Password reset failed' });
     }
   });
 
@@ -1041,13 +1189,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const branches: InsertBranch[] = [];
       const validationErrors: any[] = [];
+      const duplicates: any[] = [];
+
+      // Check for duplicates in existing database
+      const existingBranches = await storage.getAllBranches();
+      const existingBranchNames = new Set(existingBranches.branches.map(b => b.branchName.toLowerCase()));
+      const existingBranchCodes = new Set(existingBranches.branches.map(b => b.branchCode.toLowerCase()));
+
+      // Check for duplicates within the CSV file itself
+      const csvBranchNames = new Set();
+      const csvBranchCodes = new Set();
 
       parsed.data.forEach((row: any, index: number) => {
         try {
+          const branchName = row.branchName?.trim();
+          const branchCode = row.branchCode?.trim();
+
+          // Check for duplicates
+          if (branchName && existingBranchNames.has(branchName.toLowerCase())) {
+            duplicates.push({
+              row: index + 1,
+              field: 'branchName',
+              value: branchName,
+              message: 'Branch name already exists in database'
+            });
+          }
+
+          if (branchCode && existingBranchCodes.has(branchCode.toLowerCase())) {
+            duplicates.push({
+              row: index + 1,
+              field: 'branchCode', 
+              value: branchCode,
+              message: 'Branch code already exists in database'
+            });
+          }
+
+          if (branchName && csvBranchNames.has(branchName.toLowerCase())) {
+            duplicates.push({
+              row: index + 1,
+              field: 'branchName',
+              value: branchName,
+              message: 'Duplicate branch name in CSV file'
+            });
+          }
+
+          if (branchCode && csvBranchCodes.has(branchCode.toLowerCase())) {
+            duplicates.push({
+              row: index + 1,
+              field: 'branchCode',
+              value: branchCode,
+              message: 'Duplicate branch code in CSV file'
+            });
+          }
+
+          // Add to tracking sets
+          if (branchName) csvBranchNames.add(branchName.toLowerCase());
+          if (branchCode) csvBranchCodes.add(branchCode.toLowerCase());
+
           const branchData = insertBranchSchema.parse({
-            srNo: row.srNo ? parseInt(row.srNo) : undefined,
-            branchName: row.branchName?.trim(),
-            branchCode: row.branchCode?.trim(),
+            branchName,
+            branchCode,
             branchAddress: row.branchAddress?.trim(),
             pincode: row.pincode?.trim(),
             state: row.state?.trim(),
@@ -1066,10 +1267,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       });
 
+      // Handle duplicates based on admin decision
+      const { adminApproval } = req.body;
+      if (duplicates.length > 0 && !adminApproval) {
+        return res.status(409).json({
+          message: "Duplicate entries found. Admin approval required to proceed.",
+          duplicates,
+          validationErrors,
+          requiresApproval: true
+        });
+      }
+
       if (validationErrors.length > 0) {
         return res.status(400).json({
           message: "Validation errors in CSV data",
-          errors: validationErrors
+          errors: validationErrors,
+          duplicates
         });
       }
 
@@ -1082,8 +1295,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await logAudit(req.currentUser.id, 'CREATE', 'branch', createdBranches.length);
 
       res.status(201).json({
-        message: `Successfully created ${createdBranches.length} branches`,
-        branches: createdBranches
+        message: `Successfully created ${createdBranches.length} branches${duplicates.length > 0 ? ` (${duplicates.length} duplicates were approved and processed)` : ''}`,
+        branches: createdBranches,
+        duplicatesProcessed: duplicates.length
       });
     } catch (error) {
       console.error("Error in bulk branch upload:", error);
@@ -2513,18 +2727,75 @@ Jigar Jodhani
 
       // Get current SMTP settings
       const smtpSettings = await storage.getSmtpSettings();
-      if (!smtpSettings) {
-        return res.status(400).json({ message: "SMTP settings not configured" });
+      if (!smtpSettings || !smtpSettings.host || !smtpSettings.username || !smtpSettings.password) {
+        return res.status(400).json({ message: "SMTP settings incomplete. Please configure host, username, and password." });
       }
 
-      // For now, just return success (actual email sending would require nodemailer setup)
+      // Create transporter with the saved settings
+      const transportConfig: any = {
+        host: smtpSettings.host,
+        port: smtpSettings.port || 587,
+        auth: {
+          user: smtpSettings.username,
+          pass: smtpSettings.password,
+        }
+      };
+
+      // Configure TLS/SSL
+      if (smtpSettings.useSSL) {
+        transportConfig.secure = true; // Use SSL (port 465)
+      } else if (smtpSettings.useTLS) {
+        transportConfig.secure = false; // Use TLS (port 587)
+        transportConfig.requireTLS = true;
+      } else {
+        transportConfig.secure = false;
+      }
+
+      const transporter = nodemailer.createTransporter(transportConfig);
+
+      // Verify connection configuration
+      await transporter.verify();
+
+      // Send test email
+      const mailOptions = {
+        from: smtpSettings.fromEmail || smtpSettings.username,
+        to: testEmail,
+        subject: 'Courier Management System - SMTP Test Email',
+        html: `
+          <h2>SMTP Configuration Test</h2>
+          <p>This is a test email from your Courier Management System.</p>
+          <p>If you received this email, your SMTP configuration is working correctly!</p>
+          <p><strong>Test details:</strong></p>
+          <ul>
+            <li>Host: ${smtpSettings.host}</li>
+            <li>Port: ${smtpSettings.port}</li>
+            <li>TLS: ${smtpSettings.useTLS ? 'Enabled' : 'Disabled'}</li>
+            <li>SSL: ${smtpSettings.useSSL ? 'Enabled' : 'Disabled'}</li>
+            <li>Test sent at: ${new Date().toLocaleString()}</li>
+          </ul>
+          <p>Thank you!</p>
+        `
+      };
+
+      await transporter.sendMail(mailOptions);
+
       res.json({ 
-        message: `Test email would be sent to ${testEmail}`,
+        message: `Test email sent successfully to ${testEmail}`,
         success: true 
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error sending test email:", error);
-      res.status(500).json({ message: "Failed to send test email" });
+      
+      let errorMessage = "Failed to send test email";
+      if (error.code === 'EAUTH') {
+        errorMessage = "Authentication failed. Please check your username and password.";
+      } else if (error.code === 'ECONNECTION') {
+        errorMessage = "Connection failed. Please check your SMTP host and port.";
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      res.status(500).json({ message: errorMessage });
     }
   });
 

@@ -119,6 +119,8 @@ export const smtpSettings = pgTable("smtp_settings", {
   id: serial("id").primaryKey(),
   host: varchar("host", { length: 200 }),
   port: integer("port"),
+  useTLS: boolean("use_tls").default(false),
+  useSSL: boolean("use_ssl").default(false),
   username: varchar("username", { length: 100 }),
   password: text("password"),
   fromEmail: varchar("from_email", { length: 100 }),
@@ -158,6 +160,16 @@ export const userPolicies = pgTable("user_policies", {
   isEnabled: boolean("is_enabled").default(true).notNull(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Password reset tokens table for OTP-based password recovery
+export const passwordResetTokens = pgTable("password_reset_tokens", {
+  id: serial("id").primaryKey(),
+  email: varchar("email", { length: 255 }).notNull(),
+  token: varchar("token", { length: 10 }).notNull(), // 6-digit OTP
+  expiresAt: timestamp("expires_at").notNull(),
+  isUsed: boolean("is_used").default(false).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 // Authority letter templates table - Enhanced for PDF generation

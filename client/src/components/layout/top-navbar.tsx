@@ -9,6 +9,7 @@ import {
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
 import { Menu, Search, Bell, ChevronDown } from "lucide-react";
+import { useLocation } from "wouter";
 import AccountProfile from "./account-profile";
 
 interface TopNavbarProps {
@@ -17,6 +18,32 @@ interface TopNavbarProps {
 
 export default function TopNavbar({ onMenuClick }: TopNavbarProps) {
   const { user, logout } = useAuth();
+  const [location] = useLocation();
+
+  const getSearchPlaceholder = () => {
+    switch (location) {
+      case "/couriers":
+        return "Search couriers, POD numbers...";
+      case "/received-couriers":
+        return "Search received couriers...";
+      case "/branches":
+        return "Search branches, codes...";
+      case "/users":
+        return "Search users, emails...";
+      case "/departments":
+        return "Search departments...";
+      case "/user-policies":
+        return "Search policies...";
+      case "/authority-letter":
+        return "Search authority letters...";
+      case "/settings":
+      case "/custom-fields":
+      case "/audit-logs":
+        return "Search settings...";
+      default:
+        return "Search...";
+    }
+  };
 
   const handleLogout = () => {
     logout();
@@ -59,7 +86,7 @@ export default function TopNavbar({ onMenuClick }: TopNavbarProps) {
               </div>
               <Input 
                 className="pl-10 pr-3 py-2"
-                placeholder="Search couriers, POD numbers..."
+                placeholder={getSearchPlaceholder()}
                 data-testid="input-search"
               />
             </div>
