@@ -1215,7 +1215,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "CSV file is required" });
       }
 
-      const csvContent = req.file.buffer.toString('utf-8');
+      const csvContent = req.file.buffer?.toString('utf-8') || req.file.path ? 
+        require('fs').readFileSync(req.file.path, 'utf-8') : null;
+      
+      if (!csvContent) {
+        return res.status(400).json({ message: "Failed to read CSV file content" });
+      }
       const parsed = Papa.parse(csvContent, { 
         header: true, 
         skipEmptyLines: true,

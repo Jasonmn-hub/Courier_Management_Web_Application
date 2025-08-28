@@ -783,6 +783,8 @@ export class DatabaseStorage implements IStorage {
     month: string;
     onTheWay: number;
     completed: number;
+    sent: number;
+    received: number;
   }>> {
     const now = new Date();
     const monthlyData = [];
@@ -839,12 +841,16 @@ export class DatabaseStorage implements IStorage {
         .where(and(...receivedConditions));
       
       const onTheWayCount = Number(onTheWayResult?.count || 0);
-      const completedCount = Number(completedResult?.count || 0) + Number(receivedResult?.count || 0);
+      const completedCount = Number(completedResult?.count || 0);
+      const receivedCount = Number(receivedResult?.count || 0);
+      const totalCompleted = completedCount + receivedCount;
       
       monthlyData.push({
         month: monthName,
         onTheWay: onTheWayCount,
-        completed: completedCount
+        completed: totalCompleted,
+        sent: completedCount + onTheWayCount, // Sent couriers from main table
+        received: receivedCount // Received couriers from received table
       });
     }
     

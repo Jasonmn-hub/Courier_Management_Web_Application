@@ -13,6 +13,8 @@ export default function Charts() {
     month: string;
     onTheWay: number;
     completed: number;
+    sent: number;
+    received: number;
   }>>({ queryKey: ['/api/stats/monthly'] });
 
   if (isLoading || isMonthlyLoading) {
@@ -56,10 +58,9 @@ export default function Charts() {
     { name: 'Completed', value: (stats as any)?.sent ? (stats as any).sent - onTheWayCount : 0 }
   ].filter(item => item.value > 0);
 
-  const receivedData = monthlyData.map(item => ({
-    month: item.month,
-    received: (stats as any)?.received || 0
-  }));
+  const receivedData = monthlyData.length > 0 ? monthlyData : [
+    { month: 'No Data', received: 0 }
+  ];
 
   return (
     <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
@@ -107,7 +108,7 @@ export default function Charts() {
         <CardContent>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={monthlyData}>
+              <BarChart data={receivedData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
                 <XAxis 
                   dataKey="month" 
@@ -121,7 +122,7 @@ export default function Charts() {
                 <Tooltip />
                 <Legend />
                 <Bar 
-                  dataKey="completed" 
+                  dataKey="received" 
                   fill="#10B981" 
                   name="Received Couriers"
                   radius={[2, 2, 0, 0]}
