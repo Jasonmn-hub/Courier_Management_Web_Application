@@ -8,7 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { FileDown, FileText, Plus, Edit } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { FileDown, FileText, Plus, Edit, Upload, Download } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 
 interface Department {
@@ -35,6 +36,11 @@ export default function AuthorityLetter() {
   const [selectedDepartment, setSelectedDepartment] = useState<number | null>(null);
   const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
   const [generatedContent, setGeneratedContent] = useState<string>("");
+  const [showFilenameDialog, setShowFilenameDialog] = useState(false);
+  const [customFilename, setCustomFilename] = useState("");
+  const [selectedFilenameField, setSelectedFilenameField] = useState("");
+  const [showBulkUpload, setShowBulkUpload] = useState(false);
+  const [csvFile, setCsvFile] = useState<File | null>(null);
 
   // Redirect to home if not authenticated
   useEffect(() => {
@@ -86,13 +92,24 @@ export default function AuthorityLetter() {
     },
   });
 
-  // Download letter mutation
+  // Generate filename based on template fields
+  const generateFilename = () => {
+    if (!selectedFilenameField || !fieldValues[selectedFilenameField]) {
+      return customFilename || 'authority-letter';
+    }
+    
+    const fieldValue = fieldValues[selectedFilenameField];
+    const sanitized = fieldValue.replace(/[^a-zA-Z0-9_-]/g, '_');
+    return `${sanitized}_authority_letter`;
+  };
+
+  // Download letter mutation - Updated to generate PDF
   const downloadMutation = useMutation({
-    mutationFn: async (data: { departmentId: number; fieldValues: Record<string, string> }) => {
+    mutationFn: async (data: { departmentId: number; fieldValues: Record<string, string>; fileName?: string }) => {
       const token = localStorage.getItem('auth_token');
       if (!token) throw new Error('No auth token');
       
-      const response = await fetch('/api/authority-letter/generate-from-department', {
+      const response = await fetch('/api/authority-letter/generate-pdf-from-department', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -106,49 +123,102 @@ export default function AuthorityLetter() {
         throw new Error(error.message || 'Failed to generate authority letter');
       }
       
-      // Check if response is a Word document (binary) or JSON (text fallback)
-      const contentType = response.headers.get('content-type');
-      if (contentType?.includes('application/vnd.openxmlformats-officedocument.wordprocessingml.document')) {
-        // It's a Word document - trigger download directly
-        const blob = await response.blob();
-        const contentDisposition = response.headers.get('content-disposition');
-        const filename = contentDisposition?.match(/filename="(.+)"/)?.[1] || 'authority-letter.docx';
-        
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
-        
-        return { isWordDocument: true, filename };
-      } else {
-        // It's JSON (text fallback)
-        return response.json();
-      }
+      // Handle PDF download
+      const blob = await response.blob();
+      const filename = data.fileName || 'authority-letter.pdf';
+      
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename.endsWith('.pdf') ? filename : `${filename}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+      
+      return { filename };
     },
     onSuccess: (data) => {
-      if (data.isWordDocument) {
-        toast({ title: "Success", description: `Word document downloaded: ${data.filename}` });
-      } else {
-        if (data.isTextFallback) {
-          toast({ 
-            title: "Downloaded (Text Fallback)", 
-            description: "Word document processing failed. Downloaded text version instead.",
-            variant: "destructive"
-          });
-        } else {
-          toast({ title: "Success", description: "Authority letter downloaded successfully" });
-        }
-      }
+      toast({ title: "Success", description: `PDF downloaded: ${data.filename}` });
+      setShowFilenameDialog(false);
     },
     onError: (error: any) => {
-      toast({ title: "Error", description: error.message || "Failed to download authority letter", variant: "destructive" });
+      toast({ title: "Error", description: error.message || "Failed to generate authority letter", variant: "destructive" });
     },
   });
 
+  // Bulk upload mutation
+  const bulkUploadMutation = useMutation({
+    mutationFn: async (data: { departmentId: number; csvFile: File }) => {
+      const formData = new FormData();
+      formData.append('departmentId', data.departmentId.toString());
+      formData.append('csvFile', data.csvFile);
+
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch('/api/authority-letter/bulk-generate-from-department', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate bulk PDFs');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `authority_letters_bulk_${Date.now()}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    },
+    onSuccess: () => {
+      toast({ title: "Success", description: "Bulk PDFs generated and downloaded successfully" });
+      setShowBulkUpload(false);
+      setCsvFile(null);
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: "Failed to generate bulk PDFs", variant: "destructive" });
+    },
+  });
+
+  const handleGeneratePreview = () => {
+    if (!selectedDepartment || !fieldValues) {
+      toast({ title: "Error", description: "Please select a department and fill required fields", variant: "destructive" });
+      return;
+    }
+    previewMutation.mutate({ departmentId: selectedDepartment, fieldValues });
+  };
+
+  const handleDownload = () => {
+    if (!selectedDepartment || !fieldValues) {
+      toast({ title: "Error", description: "Please select a department and fill required fields", variant: "destructive" });
+      return;
+    }
+    setShowFilenameDialog(true);
+  };
+
+  const handleConfirmDownload = () => {
+    const fileName = generateFilename();
+    downloadMutation.mutate({ 
+      departmentId: selectedDepartment!, 
+      fieldValues, 
+      fileName 
+    });
+  };
+
+  const handleBulkUpload = () => {
+    if (!selectedDepartment || !csvFile) {
+      toast({ title: "Error", description: "Please select a department and upload a CSV file", variant: "destructive" });
+      return;
+    }
+    bulkUploadMutation.mutate({ departmentId: selectedDepartment, csvFile });
+  };
 
   const handleFieldChange = (fieldName: string, value: string) => {
     setFieldValues(prev => ({
@@ -156,69 +226,6 @@ export default function AuthorityLetter() {
       [fieldName]: value
     }));
   };
-
-  const handlePreview = () => {
-    if (!selectedDepartment) {
-      toast({ title: "Error", description: "Please select a department", variant: "destructive" });
-      return;
-    }
-
-    previewMutation.mutate({
-      departmentId: selectedDepartment,
-      fieldValues
-    });
-  };
-
-  const handleDownloadWord = () => {
-    if (!selectedDepartment) {
-      toast({ title: "Error", description: "Please select a department", variant: "destructive" });
-      return;
-    }
-
-    // Validate required fields
-    const requiredFields = fields.filter(field => field.isRequired);
-    const missingFields = requiredFields.filter(field => !fieldValues[field.fieldName]?.trim());
-    
-    if (missingFields.length > 0) {
-      toast({ 
-        title: "Validation Error", 
-        description: `Please fill in required fields: ${missingFields.map(f => f.fieldLabel).join(', ')}`,
-        variant: "destructive" 
-      });
-      return;
-    }
-    
-    downloadMutation.mutate({
-      departmentId: selectedDepartment,
-      fieldValues
-    });
-  };
-
-  // Auto-preview when field values change
-  useEffect(() => {
-    if (selectedDepartment && fields.length > 0) {
-      const timer = setTimeout(() => {
-        handlePreview();
-      }, 500);
-      return () => clearTimeout(timer);
-    }
-  }, [fieldValues, selectedDepartment, fields]);
-
-
-
-  useEffect(() => {
-    if (departmentsWithDocuments.length > 0 && !selectedDepartment) {
-      // Auto-select user's department if they have document, otherwise select first available
-      const userDept = departmentsWithDocuments.find(dept => dept.id === (user as any)?.departmentId);
-      setSelectedDepartment(userDept ? userDept.id : departmentsWithDocuments[0].id);
-    }
-  }, [departmentsWithDocuments, selectedDepartment, user]);
-
-  // Reset field values when department changes
-  useEffect(() => {
-    setFieldValues({});
-    setGeneratedContent("");
-  }, [selectedDepartment]);
 
   if (isLoading || !isAuthenticated) {
     return (
@@ -229,198 +236,278 @@ export default function AuthorityLetter() {
   }
 
   return (
-    <main className="flex-1 relative overflow-y-auto focus:outline-none">
-      <div className="py-6">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
-          <div className="mb-8">
-            <div>
-              <h2 className="text-2xl font-bold leading-7 text-slate-900 sm:text-3xl sm:truncate">
-                Authority Letter Generator
-              </h2>
-              <p className="mt-1 text-sm text-slate-500">
-                Generate official authority letters using uploaded Word documents with dynamic ##field## placeholders
-              </p>
-              {departmentsWithDocuments.length === 0 && (
-                <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                  <p className="text-sm text-yellow-800">
-                    <strong>No departments with Word documents found.</strong> 
-                    {(user as any)?.role === 'admin' ? (
-                      <span> Please go to Departments tab to upload Word document templates first.</span>
-                    ) : (
-                      <span> Please contact your administrator to upload department Word document templates.</span>
-                    )}
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
-
-
-          <div className="grid gap-8 lg:grid-cols-2">
-            {/* Form Section */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Letter Configuration</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label htmlFor="department">Select Department</Label>
-                  <Select value={selectedDepartment?.toString() || ""} onValueChange={(value) => setSelectedDepartment(parseInt(value))}>
-                    <SelectTrigger data-testid="select-department">
-                      <SelectValue placeholder="Choose a department" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {departmentsWithDocuments.map((department) => (
-                        <SelectItem key={department.id} value={department.id.toString()}>
-                          {department.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {selectedDepartment && (
-                    <p className="text-xs text-slate-500 mt-1">
-                      Using Word document template from {departmentsWithDocuments.find(d => d.id === selectedDepartment)?.name} department
-                    </p>
-                  )}
-                </div>
-
-                {/* Dynamic form fields based on department fields */}
-                {selectedDepartment && (
-                  <div className="space-y-4">
-                    {fieldsLoading ? (
-                      <div className="text-center py-4">
-                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto"></div>
-                        <p className="text-sm text-slate-500 mt-2">Loading form fields...</p>
-                      </div>
-                    ) : fields.length === 0 ? (
-                      <div className="text-center py-6 bg-slate-50 rounded-lg border-2 border-dashed">
-                        <FileText className="h-8 w-8 text-slate-400 mx-auto mb-2" />
-                        <p className="text-slate-600 font-medium">No custom fields configured</p>
-                        <p className="text-sm text-slate-500 mt-1">
-                          {(user as any)?.role === 'admin' ? (
-                            <span>Go to Departments → Manage Fields to add ##field## placeholders for this department's Word document.</span>
-                          ) : (
-                            <span>Contact your administrator to configure form fields for this department.</span>
-                          )}
-                        </p>
-                      </div>
-                    ) : (
-                      <div className="space-y-4">
-                        <h4 className="font-medium text-slate-900 flex items-center">
-                          Fill Document Fields 
-                          <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                            {fields.length} field{fields.length !== 1 ? 's' : ''}
-                          </span>
-                        </h4>
-                        
-                        {fields.map((field) => (
-                          <div key={field.id}>
-                            <Label htmlFor={field.fieldName} className="flex items-center">
-                              {field.fieldLabel}
-                              {field.isRequired && <span className="text-red-500 ml-1">*</span>}
-                              <span className="ml-2 text-xs font-mono bg-slate-100 px-1 rounded">##${field.fieldName}##</span>
-                            </Label>
-                            {field.fieldType === 'date' ? (
-                              <Input
-                                id={field.fieldName}
-                                type="date"
-                                value={fieldValues[field.fieldName] || ""}
-                                onChange={(e) => handleFieldChange(field.fieldName, e.target.value)}
-                                required={field.isRequired}
-                                data-testid={`input-${field.fieldName}`}
-                              />
-                            ) : field.fieldType === 'number' ? (
-                              <Input
-                                id={field.fieldName}
-                                type="number"
-                                value={fieldValues[field.fieldName] || ""}
-                                onChange={(e) => handleFieldChange(field.fieldName, e.target.value)}
-                                placeholder={`Enter ${field.fieldLabel.toLowerCase()}`}
-                                required={field.isRequired}
-                                data-testid={`input-${field.fieldName}`}
-                              />
-                            ) : (
-                              <Input
-                                id={field.fieldName}
-                                type="text"
-                                value={fieldValues[field.fieldName] || ""}
-                                onChange={(e) => handleFieldChange(field.fieldName, e.target.value)}
-                                placeholder={`Enter ${field.fieldLabel.toLowerCase()}`}
-                                required={field.isRequired}
-                                data-testid={`input-${field.fieldName}`}
-                              />
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                <div className="flex gap-4 pt-4">
-                  <Button 
-                    onClick={handlePreview} 
-                    variant="outline"
-                    disabled={previewMutation.isPending || !selectedDepartment || fields.length === 0}
-                    data-testid="button-preview"
-                  >
-                    {previewMutation.isPending ? "Updating..." : "Update Preview"}
-                  </Button>
-                  <Button 
-                    onClick={handleDownloadWord} 
-                    className="flex-1"
-                    disabled={downloadMutation.isPending || !selectedDepartment || fields.length === 0}
-                    data-testid="button-download-word"
-                  >
-                    <FileDown className="h-4 w-4 mr-2" />
-                    {downloadMutation.isPending ? "Generating..." : "Download Word Document"}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Preview Section */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <FileText className="h-5 w-5 mr-2" />
-                  Letter Preview
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="bg-white p-8 border rounded-lg min-h-[600px] shadow-inner" style={{
-                  fontFamily: 'Times New Roman, serif',
-                  fontSize: '14px',
-                  lineHeight: '1.6',
-                  maxWidth: '210mm',
-                  margin: '0 auto',
-                  backgroundColor: '#ffffff',
-                  boxShadow: '0 0 10px rgba(0,0,0,0.1)'
-                }}>
-                  {generatedContent ? (
-                    <div className="whitespace-pre-line" style={{
-                      letterSpacing: '0.3px',
-                      textAlign: 'left'
-                    }}>
-                      {generatedContent}
-                    </div>
-                  ) : (
-                    <div className="text-slate-500 text-center mt-20" style={{ fontFamily: 'system-ui' }}>
-                      {!selectedDepartment ? (
-                        "Select a department to begin"
-                      ) : fields.length === 0 ? (
-                        "No fields configured for this department"
-                      ) : (
-                        "Fill the form fields to preview the authority letter"
-                      )}
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+    <div className="space-y-6">
+      {/* Page Header */}
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
+            <FileText className="h-8 w-8 text-primary" />
+            Authority Letters (PDF)
+          </h1>
+          <p className="text-slate-600 mt-1">
+            Generate authority letters from department templates in PDF format
+          </p>
+        </div>
+        
+        <div className="flex gap-2">
+          <Button 
+            onClick={() => setShowBulkUpload(true)} 
+            variant="outline" 
+            className="flex items-center gap-2"
+            data-testid="button-bulk-upload"
+          >
+            <Upload className="h-4 w-4" />
+            Bulk Upload
+          </Button>
         </div>
       </div>
-    </main>
+
+      {departmentsWithDocuments.length === 0 ? (
+        <Card>
+          <CardContent className="p-8 text-center">
+            <FileText className="mx-auto h-12 w-12 text-slate-300 mb-3" />
+            <h3 className="text-lg font-medium text-slate-900 mb-2">No Templates Available</h3>
+            <p className="text-slate-600 mb-4">
+              No departments have uploaded Word document templates yet.
+            </p>
+            <p className="text-sm text-slate-500">
+              Ask your administrator to upload authority letter templates in the Departments section.
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Form Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Edit className="h-5 w-5" />
+                Generate Authority Letter
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Department Selection */}
+              <div>
+                <Label htmlFor="department">Select Department</Label>
+                <Select 
+                  value={selectedDepartment?.toString() || ""} 
+                  onValueChange={(value) => {
+                    setSelectedDepartment(parseInt(value));
+                    setFieldValues({});
+                    setGeneratedContent("");
+                  }}
+                >
+                  <SelectTrigger data-testid="select-department">
+                    <SelectValue placeholder="Choose a department..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {departmentsWithDocuments.map((department) => (
+                      <SelectItem key={department.id} value={department.id.toString()}>
+                        {department.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Dynamic Fields */}
+              {selectedDepartment && fields.length > 0 && (
+                <div className="space-y-4">
+                  <h3 className="font-medium text-slate-900">Fill Template Fields</h3>
+                  {fields.map((field) => (
+                    <div key={field.id}>
+                      <Label htmlFor={field.fieldName}>
+                        {field.fieldLabel}
+                        {field.isRequired && <span className="text-red-500 ml-1">*</span>}
+                      </Label>
+                      {field.fieldType === 'textarea' ? (
+                        <Textarea
+                          id={field.fieldName}
+                          value={fieldValues[field.fieldName] || ""}
+                          onChange={(e) => handleFieldChange(field.fieldName, e.target.value)}
+                          placeholder={`Enter ${field.fieldLabel.toLowerCase()}`}
+                          data-testid={`textarea-${field.fieldName}`}
+                        />
+                      ) : field.fieldType === 'date' ? (
+                        <Input
+                          type="date"
+                          id={field.fieldName}
+                          value={fieldValues[field.fieldName] || ""}
+                          onChange={(e) => handleFieldChange(field.fieldName, e.target.value)}
+                          data-testid={`input-date-${field.fieldName}`}
+                        />
+                      ) : (
+                        <Input
+                          type={field.fieldType === 'number' ? 'number' : 'text'}
+                          id={field.fieldName}
+                          value={fieldValues[field.fieldName] || ""}
+                          onChange={(e) => handleFieldChange(field.fieldName, e.target.value)}
+                          placeholder={`Enter ${field.fieldLabel.toLowerCase()}`}
+                          data-testid={`input-${field.fieldName}`}
+                        />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              {selectedDepartment && (
+                <div className="flex gap-2 pt-4">
+                  <Button 
+                    onClick={handleGeneratePreview}
+                    variant="outline"
+                    disabled={previewMutation.isPending}
+                    data-testid="button-preview"
+                  >
+                    {previewMutation.isPending ? "Generating..." : "Preview"}
+                  </Button>
+                  <Button 
+                    onClick={handleDownload}
+                    disabled={downloadMutation.isPending}
+                    className="flex items-center gap-2"
+                    data-testid="button-download"
+                  >
+                    <FileDown className="h-4 w-4" />
+                    {downloadMutation.isPending ? "Generating..." : "Download PDF"}
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Preview Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                Letter Preview
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {generatedContent ? (
+                <div className="bg-white border rounded-lg p-6 max-h-96 overflow-y-auto">
+                  <pre className="whitespace-pre-wrap text-sm text-slate-800 font-mono">
+                    {generatedContent}
+                  </pre>
+                </div>
+              ) : (
+                <div className="text-center py-8 text-slate-500">
+                  <FileText className="mx-auto h-8 w-8 text-slate-300 mb-2" />
+                  <p>Generate a preview to see the authority letter content</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Filename Selection Dialog */}
+      <Dialog open={showFilenameDialog} onOpenChange={setShowFilenameDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Customize PDF Filename</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="filename-field">Use Field Value for Filename</Label>
+              <Select value={selectedFilenameField} onValueChange={setSelectedFilenameField}>
+                <SelectTrigger data-testid="select-filename-field">
+                  <SelectValue placeholder="Select a field..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">None</SelectItem>
+                  {fields.map((field) => (
+                    <SelectItem key={field.fieldName} value={field.fieldName}>
+                      {field.fieldLabel}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div>
+              <Label htmlFor="custom-filename">Or Enter Custom Filename</Label>
+              <Input
+                id="custom-filename"
+                value={customFilename}
+                onChange={(e) => setCustomFilename(e.target.value)}
+                placeholder="authority-letter"
+                data-testid="input-custom-filename"
+              />
+            </div>
+            
+            <div className="text-sm text-slate-600">
+              Preview: <code>{generateFilename()}.pdf</code>
+            </div>
+            
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setShowFilenameDialog(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleConfirmDownload} disabled={downloadMutation.isPending}>
+                {downloadMutation.isPending ? "Generating..." : "Download PDF"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Upload Dialog */}
+      <Dialog open={showBulkUpload} onOpenChange={setShowBulkUpload}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Bulk Generate PDFs</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="bulk-department">Department</Label>
+              <Select 
+                value={selectedDepartment?.toString() || ""} 
+                onValueChange={(value) => setSelectedDepartment(parseInt(value))}
+              >
+                <SelectTrigger data-testid="select-bulk-department">
+                  <SelectValue placeholder="Choose a department..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {departmentsWithDocuments.map((department) => (
+                    <SelectItem key={department.id} value={department.id.toString()}>
+                      {department.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div>
+              <Label htmlFor="csv-file">Upload CSV File</Label>
+              <Input
+                id="csv-file"
+                type="file"
+                accept=".csv"
+                onChange={(e) => setCsvFile(e.target.files?.[0] || null)}
+                data-testid="input-csv-file"
+              />
+              <p className="text-sm text-slate-600 mt-1">
+                CSV should contain columns matching the template field names
+              </p>
+            </div>
+            
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setShowBulkUpload(false)}>
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleBulkUpload} 
+                disabled={bulkUploadMutation.isPending || !selectedDepartment || !csvFile}
+              >
+                <Download className="h-4 w-4 mr-2" />
+                {bulkUploadMutation.isPending ? "Generating..." : "Generate & Download ZIP"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }

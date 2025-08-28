@@ -43,12 +43,12 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   // Admin and Manager navigation items with proper grouping
   const adminNavigation = (user as any)?.role === 'admin' ? [
     { name: "Users & Roles", href: "/users", icon: Users, current: location === "/users", group: "management" },
+    { name: "User Policies", href: "/user-policies", icon: Shield, current: location === "/user-policies", group: "management" },
     { name: "Departments", href: "/departments", icon: Building2, current: location === "/departments", group: "management" },
     ...(shouldShowBranches ? [{ name: "Branch List", href: "/branches", icon: MapPin, current: location === "/branches", group: "management" }] : []),
     { name: "Settings", href: "/settings", icon: Settings, current: location === "/settings", group: "settings" },
     { name: "Custom Fields", href: "/custom-fields", icon: FormInput, current: location === "/custom-fields", group: "settings" },
     { name: "Audit Logs", href: "/audit-logs", icon: History, current: location === "/audit-logs", group: "settings" },
-    { name: "User Policies", href: "/user-policies", icon: Shield, current: location === "/user-policies", group: "settings" },
     { name: "Export Data", href: "/export", icon: FileDown, group: "tools" },
   ] : [];
 

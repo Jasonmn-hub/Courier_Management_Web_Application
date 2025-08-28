@@ -10,6 +10,7 @@ import {
   authorityLetterTemplates,
   authorityLetterFields,
   branches,
+  userPolicies,
   type User,
   type UpsertUser,
   type Department,
@@ -30,6 +31,8 @@ import {
   type InsertAuthorityLetterField,
   type Branch,
   type InsertBranch,
+  type UserPolicy,
+  type InsertUserPolicy,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, ilike, or, sql } from "drizzle-orm";
@@ -1077,6 +1080,47 @@ export class DatabaseStorage implements IStorage {
     }
     
     return await (query as any).orderBy(branches.srNo, branches.branchName);
+  }
+
+  // User Policy operations
+  async getAllUserPolicies(): Promise<UserPolicy[]> {
+    const query = db.select({
+      id: userPolicies.id,
+      departmentId: userPolicies.departmentId,
+      tabName: userPolicies.tabName,
+      isEnabled: userPolicies.isEnabled,
+      createdAt: userPolicies.createdAt,
+      updatedAt: userPolicies.updatedAt,
+      department: {
+        id: departments.id,
+        name: departments.name
+      }
+    })
+    .from(userPolicies)
+    .leftJoin(departments, eq(userPolicies.departmentId, departments.id));
+    
+    return await query;
+  }
+
+  async getUserPolicy(departmentId: number, tabName: string): Promise<UserPolicy | undefined> {
+    const [policy] = await db.select().from(userPolicies)
+      .where(and(eq(userPolicies.departmentId, departmentId), eq(userPolicies.tabName, tabName)));
+    return policy;
+  }
+
+  async createOrUpdateUserPolicy(policy: InsertUserPolicy): Promise<UserPolicy> {
+    const existing = await this.getUserPolicy(policy.departmentId, policy.tabName);
+    
+    if (existing) {
+      const [updated] = await db.update(userPolicies)
+        .set({ isEnabled: policy.isEnabled, updatedAt: new Date() })
+        .where(and(eq(userPolicies.departmentId, policy.departmentId), eq(userPolicies.tabName, policy.tabName)))
+        .returning();
+      return updated;
+    } else {
+      const [created] = await db.insert(userPolicies).values(policy).returning();
+      return created;
+    }
   }
 }
 

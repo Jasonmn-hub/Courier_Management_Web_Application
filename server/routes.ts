@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { authenticateToken, requireRole, hashPassword, comparePassword, generateToken } from "./auth";
-import { insertCourierSchema, insertDepartmentSchema, insertFieldSchema, insertSmtpSettingsSchema, insertReceivedCourierSchema, insertAuthorityLetterTemplateSchema, insertAuthorityLetterFieldSchema, insertBranchSchema, type InsertBranch } from "@shared/schema";
+import { insertCourierSchema, insertDepartmentSchema, insertFieldSchema, insertSmtpSettingsSchema, insertReceivedCourierSchema, insertAuthorityLetterTemplateSchema, insertAuthorityLetterFieldSchema, insertBranchSchema, insertUserPolicySchema, type InsertBranch } from "@shared/schema";
 import { z } from "zod";
 import multer from "multer";
 import path from "path";
@@ -1309,6 +1309,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // User Policy routes
+  app.get('/api/user-policies', authenticateToken, requireRole(['admin']), async (req: any, res) => {
+    try {
+      const policies = await storage.getAllUserPolicies();
+      res.json(policies);
+    } catch (error) {
+      console.error("Error fetching user policies:", error);
+      res.status(500).json({ message: "Failed to fetch user policies" });
+    }
+  });
+
+  app.post('/api/user-policies', authenticateToken, requireRole(['admin']), setCurrentUser(), async (req: any, res) => {
+    try {
+      const validatedData = insertUserPolicySchema.parse(req.body);
+      const policy = await storage.createOrUpdateUserPolicy(validatedData);
+      
+      await logAudit(req.currentUser.id, 'UPDATE', 'user_policy', `${policy.departmentId}-${policy.tabName}`);
+      
+      res.status(201).json(policy);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      console.error("Error creating/updating user policy:", error);
+      res.status(500).json({ message: "Failed to create/update user policy" });
+    }
+  });
+
   // Serve uploaded files
   app.get('/uploads/:filename', (req, res) => {
     const filename = req.params.filename;
@@ -1581,7 +1609,297 @@ Jigar Jodhani
     }
   });
 
-  // Authority Letter Generation from Department Word Document
+  // Authority Letter PDF Generation from Department Template
+  app.post('/api/authority-letter/generate-pdf-from-department', authenticateToken, setCurrentUser(), async (req: any, res) => {
+    try {
+      const { departmentId, fieldValues, fileName } = req.body;
+      const user = req.currentUser;
+      
+      // Get department
+      const departments = await storage.getAllDepartments();
+      const department = departments.find(d => d.id === departmentId);
+      if (!department) {
+        return res.status(404).json({ message: "Department not found" });
+      }
+      
+      // Check if user has access to this department
+      if (user.role !== 'admin' && user.departmentId !== departmentId) {
+        return res.status(403).json({ message: "Access denied to this department" });
+      }
+      
+      // Check if department has uploaded document
+      if (!department.authorityDocumentPath) {
+        return res.status(400).json({ message: "No authority document uploaded for this department" });
+      }
+      
+      // Get department's custom fields for text transformations
+      const fields = await storage.getAllAuthorityLetterFields(departmentId);
+      
+      // Create a basic HTML template from the hardcoded format (we'll improve this later)
+      const htmlTemplate = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Authority Letter</title>
+    <style>
+        body {
+            font-family: 'Times New Roman', serif;
+            font-size: 14px;
+            line-height: 1.6;
+            margin: 30px;
+            max-width: 800px;
+            color: #000;
+        }
+        .header {
+            text-align: center;
+            font-weight: bold;
+            font-size: 18px;
+            margin-bottom: 30px;
+        }
+        .date {
+            text-align: right;
+            margin-bottom: 30px;
+        }
+        .subject {
+            font-weight: bold;
+            margin: 20px 0;
+            text-decoration: underline;
+        }
+        .content {
+            margin-bottom: 30px;
+            text-align: justify;
+        }
+        .note {
+            font-weight: bold;
+            margin: 20px 0;
+        }
+        .signature {
+            margin-top: 40px;
+        }
+    </style>
+</head>
+<body>
+    <div class="date">
+        Date: ##Currunt Date##
+    </div>
+    
+    <div class="header">
+        SUB- LETTER AUTHORISING M/S MARUTI COURIER
+    </div>
+    
+    <div class="content">
+        <p>Dear Sir/Ma'am,</p>
+        
+        <p>We hereby authorize M/s. Maruti Courier to provide the services of transporting the System of Light Microfinance Pvt. Ltd. from Head Office Ahmedabad to its branch office Light Microfinance "##Address##" said authority is only for transporting the computer system to the above-mentioned branch address and not any other purpose.</p>
+        
+        <div class="note">
+            *NOTE: - NOT FOR SALE THIS ##Asset Name## ARE FOR ONLY OFFICE USE. (Asset Value ##Value## /-)
+        </div>
+        
+        <p>Thanking you,</p>
+        
+        <div class="signature">
+            <p>FOR LIGHT MICROFINANCE PVT. LTD</p>
+            <br><br>
+            <p>_____________________________</p>
+            <p>Jigar Jodhani</p>
+            <p>[Manager - IT]</p>
+        </div>
+    </div>
+</body>
+</html>`;
+
+      // Apply field transformations
+      const processedValues: Record<string, any> = {};
+      Object.entries(fieldValues || {}).forEach(([key, value]) => {
+        const field = fields.find(f => f.fieldName === key);
+        let processedValue = value as string;
+        
+        if (field?.textTransform && processedValue) {
+          switch (field.textTransform) {
+            case 'uppercase':
+              processedValue = processedValue.toUpperCase();
+              break;
+            case 'capitalize':
+              processedValue = processedValue.split(' ').map(word => 
+                word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+              ).join(' ');
+              break;
+            case 'toggle':
+              processedValue = processedValue.split('').map(char => 
+                char === char.toUpperCase() ? char.toLowerCase() : char.toUpperCase()
+              ).join('');
+              break;
+          }
+        }
+        
+        processedValues[key] = processedValue;
+      });
+
+      // Generate PDF using the PDFGenerator
+      const pdfBuffer = await PDFGenerator.generatePDF({
+        templateContent: htmlTemplate,
+        fieldValues: processedValues,
+        fileName: fileName || `authority_letter_${department.name}_${Date.now()}.pdf`
+      });
+      
+      await logAudit(user.id, 'CREATE', 'authority_letter_pdf_dept', department.id.toString());
+      
+      // Set headers for PDF download
+      const finalFileName = fileName?.endsWith('.pdf') ? fileName : `${fileName || 'authority_letter'}.pdf`;
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="${finalFileName}"`);
+      res.setHeader('Content-Length', pdfBuffer.length);
+      
+      res.send(pdfBuffer);
+    } catch (error) {
+      console.error("Error generating PDF from department:", error);
+      res.status(500).json({ message: "Failed to generate PDF" });
+    }
+  });
+
+  // Bulk PDF Generation from Department Template
+  app.post('/api/authority-letter/bulk-generate-from-department', authenticateToken, setCurrentUser(), multer().single('csvFile'), async (req: any, res) => {
+    try {
+      const { departmentId } = req.body;
+      const user = req.currentUser;
+      
+      if (!req.file) {
+        return res.status(400).json({ message: "CSV file is required" });
+      }
+      
+      // Get department
+      const departments = await storage.getAllDepartments();
+      const department = departments.find(d => d.id === parseInt(departmentId));
+      if (!department) {
+        return res.status(404).json({ message: "Department not found" });
+      }
+      
+      // Check access
+      if (user.role !== 'admin' && department.id !== user.departmentId) {
+        return res.status(403).json({ message: "Access denied to this department" });
+      }
+      
+      // Parse CSV
+      const csvContent = req.file.buffer.toString('utf8');
+      const parsedData = Papa.parse(csvContent, { header: true, skipEmptyLines: true });
+      
+      if (parsedData.errors.length > 0) {
+        return res.status(400).json({ message: "CSV parsing error", errors: parsedData.errors });
+      }
+      
+      // Use the same HTML template
+      const htmlTemplate = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Authority Letter</title>
+    <style>
+        body {
+            font-family: 'Times New Roman', serif;
+            font-size: 14px;
+            line-height: 1.6;
+            margin: 30px;
+            max-width: 800px;
+            color: #000;
+        }
+        .header {
+            text-align: center;
+            font-weight: bold;
+            font-size: 18px;
+            margin-bottom: 30px;
+        }
+        .date {
+            text-align: right;
+            margin-bottom: 30px;
+        }
+        .subject {
+            font-weight: bold;
+            margin: 20px 0;
+            text-decoration: underline;
+        }
+        .content {
+            margin-bottom: 30px;
+            text-align: justify;
+        }
+        .note {
+            font-weight: bold;
+            margin: 20px 0;
+        }
+        .signature {
+            margin-top: 40px;
+        }
+    </style>
+</head>
+<body>
+    <div class="date">
+        Date: ##Currunt Date##
+    </div>
+    
+    <div class="header">
+        SUB- LETTER AUTHORISING M/S MARUTI COURIER
+    </div>
+    
+    <div class="content">
+        <p>Dear Sir/Ma'am,</p>
+        
+        <p>We hereby authorize M/s. Maruti Courier to provide the services of transporting the System of Light Microfinance Pvt. Ltd. from Head Office Ahmedabad to its branch office Light Microfinance "##Address##" said authority is only for transporting the computer system to the above-mentioned branch address and not any other purpose.</p>
+        
+        <div class="note">
+            *NOTE: - NOT FOR SALE THIS ##Asset Name## ARE FOR ONLY OFFICE USE. (Asset Value ##Value## /-)
+        </div>
+        
+        <p>Thanking you,</p>
+        
+        <div class="signature">
+            <p>FOR LIGHT MICROFINANCE PVT. LTD</p>
+            <br><br>
+            <p>_____________________________</p>
+            <p>Jigar Jodhani</p>
+            <p>[Manager - IT]</p>
+        </div>
+    </div>
+</body>
+</html>`;
+      
+      // Generate bulk PDFs
+      const results = await PDFGenerator.generateBulkPDFs(
+        htmlTemplate,
+        parsedData.data as Array<Record<string, any>>,
+        {} // Field mappings - let PDFGenerator handle direct mapping
+      );
+      
+      if (results.length === 0) {
+        return res.status(400).json({ message: "No PDFs could be generated" });
+      }
+      
+      // Create a ZIP file with all PDFs
+      const JSZip = await import('jszip').then(m => m.default);
+      const zip = new JSZip();
+      
+      results.forEach((result, index) => {
+        zip.file(result.fileName, result.data);
+      });
+      
+      const zipBuffer = await zip.generateAsync({ type: 'nodebuffer' });
+      
+      await logAudit(user.id, 'CREATE', 'bulk_authority_letters_dept', `${results.length} PDFs for dept ${department.id}`);
+      
+      // Send ZIP file
+      res.setHeader('Content-Type', 'application/zip');
+      res.setHeader('Content-Disposition', `attachment; filename="authority_letters_${department.name}_bulk_${Date.now()}.zip"`);
+      res.setHeader('Content-Length', zipBuffer.length);
+      
+      res.send(zipBuffer);
+    } catch (error) {
+      console.error("Error in bulk generation from department:", error);
+      res.status(500).json({ message: "Failed to generate bulk PDFs" });
+    }
+  });
+
+  // Authority Letter Generation from Department Word Document (keep original for backwards compatibility)
   app.post('/api/authority-letter/generate-from-department', authenticateToken, setCurrentUser(), async (req: any, res) => {
     try {
       const { departmentId, fieldValues } = req.body;
