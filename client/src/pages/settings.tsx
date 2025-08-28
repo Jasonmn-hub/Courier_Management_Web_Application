@@ -25,9 +25,10 @@ interface User {
 interface SmtpSettings {
   host: string;
   port: number;
-  secure: boolean;
-  user: string;
-  pass: string;
+  useTLS: boolean;
+  useSSL: boolean;
+  username: string;
+  password: string;
 }
 
 interface CustomField {
@@ -207,12 +208,64 @@ export default function Settings() {
       toast({ title: "Error", description: "Failed to delete field", variant: "destructive" });
     },
   });
-  const [smtpData, setSmtpData] = useState<SmtpSettings>({
+  const [smtpData, setSmtpData] = useState({
     host: "",
     port: 587,
-    secure: false,
-    user: "",
-    pass: ""
+    useTLS: false,
+    useSSL: false,
+    username: "",
+    password: ""
+  });
+  
+  const [testEmail, setTestEmail] = useState("");
+
+  // Fetch SMTP settings
+  const { data: existingSmtpSettings } = useQuery({
+    queryKey: ['/api/smtp-settings'],
+  });
+
+  // Load existing SMTP settings
+  useEffect(() => {
+    if (existingSmtpSettings) {
+      setSmtpData({
+        host: existingSmtpSettings.host || "",
+        port: existingSmtpSettings.port || 587,
+        useTLS: existingSmtpSettings.useTLS || false,
+        useSSL: existingSmtpSettings.useSSL || false,
+        username: existingSmtpSettings.username || "",
+        password: existingSmtpSettings.password || ""
+      });
+    }
+  }, [existingSmtpSettings]);
+
+  // Save SMTP settings mutation
+  const saveSmtpMutation = useMutation({
+    mutationFn: async (data: typeof smtpData) => {
+      const res = await apiRequest('POST', '/api/smtp-settings', data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/smtp-settings'] });
+      toast({ title: "SMTP Settings", description: "Configuration saved successfully" });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to save SMTP settings", variant: "destructive" });
+    },
+  });
+
+  // Test email mutation
+  const testEmailMutation = useMutation({
+    mutationFn: async (email: string) => {
+      const res = await apiRequest('POST', '/api/smtp-settings/test', { testEmail: email });
+      return res.json();
+    },
+    onSuccess: (data) => {
+      toast({ title: "Test Email", description: data.message });
+    },
+    onError: (error: any) => {
+      const message = error.response?.data?.message || "Failed to send test email";
+      toast({ title: "Error", description: message, variant: "destructive" });
+    },
   });
 
   // Redirect to home if not authenticated or not admin
@@ -294,8 +347,8 @@ export default function Settings() {
                       <Input
                         id="smtp-user"
                         placeholder="your-email@domain.com"
-                        value={smtpData.user}
-                        onChange={(e) => setSmtpData({ ...smtpData, user: e.target.value })}
+                        value={smtpData.username}
+                        onChange={(e) => setSmtpData({ ...smtpData, username: e.target.value })}
                       />
                     </div>
                     <div className="space-y-2">
@@ -304,27 +357,66 @@ export default function Settings() {
                         id="smtp-pass"
                         type="password"
                         placeholder="App password"
-                        value={smtpData.pass}
-                        onChange={(e) => setSmtpData({ ...smtpData, pass: e.target.value })}
+                        value={smtpData.password}
+                        onChange={(e) => setSmtpData({ ...smtpData, password: e.target.value })}
                       />
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      id="smtp-secure"
-                      checked={smtpData.secure}
-                      onChange={(e) => setSmtpData({ ...smtpData, secure: e.target.checked })}
-                    />
-                    <Label htmlFor="smtp-secure">Use TLS/SSL</Label>
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id="smtp-tls"
+                        checked={smtpData.useTLS}
+                        onChange={(e) => setSmtpData({ ...smtpData, useTLS: e.target.checked })}
+                      />
+                      <Label htmlFor="smtp-tls">Use TLS</Label>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id="smtp-ssl"
+                        checked={smtpData.useSSL}
+                        onChange={(e) => setSmtpData({ ...smtpData, useSSL: e.target.checked })}
+                      />
+                      <Label htmlFor="smtp-ssl">Use SSL</Label>
+                    </div>
                   </div>
-                  <div className="flex gap-2">
-                    <Button onClick={() => toast({ title: "SMTP Settings", description: "Configuration saved successfully" })}>
-                      Save Configuration
-                    </Button>
-                    <Button variant="outline" onClick={() => toast({ title: "Test Email", description: "Test email sent successfully" })}>
-                      Send Test Email
-                    </Button>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="test-email">Test Email Address</Label>
+                      <Input
+                        id="test-email"
+                        type="email"
+                        placeholder="test@example.com"
+                        value={testEmail}
+                        onChange={(e) => setTestEmail(e.target.value)}
+                        data-testid="input-test-email"
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <Button 
+                        onClick={() => saveSmtpMutation.mutate(smtpData)}
+                        disabled={saveSmtpMutation.isPending}
+                        data-testid="button-save-smtp"
+                      >
+                        {saveSmtpMutation.isPending ? "Saving..." : "Save Configuration"}
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        onClick={() => {
+                          if (!testEmail) {
+                            toast({ title: "Error", description: "Please enter a test email address", variant: "destructive" });
+                            return;
+                          }
+                          testEmailMutation.mutate(testEmail);
+                        }}
+                        disabled={testEmailMutation.isPending || !testEmail}
+                        data-testid="button-test-email"
+                      >
+                        {testEmailMutation.isPending ? "Sending..." : "Send Test Email"}
+                      </Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>

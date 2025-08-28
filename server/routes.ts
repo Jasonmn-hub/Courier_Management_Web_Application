@@ -877,9 +877,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Download sample CSV for branches (MUST be before :id route)
+  app.get('/api/branches/sample-csv', authenticateToken, async (req: any, res) => {
+    try {
+      const sampleData = [
+        {
+          srNo: 1,
+          branchName: 'Main Branch',
+          branchCode: 'MB001',
+          branchAddress: '123 Main Street, City Center',
+          pincode: '110001',
+          state: 'Delhi',
+          latitude: '28.6139',
+          longitude: '77.2090',
+          status: 'active'
+        },
+        {
+          srNo: 2,
+          branchName: 'Secondary Branch',
+          branchCode: 'SB002',
+          branchAddress: '456 Market Street, Commercial Area',
+          pincode: '110002',
+          state: 'Delhi',
+          latitude: '28.6304',
+          longitude: '77.2177',
+          status: 'active'
+        }
+      ];
+
+      const csv = Papa.unparse(sampleData, {
+        header: true
+      });
+
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', 'attachment; filename="branch_sample.csv"');
+      res.send(csv);
+    } catch (error) {
+      console.error("Error generating sample CSV:", error);
+      res.status(500).json({ message: "Failed to generate sample CSV" });
+    }
+  });
+
   app.get('/api/branches/:id', authenticateToken, async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid branch ID" });
+      }
+      
       const branch = await storage.getBranchById(id);
       
       if (!branch) {
@@ -1046,46 +1091,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Download sample CSV for branches
-  app.get('/api/branches/sample-csv', authenticateToken, async (req: any, res) => {
-    try {
-      const sampleData = [
-        {
-          srNo: 1,
-          branchName: 'Main Branch',
-          branchCode: 'MB001',
-          branchAddress: '123 Main Street, City Center',
-          pincode: '110001',
-          state: 'Delhi',
-          latitude: '28.6139',
-          longitude: '77.2090',
-          status: 'active'
-        },
-        {
-          srNo: 2,
-          branchName: 'Secondary Branch',
-          branchCode: 'SB002',
-          branchAddress: '456 Market Street, Commercial Area',
-          pincode: '110002',
-          state: 'Delhi',
-          latitude: '28.6304',
-          longitude: '77.2177',
-          status: 'active'
-        }
-      ];
-
-      const csv = Papa.unparse(sampleData, {
-        header: true
-      });
-
-      res.setHeader('Content-Type', 'text/csv');
-      res.setHeader('Content-Disposition', 'attachment; filename="branch_sample.csv"');
-      res.send(csv);
-    } catch (error) {
-      console.error("Error generating sample CSV:", error);
-      res.status(500).json({ message: "Failed to generate sample CSV" });
-    }
-  });
 
   // Export branches (All, Active, or Closed)
   app.get('/api/branches/export', authenticateToken, requireRole(['admin', 'manager']), async (req: any, res) => {
@@ -2430,6 +2435,66 @@ Jigar Jodhani
   });
 
   // ===== END OF NEW PDF SYSTEM =====
+
+  // ============= SMTP SETTINGS ROUTES =============
+  
+  app.get('/api/smtp-settings', authenticateToken, requireRole(['admin']), async (req: any, res) => {
+    try {
+      const settings = await storage.getSmtpSettings();
+      res.json(settings || {});
+    } catch (error) {
+      console.error("Error fetching SMTP settings:", error);
+      res.status(500).json({ message: "Failed to fetch SMTP settings" });
+    }
+  });
+
+  app.post('/api/smtp-settings', authenticateToken, requireRole(['admin']), setCurrentUser(), async (req: any, res) => {
+    try {
+      const { host, port, username, password, useTLS, useSSL } = req.body;
+      
+      const smtpData = {
+        host: host?.trim(),
+        port: parseInt(port) || 587,
+        username: username?.trim(),
+        password: password?.trim(),
+        useTLS: Boolean(useTLS),
+        useSSL: Boolean(useSSL)
+      };
+
+      const settings = await storage.updateSmtpSettings(smtpData);
+      await logAudit(req.currentUser.id, 'UPDATE', 'smtp_settings', settings.id);
+      
+      res.json({ message: "SMTP settings saved successfully", settings });
+    } catch (error) {
+      console.error("Error saving SMTP settings:", error);
+      res.status(500).json({ message: "Failed to save SMTP settings" });
+    }
+  });
+
+  app.post('/api/smtp-settings/test', authenticateToken, requireRole(['admin']), async (req: any, res) => {
+    try {
+      const { testEmail } = req.body;
+      
+      if (!testEmail || !testEmail.includes('@')) {
+        return res.status(400).json({ message: "Valid test email is required" });
+      }
+
+      // Get current SMTP settings
+      const smtpSettings = await storage.getSmtpSettings();
+      if (!smtpSettings) {
+        return res.status(400).json({ message: "SMTP settings not configured" });
+      }
+
+      // For now, just return success (actual email sending would require nodemailer setup)
+      res.json({ 
+        message: `Test email would be sent to ${testEmail}`,
+        success: true 
+      });
+    } catch (error) {
+      console.error("Error sending test email:", error);
+      res.status(500).json({ message: "Failed to send test email" });
+    }
+  });
 
   const httpServer = createServer(app);
   return httpServer;

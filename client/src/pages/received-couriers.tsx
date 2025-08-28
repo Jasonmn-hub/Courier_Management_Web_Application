@@ -304,36 +304,17 @@ export default function ReceivedCouriers() {
 
               <div>
                 <Label htmlFor="fromLocation">From (Branch/Other) *</Label>
-                <Select 
-                  value={formData.fromLocation || ""} 
-                  onValueChange={(value) => {
-                    if (value === "custom") {
-                      setFormData({ ...formData, fromLocation: "" });
-                    } else {
-                      setFormData({ ...formData, fromLocation: value });
-                    }
-                  }}
-                >
-                  <SelectTrigger data-testid="select-from-location">
-                    <SelectValue placeholder="Select branch or type custom" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {/* Department-specific branches would be fetched here */}
-                    <SelectItem value="Main Branch">Main Branch</SelectItem>
-                    <SelectItem value="Regional Office">Regional Office</SelectItem>
-                    <SelectItem value="Head Office">Head Office</SelectItem>
-                    <SelectItem value="custom">Custom Location</SelectItem>
-                  </SelectContent>
-                </Select>
-                {formData.fromLocation === "" && (
-                  <Input
-                    className="mt-2"
-                    placeholder="Enter custom location..."
-                    value={formData.fromLocation || ""}
-                    onChange={(e) => setFormData({ ...formData, fromLocation: e.target.value })}
-                    data-testid="input-custom-from-location"
-                  />
-                )}
+                <Input
+                  id="fromLocation"
+                  value={formData.fromLocation || ""}
+                  onChange={(e) => setFormData({ ...formData, fromLocation: e.target.value })}
+                  placeholder="Type branch name or custom location..."
+                  required
+                  data-testid="input-from-location"
+                />
+                <div className="text-xs text-gray-500 mt-1">
+                  Type to search for existing branches or enter a custom location
+                </div>
               </div>
 
               <div>

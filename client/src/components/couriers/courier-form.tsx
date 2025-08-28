@@ -27,6 +27,7 @@ import { Upload, X, Save } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
+import { Autocomplete } from "@/components/ui/autocomplete";
 
 const courierSchema = z.object({
   toBranch: z.string().min(1, "Destination is required"),
@@ -252,51 +253,29 @@ export default function CourierForm({ courier, onClose, onSuccess }: CourierForm
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>To (Branch / Other)</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value} onOpenChange={(open) => {
-                      if (!open && !branches.some((b: any) => b.branchName === field.value)) {
-                        // Allow custom input if not in branch list
-                      }
-                    }}>
-                      <FormControl>
-                        <SelectTrigger data-testid="select-to-branch">
-                          <SelectValue placeholder="Select branch or type custom" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {branches.map((branch: any) => (
-                          <SelectItem key={branch.id} value={branch.branchName}>
-                            {branch.branchName} ({branch.branchCode})
-                          </SelectItem>
-                        ))}
-                        <SelectItem value="custom">Type Custom Destination</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <FormControl>
+                      <Autocomplete
+                        value={field.value}
+                        onChange={field.onChange}
+                        options={branches.map((branch: any) => ({
+                          value: branch.branchName,
+                          label: `${branch.branchName} (${branch.branchCode})`
+                        }))}
+                        placeholder="Type branch name or custom destination..."
+                        onAddNew={(value) => {
+                          field.onChange(value);
+                          toast({ 
+                            title: "Custom Destination", 
+                            description: `Using custom destination: ${value}` 
+                          });
+                        }}
+                        data-testid="autocomplete-to-branch"
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-
-              {/* Custom destination input when 'custom' is selected */}
-              {form.watch("toBranch") === "custom" && (
-                <FormField
-                  control={form.control}
-                  name="toBranch"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Custom Destination</FormLabel>
-                      <FormControl>
-                        <Input 
-                          placeholder="Enter custom destination..." 
-                          value={field.value === "custom" ? "" : field.value}
-                          onChange={(e) => field.onChange(e.target.value)}
-                          data-testid="input-custom-destination"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              )}
 
               {/* Email ID */}
               <FormField
