@@ -10,9 +10,10 @@ if (!process.env.DATABASE_URL) {
 
 // Configure for Replit PostgreSQL
 const client = postgres(process.env.DATABASE_URL, {
-  ssl: false,
+  ssl: 'prefer',
   max: 10,
-  connect_timeout: 60
+  connect_timeout: 60,
+  idle_timeout: 20
 });
 
 export const db = drizzle(client, { schema });
