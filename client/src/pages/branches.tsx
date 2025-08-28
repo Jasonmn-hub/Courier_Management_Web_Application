@@ -49,6 +49,7 @@ interface Branch {
   branchAddress: string;
   pincode: string;
   state: string;
+  email?: string;
   latitude?: string;
   longitude?: string;
   status: 'active' | 'closed';
@@ -78,6 +79,7 @@ export default function Branches() {
     branchAddress: '',
     pincode: '',
     state: '',
+    email: '',
     latitude: '',
     longitude: '',
     status: 'active' as 'active' | 'closed'
@@ -247,6 +249,7 @@ export default function Branches() {
       branchAddress: '',
       pincode: '',
       state: '',
+      email: '',
       latitude: '',
       longitude: '',
       status: 'active'
@@ -262,6 +265,7 @@ export default function Branches() {
       branchAddress: branch.branchAddress,
       pincode: branch.pincode,
       state: branch.state,
+      email: branch.email || '',
       latitude: branch.latitude || '',
       longitude: branch.longitude || '',
       status: branch.status
@@ -502,6 +506,17 @@ export default function Branches() {
                   placeholder="PIN code"
                   required
                   data-testid="input-pincode"
+                />
+              </div>
+              <div>
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData({...formData, email: e.target.value})}
+                  placeholder="branch@example.com (optional)"
+                  data-testid="input-email"
                 />
               </div>
               <div>

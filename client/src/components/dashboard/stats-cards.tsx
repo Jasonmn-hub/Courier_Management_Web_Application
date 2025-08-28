@@ -7,9 +7,13 @@ export default function StatsCards() {
     total: number;
     onTheWay: number;
     completed: number;
+    sent: number;
+    received: number;
     thisMonth: number;
     thisMonthOnTheWay: number;
     thisMonthCompleted: number;
+    thisMonthSent: number;
+    thisMonthReceived: number;
   }>({
     queryKey: ['/api/stats'],
   });
@@ -38,11 +42,18 @@ export default function StatsCards() {
 
   const statsData = [
     {
-      name: "Total Couriers",
-      value: stats?.total || 0,
+      name: "Sent Couriers",
+      value: stats?.sent || 0,
       icon: Package,
-      color: "text-slate-400",
-      testId: "stat-total-couriers"
+      color: "text-blue-500",
+      testId: "stat-sent-couriers"
+    },
+    {
+      name: "Received Couriers",
+      value: stats?.received || 0,
+      icon: CheckCircle,
+      color: "text-green-500",
+      testId: "stat-received-couriers"
     },
     {
       name: "On The Way",
@@ -52,19 +63,12 @@ export default function StatsCards() {
       testId: "stat-on-the-way"
     },
     {
-      name: "Completed",
-      value: stats?.completed || 0,
-      icon: CheckCircle,
-      color: "text-success",
-      testId: "stat-completed"
-    },
-    {
       name: "This Month",
-      value: `${stats?.thisMonthOnTheWay || 0} / ${stats?.thisMonthCompleted || 0}`,
+      value: `${stats?.thisMonthSent || 0} / ${stats?.thisMonthReceived || 0}`,
       icon: Calendar,
       color: "text-primary",
       testId: "stat-this-month",
-      subtitle: "On The Way / Completed"
+      subtitle: "Sent / Received"
     },
   ];
 

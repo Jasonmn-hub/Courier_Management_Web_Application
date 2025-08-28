@@ -32,12 +32,12 @@ export default function UserTable({ onEdit, onManageDepartments }: UserTableProp
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState("");
 
-  const { data: allUsers, isLoading } = useQuery({
-    queryKey: ['/api/users'],
+  const { data: userData, isLoading } = useQuery({
+    queryKey: ['/api/admin/users'],
   });
 
   // Filter users on the client side
-  const users = allUsers ? (Array.isArray(allUsers) ? allUsers : []).filter((user: any) => {
+  const users = userData ? (Array.isArray(userData) ? userData : (userData as any)?.users || []).filter((user: any) => {
     if (!searchTerm) return true;
     const searchLower = searchTerm.toLowerCase();
     return (
@@ -58,7 +58,7 @@ export default function UserTable({ onEdit, onManageDepartments }: UserTableProp
       await apiRequest('DELETE', `/api/users/${id}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/users'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
       toast({
         title: "Success",
         description: "User deleted successfully",

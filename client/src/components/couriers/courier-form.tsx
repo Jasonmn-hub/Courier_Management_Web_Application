@@ -93,7 +93,18 @@ export default function CourierForm({ courier, onClose, onSuccess }: CourierForm
     enabled: !!form.watch('departmentId'),
   });
   
+  // Get users for autocomplete
+  const { data: usersData } = useQuery({
+    queryKey: ['/api/users', { departmentId: form.watch('departmentId') }],
+    queryFn: async () => {
+      const response = await apiRequest('GET', '/api/users');
+      return response.json();
+    },
+    enabled: !!form.watch('departmentId'),
+  });
+  
   const branches = branchesData?.branches || [];
+  const users = usersData?.users || [];
 
   const mutation = useMutation({
     mutationFn: async (data: z.infer<typeof courierSchema>) => {
@@ -256,12 +267,31 @@ export default function CourierForm({ courier, onClose, onSuccess }: CourierForm
                     <FormControl>
                       <Autocomplete
                         value={field.value}
-                        onChange={field.onChange}
-                        options={branches.map((branch: any) => ({
-                          value: branch.branchName,
-                          label: `${branch.branchName} (${branch.branchCode})`
-                        }))}
-                        placeholder="Type branch name or custom destination..."
+                        onChange={(value) => {
+                          field.onChange(value);
+                          // Auto-fill email if branch is selected
+                          const selectedBranch = branches.find((b: any) => b.branchName === value || `${b.branchName} (${b.branchCode})` === value);
+                          if (selectedBranch && selectedBranch.email) {
+                            form.setValue('email', selectedBranch.email);
+                          } else {
+                            // Check if it's a user
+                            const selectedUser = users.find((u: any) => u.name === value || u.email === value);
+                            if (selectedUser && selectedUser.email) {
+                              form.setValue('email', selectedUser.email);
+                            }
+                          }
+                        }}
+                        options={[
+                          ...branches.map((branch: any) => ({
+                            value: branch.branchName,
+                            label: `${branch.branchName} (${branch.branchCode}) ${branch.email ? '- ' + branch.email : ''}`
+                          })),
+                          ...users.map((user: any) => ({
+                            value: user.name || user.email,
+                            label: `${user.name} (${user.email}) - User`
+                          }))
+                        ]}
+                        placeholder="Type branch name, user name, or custom destination..."
                         onAddNew={(value) => {
                           field.onChange(value);
                           toast({ 

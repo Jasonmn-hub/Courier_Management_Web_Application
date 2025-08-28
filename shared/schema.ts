@@ -146,6 +146,7 @@ export const branches = pgTable("branches", {
   state: varchar("state", { length: 100 }).notNull(),
   latitude: varchar("latitude", { length: 50 }),
   longitude: varchar("longitude", { length: 50 }),
+  email: varchar("email", { length: 255 }), // Branch email address
   status: varchar("status", { length: 20 }).default('active').notNull(), // 'active' or 'closed'
   departmentId: integer("department_id").references(() => departments.id), // Department-specific branches
   createdAt: timestamp("created_at").defaultNow(),

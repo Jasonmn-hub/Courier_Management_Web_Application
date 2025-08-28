@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
-import { PieChart, Pie, Cell, ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from "recharts";
+import { PieChart, Pie, Cell, ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, BarChart, Bar } from "recharts";
 
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4'];
 
@@ -50,24 +50,35 @@ export default function Charts() {
     { month: 'No Data', onTheWay: 0, completed: 0 }
   ];
 
+  // Prepare data for separate sent and received charts
+  const sentData = [
+    { name: 'On The Way', value: onTheWayCount },
+    { name: 'Completed', value: (stats as any)?.sent ? (stats as any).sent - onTheWayCount : 0 }
+  ].filter(item => item.value > 0);
+
+  const receivedData = monthlyData.map(item => ({
+    month: item.month,
+    received: (stats as any)?.received || 0
+  }));
+
   return (
     <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-      {/* Status Distribution Chart */}
+      {/* Sent Couriers Distribution */}
       <Card>
         <CardHeader>
-          <CardTitle>Courier Status Distribution</CardTitle>
+          <CardTitle>Sent Couriers Distribution</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
-                  data={pieData}
+                  data={sentData.length > 0 ? sentData : [{ name: 'No Data', value: 1 }]}
                   cx="50%"
                   cy="50%"
                   labelLine={false}
                   label={({ name, percent, value }) => {
-                    if (name === 'No Data') return 'No Couriers';
+                    if (name === 'No Data') return 'No Sent Couriers';
                     return `${name} ${value} (${(percent * 100).toFixed(0)}%)`;
                   }}
                   outerRadius={90}
@@ -77,7 +88,7 @@ export default function Charts() {
                   stroke="#ffffff"
                   strokeWidth={2}
                 >
-                  {pieData.map((entry, index) => (
+                  {(sentData.length > 0 ? sentData : [{ name: 'No Data', value: 1 }]).map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
@@ -88,15 +99,15 @@ export default function Charts() {
         </CardContent>
       </Card>
 
-      {/* Monthly Trends Chart */}
+      {/* Received Couriers Chart (Column Chart) */}
       <Card>
         <CardHeader>
-          <CardTitle>Monthly Courier Trends</CardTitle>
+          <CardTitle>Received Couriers Monthly</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={monthlyData}>
+              <BarChart data={monthlyData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
                 <XAxis 
                   dataKey="month" 
@@ -109,25 +120,13 @@ export default function Charts() {
                 />
                 <Tooltip />
                 <Legend />
-                <Line 
-                  type="monotone" 
-                  dataKey="onTheWay" 
-                  stroke="#F59E0B" 
-                  strokeWidth={3}
-                  name="On The Way"
-                  dot={{ fill: '#F59E0B', strokeWidth: 2, r: 4 }}
-                  activeDot={{ r: 6, stroke: '#F59E0B', strokeWidth: 2, fill: '#FBBF24' }}
-                />
-                <Line 
-                  type="monotone" 
+                <Bar 
                   dataKey="completed" 
-                  stroke="#10B981" 
-                  strokeWidth={3}
-                  name="Completed"
-                  dot={{ fill: '#10B981', strokeWidth: 2, r: 4 }}
-                  activeDot={{ r: 6, stroke: '#10B981', strokeWidth: 2, fill: '#34D399' }}
+                  fill="#10B981" 
+                  name="Received Couriers"
+                  radius={[2, 2, 0, 0]}
                 />
-              </LineChart>
+              </BarChart>
             </ResponsiveContainer>
           </div>
         </CardContent>

@@ -3,6 +3,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
+import { Autocomplete } from "@/components/ui/autocomplete";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -112,6 +113,28 @@ export default function ReceivedCouriers() {
 
   const { data: departments = [] } = useQuery<Department[]>({
     queryKey: ['/api/departments'],
+    enabled: isAuthenticated,
+  });
+
+  // Fetch branches for autocomplete
+  const { data: branchesData } = useQuery({
+    queryKey: ['/api/branches', { status: 'active' }],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      params.set('status', 'active');
+      const response = await apiRequest('GET', `/api/branches?${params.toString()}`);
+      return response.json();
+    },
+    enabled: isAuthenticated,
+  });
+
+  // Fetch users for autocomplete
+  const { data: usersData } = useQuery({
+    queryKey: ['/api/users'],
+    queryFn: async () => {
+      const response = await apiRequest('GET', '/api/users');
+      return response.json();
+    },
     enabled: isAuthenticated,
   });
 
@@ -332,16 +355,48 @@ export default function ReceivedCouriers() {
 
               <div>
                 <Label htmlFor="fromLocation">From (Branch/Other) *</Label>
-                <Input
-                  id="fromLocation"
+                <Autocomplete
                   value={formData.fromLocation || ""}
-                  onChange={(e) => setFormData({ ...formData, fromLocation: e.target.value })}
-                  placeholder="Type branch name or custom location..."
-                  required
-                  data-testid="input-from-location"
+                  onChange={(value) => {
+                    setFormData({ ...formData, fromLocation: value });
+                    // Auto-fill email if branch is selected
+                    const selectedBranch = branchesData?.branches?.find((b: any) => 
+                      b.branchName === value || `${b.branchName} (${b.branchCode})` === value
+                    );
+                    if (selectedBranch && selectedBranch.email) {
+                      setFormData(prev => ({ ...prev, emailId: selectedBranch.email }));
+                    } else {
+                      // Check if it's a user
+                      const selectedUser = usersData?.users?.find((u: any) => 
+                        u.name === value || u.email === value
+                      );
+                      if (selectedUser && selectedUser.email) {
+                        setFormData(prev => ({ ...prev, emailId: selectedUser.email }));
+                      }
+                    }
+                  }}
+                  options={[
+                    ...(branchesData?.branches || []).map((branch: any) => ({
+                      value: branch.branchName,
+                      label: `${branch.branchName} (${branch.branchCode}) ${branch.email ? '- ' + branch.email : ''}`
+                    })),
+                    ...(usersData?.users || []).map((user: any) => ({
+                      value: user.name || user.email,
+                      label: `${user.name} (${user.email}) - User`
+                    }))
+                  ]}
+                  placeholder="Type branch name, user name, or custom location..."
+                  onAddNew={(value) => {
+                    setFormData({ ...formData, fromLocation: value });
+                    toast({ 
+                      title: "Custom Location", 
+                      description: `Using custom location: ${value}` 
+                    });
+                  }}
+                  data-testid="autocomplete-from-location"
                 />
                 <div className="text-xs text-gray-500 mt-1">
-                  Type to search for existing branches or enter a custom location
+                  Type to search for existing branches/users or enter a custom location
                 </div>
               </div>
 

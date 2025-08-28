@@ -670,9 +670,13 @@ export class DatabaseStorage implements IStorage {
     total: number;
     onTheWay: number;
     completed: number;
+    sent: number;
+    received: number;
     thisMonth: number;
     thisMonthOnTheWay: number;
     thisMonthCompleted: number;
+    thisMonthSent: number;
+    thisMonthReceived: number;
   }> {
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -765,9 +769,13 @@ export class DatabaseStorage implements IStorage {
       total: onTheWayCount + totalCompleted,
       onTheWay: onTheWayCount,
       completed: totalCompleted,
+      sent: completedCount + onTheWayCount, // Sent couriers from main table
+      received: receivedCount, // Received couriers from received table
       thisMonth: thisMonthOnTheWayCount + totalThisMonthCompleted,
       thisMonthOnTheWay: thisMonthOnTheWayCount,
       thisMonthCompleted: totalThisMonthCompleted,
+      thisMonthSent: thisMonthCompletedCount + thisMonthOnTheWayCount,
+      thisMonthReceived: thisMonthReceivedCount,
     };
   }
 
