@@ -59,6 +59,7 @@ export default function ReceivedCouriers() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
   const [formData, setFormData] = useState<Partial<InsertReceivedCourier>>({
     podNumber: "",
     receivedDate: "",
@@ -89,9 +90,24 @@ export default function ReceivedCouriers() {
     }
   }, [isAuthenticated, isLoading, toast]);
 
-  const { data: receivedCouriers = [], isLoading: couriersLoading } = useQuery<ReceivedCourier[]>({
+  const { data: allReceivedCouriers = [], isLoading: couriersLoading } = useQuery<ReceivedCourier[]>({
     queryKey: ['/api/received-couriers'],
     enabled: isAuthenticated,
+  });
+
+  // Filter received couriers on the client side
+  const receivedCouriers = allReceivedCouriers.filter((courier) => {
+    if (!searchTerm) return true;
+    const searchLower = searchTerm.toLowerCase();
+    return (
+      courier.podNumber?.toLowerCase().includes(searchLower) ||
+      (courier as any).receiverName?.toLowerCase().includes(searchLower) ||
+      courier.courierVendor?.toLowerCase().includes(searchLower) ||
+      (courier as any).customVendor?.toLowerCase().includes(searchLower) ||
+      courier.fromLocation?.toLowerCase().includes(searchLower) ||
+      (courier as any).departmentName?.toLowerCase().includes(searchLower) ||
+      (courier as any).customDepartment?.toLowerCase().includes(searchLower)
+    );
   });
 
   const { data: departments = [] } = useQuery<Department[]>({
@@ -187,6 +203,18 @@ export default function ReceivedCouriers() {
             <Card>
               <CardHeader>
                 <CardTitle>All Received Couriers</CardTitle>
+                
+                {/* Search Input */}
+                <div className="relative mt-4">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
+                  <Input
+                    placeholder="Search received couriers by POD number, receiver, or vendor..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                    data-testid="input-search-received-couriers"
+                  />
+                </div>
               </CardHeader>
               <CardContent>
                 {couriersLoading ? (

@@ -44,7 +44,7 @@ export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
   getAllUsers(): Promise<User[]>;
-  getUsersWithDepartments(): Promise<Array<User & { departments: Array<{ id: number; name: string }> }>>;
+  getUsersWithDepartments(searchTerm?: string): Promise<Array<User & { departments: Array<{ id: number; name: string }> }>>;
   createUser(user: { name: string; email: string; password: string; role: string; departmentId?: number | null }): Promise<User>;
   updateUser(id: string, userData: { name: string; email: string; role: string; departmentId?: number | null }): Promise<User | undefined>;
   deleteUser(id: string): Promise<boolean>;
@@ -238,7 +238,7 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async getUsersWithDepartments(): Promise<Array<User & { departments: Array<{ id: number; name: string }> }>> {
+  async getUsersWithDepartments(searchTerm?: string): Promise<Array<User & { departments: Array<{ id: number; name: string }> }>> {
     const usersWithDeps = await db.select({
       id: users.id,
       email: users.email,

@@ -67,6 +67,27 @@ const documentUpload = multer({
   },
 });
 
+// CSV upload specifically for bulk uploads
+const csvUpload = multer({
+  dest: uploadDir,
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = /\.csv$/i;
+    const extname = allowedTypes.test(path.extname(file.originalname));
+    const mimetype = file.mimetype === 'text/csv' || 
+                     file.mimetype === 'application/csv' ||
+                     file.mimetype === 'text/plain'; // Some browsers send CSV as text/plain
+    
+    if (mimetype || extname) {
+      return cb(null, true);
+    } else {
+      cb(new Error('Only CSV files are allowed for bulk upload'));
+    }
+  },
+});
+
 // CSV helper function
 const readTempUsersFromCSV = (): Array<{email: string, name: string, firstName: string, lastName: string, password: string, role: string}> => {
   try {
@@ -254,7 +275,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           transportConfig.secure = false;
         }
 
-        const transporter = nodemailer.createTransporter(transportConfig);
+        const transporter = nodemailer.createTransport(transportConfig);
 
         const mailOptions = {
           from: smtpSettings.fromEmail || smtpSettings.username,
@@ -352,7 +373,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // User management routes
   app.get('/api/users', authenticateToken, requireRole(['admin', 'manager']), async (req: any, res) => {
     try {
-      const users = await storage.getUsersWithDepartments();
+      const { search } = req.query;
+      const users = await storage.getUsersWithDepartments(search as string);
       res.json(users);
     } catch (error) {
       console.error("Error fetching users:", error);
@@ -1167,7 +1189,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Bulk upload branches from CSV
-  app.post('/api/branches/bulk-upload', authenticateToken, requireRole(['admin']), setCurrentUser(), upload.single('csvFile'), async (req: any, res) => {
+  app.post('/api/branches/bulk-upload', authenticateToken, requireRole(['admin']), setCurrentUser(), csvUpload.single('csvFile'), async (req: any, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ message: "CSV file is required" });
@@ -2751,7 +2773,7 @@ Jigar Jodhani
         transportConfig.secure = false;
       }
 
-      const transporter = nodemailer.createTransporter(transportConfig);
+      const transporter = nodemailer.createTransport(transportConfig);
 
       // Verify connection configuration
       await transporter.verify();

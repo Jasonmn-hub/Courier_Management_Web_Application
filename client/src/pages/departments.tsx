@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Plus, FileText, Upload, Edit, Trash2, Settings } from "lucide-react";
+import { Plus, FileText, Upload, Edit, Trash2, Settings, Search } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import DepartmentForm from "@/components/departments/department-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -39,11 +39,16 @@ export default function Departments() {
   const queryClient = useQueryClient();
   const [showDepartmentForm, setShowDepartmentForm] = useState(false);
   const [editingDepartment, setEditingDepartment] = useState<any>(null);
+  const [searchTerm, setSearchTerm] = useState("");
   const [showDocumentUpload, setShowDocumentUpload] = useState(false);
   const [selectedDepartmentForUpload, setSelectedDepartmentForUpload] = useState<Department | null>(null);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [showFieldsManager, setShowFieldsManager] = useState(false);
   const [selectedDepartmentForFields, setSelectedDepartmentForFields] = useState<Department | null>(null);
+  const [deleteConfirmation, setDeleteConfirmation] = useState<{ show: boolean; department: Department | null }>({
+    show: false,
+    department: null,
+  });
 
   // Redirect to home if not authenticated or not admin
   useEffect(() => {
@@ -60,9 +65,16 @@ export default function Departments() {
     }
   }, [isAuthenticated, isLoading, user, toast]);
 
-  const { data: departments = [], isLoading: departmentsLoading } = useQuery<Department[]>({
+  const { data: allDepartments = [], isLoading: departmentsLoading } = useQuery<Department[]>({
     queryKey: ['/api/departments'],
     enabled: isAuthenticated && (user as User)?.role === 'admin',
+  });
+
+  // Filter departments on the client side
+  const departments = allDepartments.filter((dept) => {
+    if (!searchTerm) return true;
+    const searchLower = searchTerm.toLowerCase();
+    return dept.name?.toLowerCase().includes(searchLower);
   });
 
   // Fetch authority letter fields for selected department
@@ -168,6 +180,30 @@ export default function Departments() {
     },
   });
 
+  // Delete department mutation
+  const deleteDepartmentMutation = useMutation({
+    mutationFn: async (departmentId: number) => {
+      const response = await apiRequest('DELETE', `/api/departments/${departmentId}`);
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Department deleted successfully.",
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/departments'] });
+      setDeleteConfirmation({ show: false, department: null });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete department.",
+        variant: "destructive",
+      });
+      setDeleteConfirmation({ show: false, department: null });
+    },
+  });
+
   const handleCreateField = () => {
     if (!newField.fieldName.trim() || !newField.fieldLabel.trim()) {
       toast({
@@ -181,6 +217,16 @@ export default function Departments() {
     createFieldMutation.mutate(newField);
     // Reset form after successful mutation
     setNewField({ fieldName: '', fieldLabel: '', fieldType: 'text', textTransform: 'none', isRequired: false });
+  };
+
+  const handleDeleteDepartment = (department: Department) => {
+    setDeleteConfirmation({ show: true, department });
+  };
+
+  const confirmDeleteDepartment = () => {
+    if (deleteConfirmation.department) {
+      deleteDepartmentMutation.mutate(deleteConfirmation.department.id);
+    }
   };
 
   const handleFileUpload = () => {
@@ -242,6 +288,18 @@ export default function Departments() {
             <Card>
               <CardHeader>
                 <CardTitle>All Departments</CardTitle>
+                
+                {/* Search Input */}
+                <div className="relative mt-4">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
+                  <Input
+                    placeholder="Search departments by name..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                    data-testid="input-search-departments"
+                  />
+                </div>
               </CardHeader>
               <CardContent>
                 {departmentsLoading ? (
@@ -334,6 +392,16 @@ export default function Departments() {
                                   Manage Fields
                                 </Button>
                               )}
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleDeleteDepartment(dept)}
+                                className="text-red-600 hover:text-red-800"
+                                data-testid={`button-delete-${dept.id}`}
+                              >
+                                <Trash2 className="h-3 w-3 mr-1" />
+                                Delete
+                              </Button>
                             </div>
                           </TableCell>
                         </TableRow>
@@ -573,6 +641,37 @@ export default function Departments() {
                 data-testid="button-close-fields-manager"
               >
                 Close
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      {deleteConfirmation.show && deleteConfirmation.department && (
+        <Dialog open={deleteConfirmation.show} onOpenChange={(open) => !open && setDeleteConfirmation({ show: false, department: null })}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Delete Department</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to delete "{deleteConfirmation.department.name}"? This action cannot be undone and will also delete all associated data.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setDeleteConfirmation({ show: false, department: null })}
+                data-testid="button-cancel-delete"
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={confirmDeleteDepartment}
+                disabled={deleteDepartmentMutation.isPending}
+                data-testid="button-confirm-delete"
+              >
+                {deleteDepartmentMutation.isPending ? "Deleting..." : "Delete"}
               </Button>
             </DialogFooter>
           </DialogContent>

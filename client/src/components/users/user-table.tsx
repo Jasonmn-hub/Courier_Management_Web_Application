@@ -5,6 +5,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -19,7 +20,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Edit, Trash2, Settings } from "lucide-react";
+import { Edit, Trash2, Settings, Search } from "lucide-react";
 
 interface UserTableProps {
   onEdit?: (user: any) => void;
@@ -29,10 +30,24 @@ interface UserTableProps {
 export default function UserTable({ onEdit, onManageDepartments }: UserTableProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [searchTerm, setSearchTerm] = useState("");
 
-  const { data: users, isLoading } = useQuery({
+  const { data: allUsers, isLoading } = useQuery({
     queryKey: ['/api/users'],
   });
+
+  // Filter users on the client side
+  const users = allUsers ? (Array.isArray(allUsers) ? allUsers : []).filter((user: any) => {
+    if (!searchTerm) return true;
+    const searchLower = searchTerm.toLowerCase();
+    return (
+      user.firstName?.toLowerCase().includes(searchLower) ||
+      user.lastName?.toLowerCase().includes(searchLower) ||
+      user.name?.toLowerCase().includes(searchLower) ||
+      user.email?.toLowerCase().includes(searchLower) ||
+      user.role?.toLowerCase().includes(searchLower)
+    );
+  }) : [];
 
   const { data: departments } = useQuery({
     queryKey: ['/api/departments'],
@@ -123,6 +138,18 @@ export default function UserTable({ onEdit, onManageDepartments }: UserTableProp
         <p className="text-sm text-slate-500">
           {Array.isArray(users) ? users.length : 0} users registered in the system
         </p>
+        
+        {/* Search Input */}
+        <div className="relative mt-4">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
+          <Input
+            placeholder="Search users by name, email, or role..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
+            data-testid="input-search-users"
+          />
+        </div>
       </CardHeader>
       <CardContent>
         <Table>
