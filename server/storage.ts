@@ -201,7 +201,7 @@ export class DatabaseStorage implements IStorage {
 
   async deleteUser(id: string): Promise<boolean> {
     const result = await db.delete(users).where(eq(users.id, id));
-    return (result.rowCount || 0) > 0;
+    return result.length > 0;
   }
 
   async upsertUser(userData: UpsertUser): Promise<User> {
@@ -223,7 +223,7 @@ export class DatabaseStorage implements IStorage {
     const departments = await db.select({ departmentId: userDepartments.departmentId })
       .from(userDepartments)
       .where(eq(userDepartments.userId, userId));
-    return departments.map(d => d.departmentId);
+    return departments.map(d => d.departmentId).filter((id): id is number => id !== null);
   }
 
   async assignUserToDepartments(userId: string, departmentIds: number[]): Promise<void> {
@@ -310,7 +310,7 @@ export class DatabaseStorage implements IStorage {
 
   async deleteDepartment(id: number): Promise<boolean> {
     const result = await db.delete(departments).where(eq(departments.id, id));
-    return (result.rowCount ?? 0) > 0;
+    return result.length > 0;
   }
 
   // Courier operations
@@ -502,7 +502,7 @@ export class DatabaseStorage implements IStorage {
 
   async deleteField(id: number): Promise<boolean> {
     const result = await db.delete(fields).where(eq(fields.id, id));
-    return (result.rowCount ?? 0) > 0;
+    return result.length > 0;
   }
 
   // SMTP operations
@@ -567,7 +567,7 @@ export class DatabaseStorage implements IStorage {
       .set({ password: hashedPassword, updatedAt: new Date() })
       .where(eq(users.email, email));
     
-    return (result.rowCount ?? 0) > 0;
+    return result.length > 0;
   }
 
   // Audit log operations
@@ -1038,7 +1038,7 @@ export class DatabaseStorage implements IStorage {
 
   async deleteReceivedCourier(id: number): Promise<boolean> {
     const result = await db.delete(receivedCouriers).where(eq(receivedCouriers.id, id));
-    return (result.rowCount || 0) > 0;
+    return result.length > 0;
   }
 
   // Authority Letter Template methods
@@ -1072,7 +1072,7 @@ export class DatabaseStorage implements IStorage {
 
   async deleteAuthorityLetterTemplate(id: number): Promise<boolean> {
     const result = await db.delete(authorityLetterTemplates).where(eq(authorityLetterTemplates.id, id));
-    return (result.rowCount || 0) > 0;
+    return result.length > 0;
   }
 
   // Authority Letter Field methods
@@ -1106,7 +1106,7 @@ export class DatabaseStorage implements IStorage {
 
   async deleteAuthorityLetterField(id: number): Promise<boolean> {
     const result = await db.delete(authorityLetterFields).where(eq(authorityLetterFields.id, id));
-    return (result.rowCount || 0) > 0;
+    return result.length > 0;
   }
 
   // Branch methods
@@ -1194,7 +1194,7 @@ export class DatabaseStorage implements IStorage {
 
   async deleteBranch(id: number): Promise<boolean> {
     const result = await db.delete(branches).where(eq(branches.id, id));
-    return (result.rowCount || 0) > 0;
+    return result.length > 0;
   }
 
   async updateBranchStatus(id: number, status: string): Promise<Branch | undefined> {
