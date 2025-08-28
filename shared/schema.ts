@@ -41,9 +41,17 @@ export const users = pgTable("users", {
   name: varchar("name", { length: 100 }),
   password: text("password"),
   role: roleEnum("role").default('user'),
-  departmentId: integer("department_id").references(() => departments.id),
+  departmentId: integer("department_id").references(() => departments.id), // Keep for backward compatibility
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// User-Department junction table for multi-department support
+export const userDepartments = pgTable("user_departments", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").references(() => users.id, { onDelete: 'cascade' }),
+  departmentId: integer("department_id").references(() => departments.id, { onDelete: 'cascade' }),
+  assignedAt: timestamp("assigned_at").defaultNow(),
 });
 
 export const departments = pgTable("departments", {
@@ -195,9 +203,21 @@ export const usersRelations = relations(users, ({ one, many }) => ({
     fields: [users.departmentId],
     references: [departments.id],
   }),
+  userDepartments: many(userDepartments),
   couriers: many(couriers),
   receivedCouriers: many(receivedCouriers),
   auditLogs: many(auditLogs),
+}));
+
+export const userDepartmentsRelations = relations(userDepartments, ({ one }) => ({
+  user: one(users, {
+    fields: [userDepartments.userId],
+    references: [users.id],
+  }),
+  department: one(departments, {
+    fields: [userDepartments.departmentId],
+    references: [departments.id],
+  }),
 }));
 
 export const receivedCouriersRelations = relations(receivedCouriers, ({ one }) => ({
@@ -213,6 +233,7 @@ export const receivedCouriersRelations = relations(receivedCouriers, ({ one }) =
 
 export const departmentsRelations = relations(departments, ({ many }) => ({
   users: many(users),
+  userDepartments: many(userDepartments),
   couriers: many(couriers),
   receivedCouriers: many(receivedCouriers),
   departmentFields: many(departmentFields),

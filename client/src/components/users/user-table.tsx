@@ -19,13 +19,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Edit, Trash2 } from "lucide-react";
+import { Edit, Trash2, Settings } from "lucide-react";
 
 interface UserTableProps {
   onEdit?: (user: any) => void;
+  onManageDepartments?: (user: any) => void;
 }
 
-export default function UserTable({ onEdit }: UserTableProps) {
+export default function UserTable({ onEdit, onManageDepartments }: UserTableProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -93,6 +94,11 @@ export default function UserTable({ onEdit }: UserTableProps) {
     return dept?.name || 'Unknown Department';
   };
 
+  const getDepartmentNames = (userDepartments: Array<{ id: number; name: string }> | undefined) => {
+    if (!userDepartments || userDepartments.length === 0) return [];
+    return userDepartments;
+  };
+
   if (isLoading) {
     return (
       <Card>
@@ -125,7 +131,7 @@ export default function UserTable({ onEdit }: UserTableProps) {
               <TableHead>Name</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Role</TableHead>
-              <TableHead>Department</TableHead>
+              <TableHead>Departments</TableHead>
               <TableHead>Created</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
@@ -155,7 +161,17 @@ export default function UserTable({ onEdit }: UserTableProps) {
                     </Badge>
                   </TableCell>
                   <TableCell data-testid={`text-department-${user.id}`}>
-                    {getDepartmentName(user.departmentId)}
+                    <div className="flex flex-wrap gap-1">
+                      {getDepartmentNames(user.departments).length > 0 ? (
+                        getDepartmentNames(user.departments).map((dept) => (
+                          <Badge key={dept.id} variant="outline" className="text-xs">
+                            {dept.name}
+                          </Badge>
+                        ))
+                      ) : (
+                        <span className="text-slate-500 text-sm">No departments assigned</span>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell data-testid={`text-created-${user.id}`}>
                     {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : '-'}
@@ -169,6 +185,14 @@ export default function UserTable({ onEdit }: UserTableProps) {
                         data-testid={`button-edit-${user.id}`}
                       >
                         <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onManageDepartments?.(user)}
+                        data-testid={`button-departments-${user.id}`}
+                      >
+                        <Settings className="h-4 w-4" />
                       </Button>
                       <Button
                         variant="outline"

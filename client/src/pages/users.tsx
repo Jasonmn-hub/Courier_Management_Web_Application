@@ -5,12 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import UserForm from "@/components/users/user-form";
 import UserTable from "@/components/users/user-table";
+import UserDepartmentsDialog from "@/components/users/user-departments-dialog";
 
 export default function Users() {
   const { toast } = useToast();
   const { user, isAuthenticated, isLoading } = useAuth();
   const [showUserForm, setShowUserForm] = useState(false);
   const [editingUser, setEditingUser] = useState<any>(null);
+  const [managingUser, setManagingUser] = useState<any>(null);
 
   // Redirect to home if not authenticated or not admin
   useEffect(() => {
@@ -62,10 +64,15 @@ export default function Users() {
 
           {/* User Management Content */}
           <div className="mt-8">
-            <UserTable onEdit={(user) => {
-              setEditingUser(user);
-              setShowUserForm(true);
-            }} />
+            <UserTable 
+              onEdit={(user) => {
+                setEditingUser(user);
+                setShowUserForm(true);
+              }}
+              onManageDepartments={(user) => {
+                setManagingUser(user);
+              }}
+            />
           </div>
         </div>
       </div>
@@ -84,6 +91,23 @@ export default function Users() {
             toast({
               title: "Success",
               description: `User ${editingUser ? 'updated' : 'created'} successfully`,
+            });
+          }}
+        />
+      )}
+
+      {/* Manage User Departments Modal */}
+      {managingUser && (
+        <UserDepartmentsDialog
+          user={managingUser}
+          onClose={() => {
+            setManagingUser(null);
+          }}
+          onSuccess={() => {
+            setManagingUser(null);
+            toast({
+              title: "Success",
+              description: "User departments updated successfully",
             });
           }}
         />

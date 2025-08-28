@@ -204,7 +204,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // User management routes
   app.get('/api/users', authenticateToken, requireRole(['admin', 'manager']), async (req: any, res) => {
     try {
-      const users = await storage.getAllUsers();
+      const users = await storage.getUsersWithDepartments();
       res.json(users);
     } catch (error) {
       console.error("Error fetching users:", error);
@@ -2435,6 +2435,38 @@ Jigar Jodhani
   });
 
   // ===== END OF NEW PDF SYSTEM =====
+
+  // ============= USER DEPARTMENT MANAGEMENT ROUTES =============
+
+  app.get('/api/users/:id/departments', authenticateToken, requireRole(['admin']), async (req: any, res) => {
+    try {
+      const userId = req.params.id;
+      const departments = await storage.getUserDepartments(userId);
+      res.json(departments);
+    } catch (error) {
+      console.error("Error fetching user departments:", error);
+      res.status(500).json({ message: "Failed to fetch user departments" });
+    }
+  });
+
+  app.post('/api/users/:id/departments', authenticateToken, requireRole(['admin']), setCurrentUser(), async (req: any, res) => {
+    try {
+      const userId = req.params.id;
+      const { departmentIds } = req.body;
+      
+      if (!Array.isArray(departmentIds)) {
+        return res.status(400).json({ message: "departmentIds must be an array" });
+      }
+
+      await storage.assignUserToDepartments(userId, departmentIds);
+      await logAudit(req.currentUser.id, 'UPDATE', 'user_departments', userId);
+      
+      res.json({ message: "User departments updated successfully" });
+    } catch (error) {
+      console.error("Error updating user departments:", error);
+      res.status(500).json({ message: "Failed to update user departments" });
+    }
+  });
 
   // ============= SMTP SETTINGS ROUTES =============
   

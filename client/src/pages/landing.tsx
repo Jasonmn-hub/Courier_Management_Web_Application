@@ -156,7 +156,18 @@ export default function Landing() {
                     </Button>
                     <Button
                       variant="outline"
-                      onClick={() => setIsRegisterMode(!isRegisterMode)}
+                      onClick={() => {
+                        if (isRegisterMode) {
+                          setIsRegisterMode(false);
+                        } else {
+                          // Forget password functionality
+                          toast({
+                            title: "Password Reset",
+                            description: "Please contact your system administrator to reset your password.",
+                            duration: 5000,
+                          });
+                        }
+                      }}
                       className="w-full"
                     >
                       {isRegisterMode ? "Already have an account? Sign In" : "Forget Password"}

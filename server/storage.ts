@@ -11,6 +11,7 @@ import {
   authorityLetterFields,
   branches,
   userPolicies,
+  userDepartments,
   type User,
   type UpsertUser,
   type Department,
@@ -42,10 +43,13 @@ export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
   getAllUsers(): Promise<User[]>;
+  getUsersWithDepartments(): Promise<Array<User & { departments: Array<{ id: number; name: string }> }>>;
   createUser(user: { name: string; email: string; password: string; role: string; departmentId?: number | null }): Promise<User>;
   updateUser(id: string, userData: { name: string; email: string; role: string; departmentId?: number | null }): Promise<User | undefined>;
   deleteUser(id: string): Promise<boolean>;
   upsertUser(user: UpsertUser): Promise<User>;
+  getUserDepartments(userId: string): Promise<number[]>;
+  assignUserToDepartments(userId: string, departmentIds: number[]): Promise<void>;
   
   // Department operations
   getAllDepartments(): Promise<Department[]>;
@@ -212,6 +216,76 @@ export class DatabaseStorage implements IStorage {
       })
       .returning();
     return user;
+  }
+
+  async getUserDepartments(userId: string): Promise<number[]> {
+    const departments = await db.select({ departmentId: userDepartments.departmentId })
+      .from(userDepartments)
+      .where(eq(userDepartments.userId, userId));
+    return departments.map(d => d.departmentId);
+  }
+
+  async assignUserToDepartments(userId: string, departmentIds: number[]): Promise<void> {
+    // Remove existing assignments
+    await db.delete(userDepartments).where(eq(userDepartments.userId, userId));
+    
+    // Add new assignments
+    if (departmentIds.length > 0) {
+      await db.insert(userDepartments).values(
+        departmentIds.map(departmentId => ({ userId, departmentId }))
+      );
+    }
+  }
+
+  async getUsersWithDepartments(): Promise<Array<User & { departments: Array<{ id: number; name: string }> }>> {
+    const usersWithDeps = await db.select({
+      id: users.id,
+      email: users.email,
+      firstName: users.firstName,
+      lastName: users.lastName,
+      profileImageUrl: users.profileImageUrl,
+      name: users.name,
+      password: users.password,
+      role: users.role,
+      departmentId: users.departmentId,
+      createdAt: users.createdAt,
+      updatedAt: users.updatedAt,
+      assignedDepartmentId: userDepartments.departmentId,
+      assignedDepartmentName: departments.name,
+    })
+    .from(users)
+    .leftJoin(userDepartments, eq(users.id, userDepartments.userId))
+    .leftJoin(departments, eq(userDepartments.departmentId, departments.id));
+
+    // Group by user
+    const userMap = new Map();
+    usersWithDeps.forEach(row => {
+      if (!userMap.has(row.id)) {
+        userMap.set(row.id, {
+          id: row.id,
+          email: row.email,
+          firstName: row.firstName,
+          lastName: row.lastName,
+          profileImageUrl: row.profileImageUrl,
+          name: row.name,
+          password: row.password,
+          role: row.role,
+          departmentId: row.departmentId,
+          createdAt: row.createdAt,
+          updatedAt: row.updatedAt,
+          departments: []
+        });
+      }
+      
+      if (row.assignedDepartmentId) {
+        userMap.get(row.id).departments.push({
+          id: row.assignedDepartmentId,
+          name: row.assignedDepartmentName
+        });
+      }
+    });
+
+    return Array.from(userMap.values());
   }
 
   // Department operations
