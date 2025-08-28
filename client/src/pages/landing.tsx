@@ -117,6 +117,15 @@ export default function Landing() {
                         }
                       }}
                       placeholder="Enter your password"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          if (isRegisterMode) {
+                            handleRegister();
+                          } else {
+                            handleLogin();
+                          }
+                        }
+                      }}
                     />
                   </div>
                   {!isRegisterMode && (
@@ -150,7 +159,7 @@ export default function Landing() {
                       onClick={() => setIsRegisterMode(!isRegisterMode)}
                       className="w-full"
                     >
-                      {isRegisterMode ? "Already have an account? Sign In" : "Don't have an account? Register"}
+                      {isRegisterMode ? "Already have an account? Sign In" : "Forget Password"}
                     </Button>
                   </div>
                 </div>
@@ -167,13 +176,7 @@ export default function Landing() {
             Courier Management System
           </h1>
           <div className="mt-10 flex items-center justify-center gap-x-6">
-            <Dialog open={showLogin} onOpenChange={setShowLogin}>
-              <DialogTrigger asChild>
-                <Button size="lg" data-testid="button-get-started">
-                  Get Started
-                </Button>
-              </DialogTrigger>
-            </Dialog>
+            {/* Get Started button removed as requested */}
           </div>
         </div>
 

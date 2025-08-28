@@ -304,14 +304,36 @@ export default function ReceivedCouriers() {
 
               <div>
                 <Label htmlFor="fromLocation">From (Branch/Other) *</Label>
-                <Input
-                  id="fromLocation"
-                  value={formData.fromLocation || ""}
-                  onChange={(e) => setFormData({ ...formData, fromLocation: e.target.value })}
-                  placeholder="e.g., Main Branch, Regional Office, etc."
-                  required
-                  data-testid="input-from-location"
-                />
+                <Select 
+                  value={formData.fromLocation || ""} 
+                  onValueChange={(value) => {
+                    if (value === "custom") {
+                      setFormData({ ...formData, fromLocation: "" });
+                    } else {
+                      setFormData({ ...formData, fromLocation: value });
+                    }
+                  }}
+                >
+                  <SelectTrigger data-testid="select-from-location">
+                    <SelectValue placeholder="Select branch or type custom" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {/* Department-specific branches would be fetched here */}
+                    <SelectItem value="Main Branch">Main Branch</SelectItem>
+                    <SelectItem value="Regional Office">Regional Office</SelectItem>
+                    <SelectItem value="Head Office">Head Office</SelectItem>
+                    <SelectItem value="custom">Custom Location</SelectItem>
+                  </SelectContent>
+                </Select>
+                {formData.fromLocation === "" && (
+                  <Input
+                    className="mt-2"
+                    placeholder="Enter custom location..."
+                    value={formData.fromLocation || ""}
+                    onChange={(e) => setFormData({ ...formData, fromLocation: e.target.value })}
+                    data-testid="input-custom-from-location"
+                  />
+                )}
               </div>
 
               <div>

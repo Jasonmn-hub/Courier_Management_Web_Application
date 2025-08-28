@@ -858,12 +858,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.get('/api/branches', authenticateToken, async (req: any, res) => {
     try {
-      const { status, search, page = "1", limit = "50" } = req.query;
+      const { status, search, page = "1", limit = "50", departmentId } = req.query;
       const offset = (parseInt(page) - 1) * parseInt(limit);
       
       const filters = {
         status: status || undefined,
         search: search || undefined,
+        departmentId: departmentId ? parseInt(departmentId) : undefined,
         limit: parseInt(limit),
         offset
       };

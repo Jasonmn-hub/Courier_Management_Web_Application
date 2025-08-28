@@ -137,6 +137,7 @@ export const branches = pgTable("branches", {
   latitude: varchar("latitude", { length: 50 }),
   longitude: varchar("longitude", { length: 50 }),
   status: varchar("status", { length: 20 }).default('active').notNull(), // 'active' or 'closed'
+  departmentId: integer("department_id").references(() => departments.id), // Department-specific branches
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -174,6 +175,17 @@ export const authorityLetterFields = pgTable('authority_letter_fields', {
   fieldType: varchar('field_type', { length: 50 }).default('text').notNull(), // text, number, date
   textTransform: varchar('text_transform', { length: 20 }).default('none'), // none, uppercase, capitalize, toggle
   isRequired: boolean('is_required').default(false),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+// Dropdown field options table for custom fields
+export const fieldDropdownOptions = pgTable('field_dropdown_options', {
+  id: serial('id').primaryKey(),
+  fieldId: integer('field_id').references(() => authorityLetterFields.id, { onDelete: 'cascade' }),
+  departmentId: integer('department_id').references(() => departments.id),
+  optionValue: varchar('option_value', { length: 255 }).notNull(),
+  optionLabel: varchar('option_label', { length: 255 }).notNull(),
+  sortOrder: integer('sort_order').default(0),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
@@ -239,7 +251,11 @@ export const auditLogsRelations = relations(auditLogs, ({ one }) => ({
   }),
 }));
 
-export const branchesRelations = relations(branches, ({ many }) => ({
+export const branchesRelations = relations(branches, ({ one, many }) => ({
+  department: one(departments, {
+    fields: [branches.departmentId],
+    references: [departments.id],
+  }),
   // Future relations with couriers if needed
 }));
 

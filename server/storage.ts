@@ -595,7 +595,7 @@ export class DatabaseStorage implements IStorage {
       .where(
         and(
           ...onTheWayConditions,
-          sql`${couriers.createdAt} >= ${startOfMonth}`
+          sql`${couriers.createdAt} >= ${startOfMonth.toISOString()}`
         )
       );
       
@@ -605,13 +605,13 @@ export class DatabaseStorage implements IStorage {
       .where(
         and(
           ...completedConditions,
-          sql`${couriers.createdAt} >= ${startOfMonth}`
+          sql`${couriers.createdAt} >= ${startOfMonth.toISOString()}`
         )
       );
       
     // Get this month's received couriers count
     let thisMonthReceivedConditions = [
-      sql`${receivedCouriers.receivedDate} >= ${startOfMonth}`
+      sql`${receivedCouriers.receivedDate} >= ${startOfMonth.toISOString()}`
     ];
     if (departmentId) {
       thisMonthReceivedConditions.push(eq(receivedCouriers.departmentId, departmentId));
@@ -661,8 +661,8 @@ export class DatabaseStorage implements IStorage {
       // Build conditions for the month range
       let onTheWayConditions = [
         eq(couriers.status, 'on_the_way'),
-        sql`${couriers.createdAt} >= ${date}`,
-        sql`${couriers.createdAt} < ${nextDate}`
+        sql`${couriers.createdAt} >= ${date.toISOString()}`,
+        sql`${couriers.createdAt} < ${nextDate.toISOString()}`
       ];
       
       let completedConditions = [
@@ -670,8 +670,8 @@ export class DatabaseStorage implements IStorage {
           eq(couriers.status, 'completed'),
           eq(couriers.status, 'received')
         ),
-        sql`${couriers.createdAt} >= ${date}`,
-        sql`${couriers.createdAt} < ${nextDate}`
+        sql`${couriers.createdAt} >= ${date.toISOString()}`,
+        sql`${couriers.createdAt} < ${nextDate.toISOString()}`
       ];
       
       // Add department filter if specified
@@ -691,8 +691,8 @@ export class DatabaseStorage implements IStorage {
       
       // Also get received couriers for this month
       let receivedConditions = [
-        sql`${receivedCouriers.receivedDate} >= ${date}`,
-        sql`${receivedCouriers.receivedDate} < ${nextDate}`
+        sql`${receivedCouriers.receivedDate} >= ${date.toISOString()}`,
+        sql`${receivedCouriers.receivedDate} < ${nextDate.toISOString()}`
       ];
       
       if (departmentId) {
@@ -988,6 +988,7 @@ export class DatabaseStorage implements IStorage {
     search?: string;
     limit?: number;
     offset?: number;
+    departmentId?: number;
   }): Promise<{ branches: Branch[]; total: number }> {
     let query = db.select().from(branches);
     let countQuery = db.select({ count: sql`count(*)` }).from(branches);
@@ -996,6 +997,10 @@ export class DatabaseStorage implements IStorage {
 
     if (filters?.status) {
       conditions.push(eq(branches.status, filters.status));
+    }
+
+    if (filters?.departmentId) {
+      conditions.push(eq(branches.departmentId, filters.departmentId));
     }
 
     if (filters?.search) {

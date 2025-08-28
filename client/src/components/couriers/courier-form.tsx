@@ -30,6 +30,7 @@ import { isUnauthorizedError } from "@/lib/authUtils";
 
 const courierSchema = z.object({
   toBranch: z.string().min(1, "Destination is required"),
+  departmentId: z.number().min(1, "Department is required"),
   email: z.string().email("Valid email is required"),
   courierDate: z.string().min(1, "Courier date is required"),
   vendor: z.string().min(1, "Vendor is required"),
@@ -57,6 +58,7 @@ export default function CourierForm({ courier, onClose, onSuccess }: CourierForm
     resolver: zodResolver(courierSchema),
     defaultValues: {
       toBranch: courier?.toBranch || "",
+      departmentId: courier?.departmentId || 0,
       email: courier?.email || "",
       courierDate: courier?.courierDate || "",
       vendor: courier?.vendor || "",
@@ -73,6 +75,24 @@ export default function CourierForm({ courier, onClose, onSuccess }: CourierForm
   const { data: departments } = useQuery({
     queryKey: ['/api/departments'],
   });
+
+  const { data: branchesData } = useQuery({
+    queryKey: ['/api/branches', { status: 'active', departmentId: form.watch('departmentId') }],
+    queryFn: async () => {
+      const departmentId = form.watch('departmentId');
+      if (!departmentId) return { branches: [] };
+      
+      const params = new URLSearchParams();
+      params.set('status', 'active');
+      params.set('departmentId', departmentId.toString());
+      
+      const response = await apiRequest('GET', `/api/branches?${params.toString()}`);
+      return response.json();
+    },
+    enabled: !!form.watch('departmentId'),
+  });
+  
+  const branches = branchesData?.branches || [];
 
   const mutation = useMutation({
     mutationFn: async (data: z.infer<typeof courierSchema>) => {
@@ -199,6 +219,32 @@ export default function CourierForm({ courier, onClose, onSuccess }: CourierForm
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+              {/* Department */}
+              <FormField
+                control={form.control}
+                name="departmentId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Department</FormLabel>
+                    <Select onValueChange={(value) => field.onChange(parseInt(value))} value={field.value ? field.value.toString() : ""}>
+                      <FormControl>
+                        <SelectTrigger data-testid="select-department">
+                          <SelectValue placeholder="Select department" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {(departments || []).map((dept: any) => (
+                          <SelectItem key={dept.id} value={dept.id.toString()}>
+                            {dept.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
               {/* To Branch/Other */}
               <FormField
                 control={form.control}
@@ -206,17 +252,51 @@ export default function CourierForm({ courier, onClose, onSuccess }: CourierForm
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>To (Branch / Other)</FormLabel>
-                    <FormControl>
-                      <Input 
-                        placeholder="Enter destination" 
-                        {...field} 
-                        data-testid="input-to-branch"
-                      />
-                    </FormControl>
+                    <Select onValueChange={field.onChange} value={field.value} onOpenChange={(open) => {
+                      if (!open && !branches.some((b: any) => b.branchName === field.value)) {
+                        // Allow custom input if not in branch list
+                      }
+                    }}>
+                      <FormControl>
+                        <SelectTrigger data-testid="select-to-branch">
+                          <SelectValue placeholder="Select branch or type custom" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {branches.map((branch: any) => (
+                          <SelectItem key={branch.id} value={branch.branchName}>
+                            {branch.branchName} ({branch.branchCode})
+                          </SelectItem>
+                        ))}
+                        <SelectItem value="custom">Type Custom Destination</SelectItem>
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
               />
+
+              {/* Custom destination input when 'custom' is selected */}
+              {form.watch("toBranch") === "custom" && (
+                <FormField
+                  control={form.control}
+                  name="toBranch"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Custom Destination</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="Enter custom destination..." 
+                          value={field.value === "custom" ? "" : field.value}
+                          onChange={(e) => field.onChange(e.target.value)}
+                          data-testid="input-custom-destination"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
 
               {/* Email ID */}
               <FormField
