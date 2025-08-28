@@ -8,7 +8,7 @@ import {
   DropdownMenuItem, 
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
-import { Menu, Search, Bell, ChevronDown } from "lucide-react";
+import { Menu, Bell, ChevronDown } from "lucide-react";
 import { useLocation } from "wouter";
 import AccountProfile from "./account-profile";
 
@@ -20,30 +20,7 @@ export default function TopNavbar({ onMenuClick }: TopNavbarProps) {
   const { user, logout } = useAuth();
   const [location] = useLocation();
 
-  const getSearchPlaceholder = () => {
-    switch (location) {
-      case "/couriers":
-        return "Search couriers, POD numbers...";
-      case "/received-couriers":
-        return "Search received couriers...";
-      case "/branches":
-        return "Search branches, codes...";
-      case "/users":
-        return "Search users, emails...";
-      case "/departments":
-        return "Search departments...";
-      case "/user-policies":
-        return "Search policies...";
-      case "/authority-letter":
-        return "Search authority letters...";
-      case "/settings":
-      case "/custom-fields":
-      case "/audit-logs":
-        return "Search settings...";
-      default:
-        return "Search...";
-    }
-  };
+
 
   const handleLogout = () => {
     logout();
@@ -76,23 +53,7 @@ export default function TopNavbar({ onMenuClick }: TopNavbarProps) {
         <Menu className="h-5 w-5" />
       </button>
 
-      <div className="flex-1 px-4 flex justify-between items-center">
-        {/* Search bar */}
-        <div className="flex-1 flex">
-          <div className="w-full flex md:ml-0">
-            <div className="relative w-full max-w-lg">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Search className="h-4 w-4 text-slate-400" />
-              </div>
-              <Input 
-                className="pl-10 pr-3 py-2"
-                placeholder={getSearchPlaceholder()}
-                data-testid="input-search"
-              />
-            </div>
-          </div>
-        </div>
-
+      <div className="flex-1 px-4 flex justify-end items-center">
         {/* Right side */}
         <div className="ml-4 flex items-center md:ml-6 space-x-4">
           {/* Notifications */}
