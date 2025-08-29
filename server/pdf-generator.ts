@@ -153,9 +153,10 @@ export class PDFGenerator {
       // Replace placeholders with actual values
       const htmlContent = this.replacePlaceholders(template, options.fieldValues);
       
-      // Launch Puppeteer
+      // Launch Puppeteer with system Chromium
       browser = await puppeteer.launch({
         headless: true,
+        executablePath: '/nix/store/qa9cnw4v5xkxyip6mb9kxqfq1z4x2dx1-chromium-138.0.7204.100/bin/chromium',
         args: [
           '--no-sandbox',
           '--disable-setuid-sandbox',
@@ -164,7 +165,9 @@ export class PDFGenerator {
           '--no-first-run',
           '--no-zygote',
           '--single-process', // This helps in serverless environments
-          '--disable-gpu'
+          '--disable-gpu',
+          '--disable-web-security',
+          '--disable-features=VizDisplayCompositor'
         ]
       });
       
