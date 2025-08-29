@@ -493,6 +493,99 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post('/api/users/bulk-upload', authenticateToken, requireRole(['admin']), setCurrentUser(), upload.single('file'), async (req: any, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: 'No file uploaded' });
+      }
+
+      const fileContent = req.file.buffer.toString('utf-8');
+      const lines = fileContent.split('\n').filter(line => line.trim());
+      
+      if (lines.length < 2) {
+        return res.status(400).json({ message: 'Invalid CSV file. Must have header row and at least one data row.' });
+      }
+
+      const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+      const expectedHeaders = ['name', 'email', 'role', 'departmentName', 'password'];
+      
+      // Validate headers
+      const missingHeaders = expectedHeaders.filter(h => !headers.includes(h));
+      if (missingHeaders.length > 0) {
+        return res.status(400).json({ 
+          message: `Missing required headers: ${missingHeaders.join(', ')}` 
+        });
+      }
+
+      let processed = 0;
+      let errors = 0;
+      const results = [];
+
+      for (let i = 1; i < lines.length; i++) {
+        try {
+          const values = lines[i].split(',').map(v => v.trim().replace(/"/g, ''));
+          const userData: any = {};
+          
+          headers.forEach((header, index) => {
+            userData[header] = values[index] || '';
+          });
+
+          // Validate required fields
+          if (!userData.name || !userData.email || !userData.role || !userData.password) {
+            errors++;
+            continue;
+          }
+
+          // Check if user already exists
+          const existingUser = await storage.getUserByEmail(userData.email);
+          if (existingUser) {
+            errors++;
+            continue;
+          }
+
+          // Find department by name
+          let departmentId = null;
+          if (userData.departmentName) {
+            const departments = await storage.getDepartments();
+            const department = departments.find(d => d.name.toLowerCase() === userData.departmentName.toLowerCase());
+            if (department) {
+              departmentId = department.id;
+            }
+          }
+
+          // Hash password
+          const hashedPassword = await hashPassword(userData.password);
+
+          // Create user
+          const newUser = await storage.createUser({
+            name: userData.name,
+            email: userData.email,
+            password: hashedPassword,
+            role: userData.role,
+            departmentId
+          });
+
+          await logAudit(req.currentUser.id, 'CREATE', 'user', newUser.id);
+          processed++;
+
+        } catch (error) {
+          console.error(`Error processing row ${i}:`, error);
+          errors++;
+        }
+      }
+
+      res.json({ 
+        message: `Bulk upload completed. Processed: ${processed}, Errors: ${errors}`,
+        processed,
+        errors
+      });
+
+    } catch (error) {
+      console.error('Bulk upload error:', error);
+      res.status(500).json({ message: 'Bulk upload failed' });
+    }
+  });
+
   // Helper function to log audit
   const logAudit = async (userId: string, action: string, entityType: string, entityId?: string | number) => {
     try {
@@ -865,6 +958,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validatedData = insertCourierSchema.parse(courierData);
       const courier = await storage.createCourier(validatedData);
       
+      // Send email notification if requested
+      if (req.body.sendEmail === 'true' && req.body.email) {
+        try {
+          const smtpSettings = await storage.getSmtpSettings();
+          if (smtpSettings && smtpSettings.host && smtpSettings.username && smtpSettings.password) {
+            const transportConfig: any = {
+              host: smtpSettings.host,
+              port: smtpSettings.port || 587,
+              auth: {
+                user: smtpSettings.username,
+                pass: smtpSettings.password,
+              }
+            };
+
+            if (smtpSettings.useSSL) {
+              transportConfig.secure = true;
+            } else if (smtpSettings.useTLS) {
+              transportConfig.secure = false;
+              transportConfig.requireTLS = true;
+            } else {
+              transportConfig.secure = false;
+            }
+
+            const transporter = nodemailer.createTransport(transportConfig);
+
+            const mailOptions = {
+              from: smtpSettings.fromEmail || smtpSettings.username,
+              to: req.body.email,
+              subject: 'Courier Dispatch Notification - Courier Management System',
+              html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                  <h2 style="color: #333;">Courier Dispatch Notification</h2>
+                  <p>A courier has been dispatched with the following details:</p>
+                  <table style="border-collapse: collapse; width: 100%; margin: 20px 0;">
+                    <tr><td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">To Branch:</td><td style="padding: 8px; border: 1px solid #ddd;">${courier.toBranch || 'N/A'}</td></tr>
+                    <tr><td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Courier Date:</td><td style="padding: 8px; border: 1px solid #ddd;">${courier.courierDate || 'N/A'}</td></tr>
+                    <tr><td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Vendor:</td><td style="padding: 8px; border: 1px solid #ddd;">${courier.vendor || courier.customVendor || 'N/A'}</td></tr>
+                    <tr><td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">POD Number:</td><td style="padding: 8px; border: 1px solid #ddd;">${courier.podNo || 'N/A'}</td></tr>
+                    <tr><td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Details:</td><td style="padding: 8px; border: 1px solid #ddd;">${courier.details || 'N/A'}</td></tr>
+                    <tr><td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Status:</td><td style="padding: 8px; border: 1px solid #ddd;">On the Way</td></tr>
+                  </table>
+                  <p>You will receive another notification once the courier is delivered.</p>
+                  <p>Thank you!</p>
+                </div>
+              `
+            };
+
+            await transporter.sendMail(mailOptions);
+          }
+        } catch (emailError) {
+          console.error('Error sending courier notification email:', emailError);
+          // Don't fail the courier creation if email fails
+        }
+      }
+      
       await logAudit(userId, 'CREATE', 'courier', courier.id);
       
       res.status(201).json(courier);
@@ -1078,6 +1226,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           branchAddress: '123 Main Street, City Center',
           pincode: '110001',
           state: 'Delhi',
+          email: 'mainbranch@example.com',
           latitude: '28.6139',
           longitude: '77.2090',
           status: 'active'
@@ -1089,6 +1238,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           branchAddress: '456 Market Street, Commercial Area',
           pincode: '110002',
           state: 'Delhi',
+          email: 'secondarybranch@example.com',
           latitude: '28.6304',
           longitude: '77.2177',
           status: 'active'
@@ -1458,6 +1608,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const validatedData = insertReceivedCourierSchema.parse(courierData);
       const courier = await storage.createReceivedCourier(validatedData);
+      
+      // Send email notification if requested
+      if (req.body.sendEmailNotification === true && req.body.emailId) {
+        try {
+          const smtpSettings = await storage.getSmtpSettings();
+          if (smtpSettings && smtpSettings.host && smtpSettings.username && smtpSettings.password) {
+            const transportConfig: any = {
+              host: smtpSettings.host,
+              port: smtpSettings.port || 587,
+              auth: {
+                user: smtpSettings.username,
+                pass: smtpSettings.password,
+              }
+            };
+
+            if (smtpSettings.useSSL) {
+              transportConfig.secure = true;
+            } else if (smtpSettings.useTLS) {
+              transportConfig.secure = false;
+              transportConfig.requireTLS = true;
+            } else {
+              transportConfig.secure = false;
+            }
+
+            const transporter = nodemailer.createTransport(transportConfig);
+
+            const mailOptions = {
+              from: smtpSettings.fromEmail || smtpSettings.username,
+              to: req.body.emailId,
+              subject: 'Courier Received Notification - Courier Management System',
+              html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                  <h2 style="color: #333;">Courier Received Notification</h2>
+                  <p>A courier has been received with the following details:</p>
+                  <table style="border-collapse: collapse; width: 100%; margin: 20px 0;">
+                    <tr><td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">POD Number:</td><td style="padding: 8px; border: 1px solid #ddd;">${courier.podNumber || 'N/A'}</td></tr>
+                    <tr><td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">From Location:</td><td style="padding: 8px; border: 1px solid #ddd;">${courier.fromLocation || 'N/A'}</td></tr>
+                    <tr><td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Received Date:</td><td style="padding: 8px; border: 1px solid #ddd;">${courier.receivedDate || 'N/A'}</td></tr>
+                    <tr><td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Courier Vendor:</td><td style="padding: 8px; border: 1px solid #ddd;">${courier.courierVendor || courier.customVendor || 'N/A'}</td></tr>
+                    <tr><td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Receiver:</td><td style="padding: 8px; border: 1px solid #ddd;">${courier.receiverName || 'N/A'}</td></tr>
+                    <tr><td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Remarks:</td><td style="padding: 8px; border: 1px solid #ddd;">${courier.remarks || 'N/A'}</td></tr>
+                  </table>
+                  <p>Please collect the courier from your designated department.</p>
+                  <p>Thank you!</p>
+                </div>
+              `
+            };
+
+            await transporter.sendMail(mailOptions);
+          }
+        } catch (emailError) {
+          console.error('Error sending received courier notification email:', emailError);
+          // Don't fail the courier creation if email fails
+        }
+      }
       
       await logAudit(userId, 'CREATE', 'received_courier', courier.id);
       

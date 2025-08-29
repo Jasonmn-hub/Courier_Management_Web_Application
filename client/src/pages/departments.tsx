@@ -3,6 +3,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Plus, FileText, Upload, Edit, Trash2, Settings, Search } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import DepartmentForm from "@/components/departments/department-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -315,9 +316,9 @@ export default function Departments() {
                     <TableHeader>
                       <TableRow>
                         <TableHead>Name</TableHead>
-                        <TableHead>Authority Document</TableHead>
                         <TableHead>Created</TableHead>
-                        <TableHead>Actions</TableHead>
+                        <TableHead className="text-center">Manage Files</TableHead>
+                        <TableHead className="text-center">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -325,84 +326,118 @@ export default function Departments() {
                         <TableRow key={dept.id}>
                           <TableCell className="font-medium">{dept.name}</TableCell>
                           <TableCell>
-                            <div className="flex items-center space-x-2">
-                              {dept.authorityDocumentPath ? (
-                                <div className="flex items-center space-x-2">
-                                  <FileText className="h-4 w-4 text-green-600" />
-                                  <span className="text-sm text-green-600">Document uploaded</span>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => {
-                                      setSelectedDepartmentForUpload(dept);
-                                      setShowDocumentUpload(true);
-                                    }}
-                                    className="h-6 p-1"
-                                    data-testid={`button-update-document-${dept.id}`}
-                                  >
-                                    <Edit className="h-3 w-3" />
-                                  </Button>
-                                </div>
-                              ) : (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => {
-                                    setSelectedDepartmentForUpload(dept);
-                                    setShowDocumentUpload(true);
-                                  }}
-                                  className="h-8"
-                                  data-testid={`button-upload-document-${dept.id}`}
-                                >
-                                  <Upload className="h-3 w-3 mr-1" />
-                                  Upload Document
-                                </Button>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell>
                             {new Date(dept.createdAt).toLocaleDateString()}
                           </TableCell>
-                          <TableCell>
-                            <div className="flex space-x-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                  setEditingDepartment(dept);
-                                  setShowDepartmentForm(true);
-                                }}
-                                data-testid={`button-edit-${dept.id}`}
-                              >
-                                <Edit className="h-3 w-3 mr-1" />
-                                Edit
-                              </Button>
-                              {dept.authorityDocumentPath && (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => {
-                                    setSelectedDepartmentForFields(dept);
-                                    setShowFieldsManager(true);
-                                  }}
-                                  className="text-blue-600 hover:text-blue-800"
-                                  data-testid={`button-manage-fields-${dept.id}`}
-                                >
-                                  <Settings className="h-3 w-3 mr-1" />
-                                  Manage Fields
-                                </Button>
-                              )}
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleDeleteDepartment(dept)}
-                                className="text-red-600 hover:text-red-800"
-                                data-testid={`button-delete-${dept.id}`}
-                              >
-                                <Trash2 className="h-3 w-3 mr-1" />
-                                Delete
-                              </Button>
-                            </div>
+                          <TableCell className="text-center">
+                            <TooltipProvider>
+                              <div className="flex justify-center space-x-2">
+                                {dept.authorityDocumentPath ? (
+                                  <>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => {
+                                            setSelectedDepartmentForUpload(dept);
+                                            setShowDocumentUpload(true);
+                                          }}
+                                          className="h-8 w-8 p-0 text-green-600 hover:text-green-800"
+                                          data-testid={`button-update-document-${dept.id}`}
+                                        >
+                                          <FileText className="h-4 w-4" />
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <p>Update Authority Document</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                    
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => {
+                                            setSelectedDepartmentForFields(dept);
+                                            setShowFieldsManager(true);
+                                          }}
+                                          className="h-8 w-8 p-0 text-blue-600 hover:text-blue-800"
+                                          data-testid={`button-manage-fields-${dept.id}`}
+                                        >
+                                          <Settings className="h-4 w-4" />
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <p>Manage Document Fields</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </>
+                                ) : (
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => {
+                                          setSelectedDepartmentForUpload(dept);
+                                          setShowDocumentUpload(true);
+                                        }}
+                                        className="h-8 w-8 p-0 text-gray-600 hover:text-gray-800"
+                                        data-testid={`button-upload-document-${dept.id}`}
+                                      >
+                                        <Upload className="h-4 w-4" />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>Upload Authority Document</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                )}
+                              </div>
+                            </TooltipProvider>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <TooltipProvider>
+                              <div className="flex justify-center space-x-2">
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => {
+                                        setEditingDepartment(dept);
+                                        setShowDepartmentForm(true);
+                                      }}
+                                      className="h-8 w-8 p-0 text-gray-600 hover:text-gray-800"
+                                      data-testid={`button-edit-${dept.id}`}
+                                    >
+                                      <Edit className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Edit Department</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                                
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleDeleteDepartment(dept)}
+                                      className="h-8 w-8 p-0 text-red-600 hover:text-red-800"
+                                      data-testid={`button-delete-${dept.id}`}
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Delete Department</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </div>
+                            </TooltipProvider>
                           </TableCell>
                         </TableRow>
                       ))}

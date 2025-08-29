@@ -186,7 +186,9 @@ export default function CourierTable({
       case 'on_the_way':
         return <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">On The Way</Badge>;
       case 'received':
-        return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Received</Badge>;
+        return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Delivered</Badge>;
+      case 'completed':
+        return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Delivered</Badge>;
       case 'deleted':
         return <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">Deleted</Badge>;
       default:
@@ -239,8 +241,8 @@ export default function CourierTable({
                 <SelectContent>
                   <SelectItem value="all">All Status</SelectItem>
                   <SelectItem value="on_the_way">On The Way</SelectItem>
-                  <SelectItem value="received">Received</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
+                  <SelectItem value="received">Delivered</SelectItem>
+                  <SelectItem value="completed">Delivered</SelectItem>
                   <SelectItem value="deleted">Deleted</SelectItem>
                 </SelectContent>
               </Select>

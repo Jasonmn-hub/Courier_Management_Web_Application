@@ -2,17 +2,91 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, Download, Upload } from "lucide-react";
 import UserForm from "@/components/users/user-form";
 import UserTable from "@/components/users/user-table";
 import UserDepartmentsDialog from "@/components/users/user-departments-dialog";
+import { Input } from "@/components/ui/input";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 export default function Users() {
   const { toast } = useToast();
   const { user, isAuthenticated, isLoading } = useAuth();
+  const queryClient = useQueryClient();
   const [showUserForm, setShowUserForm] = useState(false);
   const [editingUser, setEditingUser] = useState<any>(null);
   const [managingUser, setManagingUser] = useState<any>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+
+  const bulkUploadMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch('/api/users/bulk-upload', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formData
+      });
+      
+      if (!response.ok) {
+        const error = await response.text();
+        throw new Error(error || 'Bulk upload failed');
+      }
+      
+      return response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/users'] });
+      toast({
+        title: "Success",
+        description: `Successfully processed ${data.processed || 0} users. ${data.errors ? `${data.errors} errors occurred.` : ''}`,
+      });
+      setSelectedFile(null);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Upload Failed",
+        description: error.message || "Failed to process bulk user upload",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleBulkUpload = () => {
+    if (!selectedFile) {
+      toast({
+        title: "No File Selected",
+        description: "Please select a CSV file to upload",
+        variant: "destructive",
+      });
+      return;
+    }
+    bulkUploadMutation.mutate(selectedFile);
+  };
+
+  const downloadTemplate = () => {
+    // Create a CSV template with headers
+    const headers = ['name', 'email', 'role', 'departmentName', 'password'];
+    const sampleData = [
+      ['John Doe', 'john@example.com', 'user', 'IT Department', 'password123'],
+      ['Jane Smith', 'jane@example.com', 'manager', 'HR Department', 'password456']
+    ];
+    
+    const csvContent = [
+      headers.join(','),
+      ...sampleData.map(row => row.map(cell => `"${cell}"`).join(','))
+    ].join('\n');
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'user_bulk_upload_template.csv';
+    link.click();
+  };
 
   // Redirect to home if not authenticated or not admin
   useEffect(() => {
@@ -51,7 +125,43 @@ export default function Users() {
                 Manage user accounts and role assignments
               </p>
             </div>
-            <div className="mt-4 flex md:mt-0 md:ml-4">
+            <div className="mt-4 flex space-x-3 md:mt-0 md:ml-4">
+              <Button 
+                variant="outline" 
+                onClick={downloadTemplate}
+                data-testid="button-download-template"
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Download Template
+              </Button>
+              
+              <div className="flex items-center space-x-2">
+                <Input
+                  type="file"
+                  accept=".csv"
+                  onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+                  className="hidden"
+                  id="csv-upload"
+                />
+                <label htmlFor="csv-upload">
+                  <Button variant="outline" type="button" asChild>
+                    <span className="cursor-pointer" data-testid="button-select-csv">
+                      <Upload className="h-4 w-4 mr-2" />
+                      Select CSV
+                    </span>
+                  </Button>
+                </label>
+                {selectedFile && (
+                  <Button 
+                    onClick={handleBulkUpload}
+                    disabled={bulkUploadMutation.isPending}
+                    data-testid="button-bulk-upload"
+                  >
+                    {bulkUploadMutation.isPending ? "Uploading..." : "Upload Users"}
+                  </Button>
+                )}
+              </div>
+              
               <Button 
                 onClick={() => setShowUserForm(true)}
                 data-testid="button-add-user"
