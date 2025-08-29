@@ -1241,8 +1241,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteBranch(id: number): Promise<boolean> {
-    const result = await db.delete(branches).where(eq(branches.id, id));
-    return result.length > 0;
+    try {
+      const result = await db.delete(branches).where(eq(branches.id, id));
+      return (result as any).rowCount > 0 || result.length > 0;
+    } catch (error) {
+      console.error("Error deleting branch:", error);
+      return false;
+    }
   }
 
   async updateBranchStatus(id: number, status: string): Promise<Branch | undefined> {

@@ -42,18 +42,11 @@ export default function StatsCards() {
 
   const statsData = [
     {
-      name: "Sent Couriers",
-      value: stats?.sent || 0,
+      name: "Total Couriers",
+      value: stats?.total || 0,
       icon: Package,
       color: "text-blue-500",
-      testId: "stat-sent-couriers"
-    },
-    {
-      name: "Received Couriers",
-      value: stats?.received || 0,
-      icon: CheckCircle,
-      color: "text-green-500",
-      testId: "stat-received-couriers"
+      testId: "stat-total-couriers"
     },
     {
       name: "On The Way",
@@ -63,12 +56,18 @@ export default function StatsCards() {
       testId: "stat-on-the-way"
     },
     {
-      name: "This Month",
-      value: `${stats?.thisMonthSent || 0} / ${stats?.thisMonthReceived || 0}`,
-      icon: Calendar,
-      color: "text-primary",
-      testId: "stat-this-month",
-      subtitle: "Sent / Received"
+      name: "Received Couriers",
+      value: stats?.received || 0,
+      icon: CheckCircle,
+      color: "text-green-500",
+      testId: "stat-received-couriers"
+    },
+    {
+      name: "Sent Couriers",
+      value: stats?.sent || 0,
+      icon: Package,
+      color: "text-purple-500",
+      testId: "stat-sent-couriers"
     },
   ];
 
