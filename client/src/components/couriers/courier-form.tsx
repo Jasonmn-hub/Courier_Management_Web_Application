@@ -38,6 +38,7 @@ const courierSchema = z.object({
   customVendor: z.string().optional(),
   podNo: z.string().min(1, "POD number is required"),
   contactDetails: z.string().min(1, "Contact details are required"),
+  receiverName: z.string().min(1, "Receiver name is required"),
   details: z.string().min(1, "Courier details are required"),
   remarks: z.string().optional(),
   sendEmail: z.boolean().default(true),
@@ -66,6 +67,7 @@ export default function CourierForm({ courier, onClose, onSuccess }: CourierForm
       customVendor: courier?.customVendor || "",
       podNo: courier?.podNo || "",
       contactDetails: courier?.contactDetails || "",
+      receiverName: courier?.receiverName || "",
       details: courier?.details || "",
       remarks: courier?.remarks || "",
       sendEmail: true,
@@ -399,6 +401,25 @@ export default function CourierForm({ courier, onClose, onSuccess }: CourierForm
                         placeholder="Phone number" 
                         {...field} 
                         data-testid="input-contact-details"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Receiver Name */}
+              <FormField
+                control={form.control}
+                name="receiverName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Receiver Name</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="Name of the person receiving" 
+                        {...field} 
+                        data-testid="input-receiver-name"
                       />
                     </FormControl>
                     <FormMessage />

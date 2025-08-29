@@ -33,7 +33,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     { name: "Dashboard", href: "/", icon: BarChart3, current: location === "/" },
     { name: "Sent Couriers", href: "/couriers", icon: Package, current: location === "/couriers" },
     { name: "Received Couriers", href: "/received-couriers", icon: Truck, current: location === "/received-couriers" },
-    { name: "Authority Letter (Legacy)", href: "/authority-letter", icon: FileDown, current: location === "/authority-letter" },
+    { name: "Authority Letter", href: "/authority-letter", icon: FileDown, current: location === "/authority-letter" },
   ];
 
   // Check if branches tab should be shown based on user policy

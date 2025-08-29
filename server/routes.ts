@@ -1076,24 +1076,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
             const transporter = nodemailer.createTransport(transportConfig);
 
+            // Get department name for email signature
+            let departmentName = 'N/A';
+            if (user.departmentId) {
+              try {
+                const department = await storage.getDepartmentById(user.departmentId);
+                departmentName = department?.name || 'N/A';
+              } catch (error) {
+                console.error('Error fetching department for email:', error);
+              }
+            }
+
             const mailOptions = {
               from: smtpSettings.fromEmail || smtpSettings.username,
               to: req.body.email,
               subject: 'Courier Dispatch Notification - Courier Management System',
               html: `
-                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                  <h2 style="color: #333;">Courier Dispatch Notification</h2>
-                  <p>A courier has been dispatched with the following details:</p>
-                  <table style="border-collapse: collapse; width: 100%; margin: 20px 0;">
-                    <tr><td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">To Branch:</td><td style="padding: 8px; border: 1px solid #ddd;">${courier.toBranch || 'N/A'}</td></tr>
-                    <tr><td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Courier Date:</td><td style="padding: 8px; border: 1px solid #ddd;">${courier.courierDate || 'N/A'}</td></tr>
-                    <tr><td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Vendor:</td><td style="padding: 8px; border: 1px solid #ddd;">${courier.vendor || courier.customVendor || 'N/A'}</td></tr>
-                    <tr><td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">POD Number:</td><td style="padding: 8px; border: 1px solid #ddd;">${courier.podNo || 'N/A'}</td></tr>
-                    <tr><td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Details:</td><td style="padding: 8px; border: 1px solid #ddd;">${courier.details || 'N/A'}</td></tr>
-                    <tr><td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Status:</td><td style="padding: 8px; border: 1px solid #ddd;">On the Way</td></tr>
-                  </table>
-                  <p>You will receive another notification once the courier is delivered.</p>
-                  <p>Thank you!</p>
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                  <p>Dear team,</p>
+                  
+                  <p>We have dispatched courier and we have mentioned Name <strong>${courier.receiverName || 'N/A'}</strong> and Mobile Number - <strong>${courier.contactDetails || 'N/A'}</strong> please find the below courier POD details.</p>
+                  
+                  <div style="margin: 20px 0;">
+                    <p><strong>Sent To</strong> - "${courier.toBranch || 'N/A'}"</p>
+                    <p><strong>Date</strong> - "${courier.courierDate || 'N/A'}"</p>
+                    <p><strong>Courier Vendor</strong> - "${courier.vendor || courier.customVendor || 'N/A'}"</p>
+                    <p><strong>POD No.</strong> - "${courier.podNo || 'N/A'}"</p>
+                    <p><strong>Remarks</strong> - "${courier.remarks || 'N/A'}"</p>
+                  </div>
+                  
+                  <p>Thanks And Regards,<br>
+                  ${user.name || user.email || 'User'}<br>
+                  ${departmentName}</p>
                 </div>
               `
             };

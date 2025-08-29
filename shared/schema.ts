@@ -89,6 +89,7 @@ export const couriers = pgTable("couriers", {
   podNo: varchar("pod_no", { length: 100 }),
   details: text("details"),
   contactDetails: text("contact_details"),
+  receiverName: varchar("receiver_name", { length: 100 }),
   remarks: text("remarks"),
   status: statusEnum("status").default('on_the_way'),
   receivedDate: date("received_date"),
