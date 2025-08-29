@@ -58,50 +58,90 @@ export class PDFGenerator {
     <style>
         body {
             font-family: 'Times New Roman', serif;
-            font-size: 14px;
-            line-height: 1.6;
-            margin: 20px;
-            max-width: 800px;
+            font-size: 12px;
+            line-height: 1.4;
+            margin: 0;
+            padding: 20px;
             color: #000;
+        }
+        .logo-section {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 1px solid #ccc;
+            padding-bottom: 15px;
+        }
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        .logo-subtitle {
+            font-size: 10px;
+            color: #999;
+            letter-spacing: 2px;
         }
         .header {
             text-align: center;
             font-weight: bold;
-            font-size: 18px;
-            margin-bottom: 30px;
+            font-size: 14px;
+            margin: 20px 0 30px 0;
             text-decoration: underline;
         }
         .date {
-            text-align: right;
-            margin-bottom: 30px;
+            text-align: left;
+            margin-bottom: 20px;
         }
-        .address {
-            margin-bottom: 30px;
+        .address-section {
+            margin-bottom: 20px;
+        }
+        .address-line {
+            margin-bottom: 3px;
         }
         .subject {
             font-weight: bold;
-            margin: 20px 0;
+            margin: 30px 0 20px 0;
+            text-align: center;
             text-decoration: underline;
+            font-size: 13px;
         }
         .content {
-            margin-bottom: 30px;
+            margin-bottom: 20px;
             text-align: justify;
+            line-height: 1.5;
         }
         .note {
             font-weight: bold;
             margin: 20px 0;
+            font-style: italic;
         }
-        .signature {
-            margin-top: 50px;
+        .thanking {
+            margin: 30px 0 40px 0;
         }
-        .signature-line {
-            border-bottom: 1px solid #000;
-            width: 300px;
-            margin: 10px 0;
+        .signature-section {
+            margin-top: 40px;
         }
         .company-name {
             font-weight: bold;
-            margin: 20px 0;
+            margin-bottom: 40px;
+        }
+        .signature-line {
+            border-bottom: 1px solid #000;
+            width: 200px;
+            margin: 15px 0 5px 0;
+        }
+        .footer {
+            position: fixed;
+            bottom: 15px;
+            left: 20px;
+            right: 20px;
+            font-size: 8px;
+            color: #666;
+            border-top: 1px solid #ccc;
+            padding-top: 10px;
+        }
+        .footer-line {
+            margin-bottom: 2px;
         }
         @media print {
             body { margin: 0; padding: 15px; }
@@ -109,36 +149,49 @@ export class PDFGenerator {
     </style>
 </head>
 <body>
+    <div class="logo-section">
+        <div class="logo">☀ Light</div>
+        <div class="logo-subtitle">MICROFINANCE</div>
+    </div>
+    
     <div class="header">AUTHORITY LETTER</div>
     
     <div class="date">##current_date##</div>
     
-    <div class="address">
-        To,<br><br>
-        ##courier_name##<br>
-        ##courier_address##
+    <div class="address-section">
+        <div>To,</div>
+        <br>
+        <div class="address-line">##courier_company##</div>
+        <div class="address-line">##courier_address##</div>
     </div>
     
-    <div class="subject">SUB- LETTER AUTHORISING ##courier_company##</div>
+    <div class="subject">SUB- LETTER AUTHORISING M/S ##courier_company##</div>
     
     <div class="content">
-        Dear Sir/Ma'am,<br><br>
-        We hereby authorize ##courier_company## to provide the services of transporting the System of ##company_name## from Head Office ##head_office_location## to its branch office ##branch_location## said authority is only for transporting the computer system to the above-mentioned branch address and not any other purpose.
+Dear Sir/Ma'am,<br><br>
+We hereby authorize M/s. ##courier_company## to provide the services of transporting the System of ##company_name## from Head Office ##head_office_location## to its branch office ##branch_location## "##branch_name##" said authority is only for transporting the computer system to the above-mentioned branch address and not any other purpose.
     </div>
     
     <div class="note">
         *NOTE: - NOT FOR SALE THIS ##asset_name## ARE FOR ONLY OFFICE USE. (Asset Value ##asset_value## /-)
     </div>
     
-    <div class="content">
-        Thanking you,
+    <div class="thanking">
+        <u>Thanking you,</u>
     </div>
     
-    <div class="signature">
+    <div class="signature-section">
         <div class="company-name">FOR ##company_name##</div>
+        
         <div class="signature-line"></div>
-        ##signatory_name##<br>
-        [##signatory_designation##]
+        <div>##signatory_name##</div>
+        <div>[##signatory_designation##]</div>
+    </div>
+
+    <div class="footer">
+        <div class="footer-line">##company_name##</div>
+        <div class="footer-line">Registered Office: - ##registered_office##</div>
+        <div class="footer-line">Corporate Office: - ##corporate_office##</div>
     </div>
 </body>
 </html>`;
