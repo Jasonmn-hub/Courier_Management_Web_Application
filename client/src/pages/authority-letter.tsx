@@ -94,7 +94,7 @@ export default function AuthorityLetter() {
 
   // Generate filename based on template fields
   const generateFilename = () => {
-    if (!selectedFilenameField || !fieldValues[selectedFilenameField]) {
+    if (!selectedFilenameField || selectedFilenameField === 'none' || !fieldValues[selectedFilenameField]) {
       return customFilename || 'authority-letter';
     }
     
@@ -218,6 +218,46 @@ export default function AuthorityLetter() {
       return;
     }
     bulkUploadMutation.mutate({ departmentId: selectedDepartment, csvFile });
+  };
+
+  // Generate sample CSV file
+  const handleDownloadSampleCSV = () => {
+    if (!selectedDepartment || fields.length === 0) {
+      toast({ title: "Error", description: "Please select a department with template fields", variant: "destructive" });
+      return;
+    }
+
+    // Create CSV header row with field names
+    const headers = fields.map(field => field.fieldName).join(',');
+    
+    // Create sample data row with placeholder values
+    const sampleRow = fields.map(field => {
+      switch (field.fieldType) {
+        case 'date':
+          return new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+        case 'number':
+          return '123';
+        case 'textarea':
+          return 'Sample long text content';
+        default:
+          return `Sample ${field.fieldLabel}`;
+      }
+    }).join(',');
+
+    const csvContent = `${headers}\n${sampleRow}`;
+    
+    // Create and download the file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `sample_template_${selectedDepartment}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+    
+    toast({ title: "Success", description: "Sample CSV file downloaded successfully" });
   };
 
   const handleFieldChange = (fieldName: string, value: string) => {
@@ -416,7 +456,7 @@ export default function AuthorityLetter() {
                   <SelectValue placeholder="Select a field..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">None</SelectItem>
+                  <SelectItem value="none">None</SelectItem>
                   {fields.map((field) => (
                     <SelectItem key={field.fieldName} value={field.fieldName}>
                       {field.fieldLabel}
@@ -492,6 +532,29 @@ export default function AuthorityLetter() {
                 CSV should contain columns matching the template field names
               </p>
             </div>
+            
+            {/* Sample CSV Download */}
+            {selectedDepartment && fields.length > 0 && (
+              <div className="border-t pt-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="font-medium">Download Sample CSV</Label>
+                    <p className="text-sm text-slate-600">
+                      Get a sample CSV file with the correct field names and format
+                    </p>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    onClick={handleDownloadSampleCSV}
+                    className="flex items-center gap-2"
+                    data-testid="button-download-sample-csv"
+                  >
+                    <FileDown className="h-4 w-4" />
+                    Download Sample
+                  </Button>
+                </div>
+              </div>
+            )}
             
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setShowBulkUpload(false)}>
