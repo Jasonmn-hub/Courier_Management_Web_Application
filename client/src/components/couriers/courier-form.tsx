@@ -28,10 +28,10 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { Autocomplete } from "@/components/ui/autocomplete";
+import { useAuth } from "@/hooks/useAuth";
 
 const courierSchema = z.object({
   toBranch: z.string().min(1, "Destination is required"),
-  departmentId: z.number().min(1, "Department is required"),
   email: z.string().email("Valid email is required"),
   courierDate: z.string().min(1, "Courier date is required"),
   vendor: z.string().min(1, "Vendor is required"),
@@ -54,12 +54,12 @@ export default function CourierForm({ courier, onClose, onSuccess }: CourierForm
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const { user } = useAuth();
 
   const form = useForm<z.infer<typeof courierSchema>>({
     resolver: zodResolver(courierSchema),
     defaultValues: {
       toBranch: courier?.toBranch || "",
-      departmentId: courier?.departmentId || 0,
       email: courier?.email || "",
       courierDate: courier?.courierDate || "",
       vendor: courier?.vendor || "",
@@ -78,29 +78,28 @@ export default function CourierForm({ courier, onClose, onSuccess }: CourierForm
   });
 
   const { data: branchesData } = useQuery({
-    queryKey: ['/api/branches', { status: 'active', departmentId: form.watch('departmentId') }],
+    queryKey: ['/api/branches', { status: 'active', departmentId: user?.departmentId }],
     queryFn: async () => {
-      const departmentId = form.watch('departmentId');
-      if (!departmentId) return { branches: [] };
+      if (!user?.departmentId) return { branches: [] };
       
       const params = new URLSearchParams();
       params.set('status', 'active');
-      params.set('departmentId', departmentId.toString());
+      params.set('departmentId', user.departmentId.toString());
       
       const response = await apiRequest('GET', `/api/branches?${params.toString()}`);
       return response.json();
     },
-    enabled: !!form.watch('departmentId'),
+    enabled: !!user?.departmentId,
   });
   
   // Get users for autocomplete
   const { data: usersData } = useQuery({
-    queryKey: ['/api/users', { departmentId: form.watch('departmentId') }],
+    queryKey: ['/api/users', { departmentId: user?.departmentId }],
     queryFn: async () => {
       const response = await apiRequest('GET', '/api/users');
       return response.json();
     },
-    enabled: !!form.watch('departmentId'),
+    enabled: !!user?.departmentId,
   });
   
   const branches = branchesData?.branches || [];
@@ -116,6 +115,11 @@ export default function CourierForm({ courier, onClose, onSuccess }: CourierForm
           formData.append(key, value.toString());
         }
       });
+      
+      // Add user's department ID
+      if (user?.departmentId) {
+        formData.append('departmentId', user.departmentId.toString());
+      }
 
       // Append file if selected
       if (selectedFile) {
@@ -231,31 +235,6 @@ export default function CourierForm({ courier, onClose, onSuccess }: CourierForm
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-              {/* Department */}
-              <FormField
-                control={form.control}
-                name="departmentId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Department</FormLabel>
-                    <Select onValueChange={(value) => field.onChange(parseInt(value))} value={field.value ? field.value.toString() : ""}>
-                      <FormControl>
-                        <SelectTrigger data-testid="select-department">
-                          <SelectValue placeholder="Select department" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {(departments || []).map((dept: any) => (
-                          <SelectItem key={dept.id} value={dept.id.toString()}>
-                            {dept.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
 
               {/* To Branch/Other */}
               <FormField
