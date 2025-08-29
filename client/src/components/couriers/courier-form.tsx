@@ -78,18 +78,14 @@ export default function CourierForm({ courier, onClose, onSuccess }: CourierForm
   });
 
   const { data: branchesData } = useQuery({
-    queryKey: ['/api/branches', { status: 'active', departmentId: user?.departmentId }],
+    queryKey: ['/api/branches', { status: 'active' }],
     queryFn: async () => {
-      if (!user?.departmentId) return { branches: [] };
-      
       const params = new URLSearchParams();
       params.set('status', 'active');
-      params.set('departmentId', user.departmentId.toString());
       
       const response = await apiRequest('GET', `/api/branches?${params.toString()}`);
       return response.json();
     },
-    enabled: !!user?.departmentId,
   });
   
   // Get users for autocomplete

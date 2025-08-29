@@ -143,7 +143,7 @@ export function Autocomplete({
                 )}
                 onClick={() => handleOptionSelect(option)}
               >
-                <span className="truncate whitespace-nowrap overflow-hidden flex-1 mr-2">{option.label}</span>
+                <span className="whitespace-nowrap flex-1 mr-2">{option.label}</span>
                 {value === option.value && <Check className="h-4 w-4 text-green-600 flex-shrink-0" />}
               </div>
             ))
