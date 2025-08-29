@@ -314,45 +314,34 @@ export default function ReceivedCouriers() {
           
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-4">
+              {/* Related Department - First Field */}
               <div>
-                <Label htmlFor="podNumber">POD Number *</Label>
-                <Input
-                  id="podNumber"
-                  value={formData.podNumber || ""}
-                  onChange={(e) => setFormData({ ...formData, podNumber: e.target.value })}
-                  placeholder="Enter POD Number"
-                  required
-                  data-testid="input-pod-number"
-                />
+                <Label htmlFor="department">Related Department *</Label>
+                <Select
+                  value={formData.departmentId?.toString() || ""}
+                  onValueChange={(value) => {
+                    if (value === "other") {
+                      setFormData({ ...formData, departmentId: undefined });
+                    } else {
+                      setFormData({ ...formData, departmentId: parseInt(value), customDepartment: "" });
+                    }
+                  }}
+                >
+                  <SelectTrigger data-testid="select-department">
+                    <SelectValue placeholder="Select department" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {departments.map((dept) => (
+                      <SelectItem key={dept.id} value={dept.id.toString()}>
+                        {dept.name}
+                      </SelectItem>
+                    ))}
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
-              <div>
-                <Label>Received Date *</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "w-full justify-start text-left font-normal",
-                        !selectedDate && "text-muted-foreground"
-                      )}
-                      data-testid="button-received-date"
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {selectedDate ? format(selectedDate, "PPP") : "Pick a date"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={selectedDate}
-                      onSelect={setSelectedDate}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-
+              {/* From (Branch/Other) - Second Field */}
               <div>
                 <Label htmlFor="fromLocation">From (Branch/Other) *</Label>
                 <Autocomplete
@@ -400,58 +389,48 @@ export default function ReceivedCouriers() {
                 </div>
               </div>
 
+              {/* Received Date - Third Field */}
               <div>
-                <Label htmlFor="department">Related Department *</Label>
-                <Select
-                  value={formData.departmentId?.toString() || ""}
-                  onValueChange={(value) => {
-                    if (value === "other") {
-                      setFormData({ ...formData, departmentId: undefined });
-                    } else {
-                      setFormData({ ...formData, departmentId: parseInt(value), customDepartment: "" });
-                    }
-                  }}
-                >
-                  <SelectTrigger data-testid="select-department">
-                    <SelectValue placeholder="Select department" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {departments.map((dept) => (
-                      <SelectItem key={dept.id} value={dept.id.toString()}>
-                        {dept.name}
-                      </SelectItem>
-                    ))}
-                    <SelectItem value="other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Label>Received Date *</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !selectedDate && "text-muted-foreground"
+                      )}
+                      data-testid="button-received-date"
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {selectedDate ? format(selectedDate, "PPP") : "Pick a date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={selectedDate}
+                      onSelect={setSelectedDate}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
 
-              {/* Custom Department Field (when "Other" is selected) */}
-              {formData.departmentId === undefined && (
-                <div>
-                  <Label htmlFor="customDepartment">Custom Department Name *</Label>
-                  <Input
-                    id="customDepartment"
-                    value={formData.customDepartment || ""}
-                    onChange={(e) => setFormData({ ...formData, customDepartment: e.target.value })}
-                    placeholder="Enter department name"
-                    required
-                    data-testid="input-custom-department"
-                  />
-                </div>
-              )}
-
+              {/* POD Number - Fourth Field */}
               <div>
-                <Label htmlFor="receiverName">Receiver Name</Label>
+                <Label htmlFor="podNumber">POD Number *</Label>
                 <Input
-                  id="receiverName"
-                  value={formData.receiverName || ""}
-                  onChange={(e) => setFormData({ ...formData, receiverName: e.target.value })}
-                  placeholder="Name of person who received"
-                  data-testid="input-receiver-name"
+                  id="podNumber"
+                  value={formData.podNumber || ""}
+                  onChange={(e) => setFormData({ ...formData, podNumber: e.target.value })}
+                  placeholder="Enter POD Number"
+                  required
+                  data-testid="input-pod-number"
                 />
               </div>
 
+              {/* Courier Vendor - Fifth Field */}
               <div>
                 <Label htmlFor="courierVendor">Courier Vendor *</Label>
                 <Select
@@ -489,6 +468,34 @@ export default function ReceivedCouriers() {
                 </div>
               )}
 
+              {/* Custom Department Field (when "Other" is selected) - Sixth Field */}
+              {formData.departmentId === undefined && (
+                <div>
+                  <Label htmlFor="customDepartment">Custom Department Name *</Label>
+                  <Input
+                    id="customDepartment"
+                    value={formData.customDepartment || ""}
+                    onChange={(e) => setFormData({ ...formData, customDepartment: e.target.value })}
+                    placeholder="Enter department name"
+                    required
+                    data-testid="input-custom-department"
+                  />
+                </div>
+              )}
+
+              {/* Receiver Name - Seventh Field */}
+              <div>
+                <Label htmlFor="receiverName">Receiver Name</Label>
+                <Input
+                  id="receiverName"
+                  value={formData.receiverName || ""}
+                  onChange={(e) => setFormData({ ...formData, receiverName: e.target.value })}
+                  placeholder="Name of person who received"
+                  data-testid="input-receiver-name"
+                />
+              </div>
+
+              {/* Email ID - Eighth Field */}
               <div>
                 <Label htmlFor="emailId">Email ID</Label>
                 <Input
@@ -518,6 +525,7 @@ export default function ReceivedCouriers() {
                 </div>
               )}
 
+              {/* Remarks - Ninth Field */}
               <div>
                 <Label htmlFor="remarks">Remarks</Label>
                 <Textarea

@@ -176,6 +176,17 @@ export default function Branches() {
       refetchBranches();
     },
     onError: (error: any) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
       toast({ title: "Error", description: "Failed to delete branch", variant: "destructive" });
     },
   });
@@ -189,6 +200,7 @@ export default function Branches() {
     onSuccess: () => {
       toast({ title: "Success", description: "Branch status updated successfully" });
       refetchBranches();
+      queryClient.invalidateQueries({ queryKey: ['/api/branches'] });
     },
     onError: (error: any) => {
       toast({ title: "Error", description: "Failed to update branch status", variant: "destructive" });

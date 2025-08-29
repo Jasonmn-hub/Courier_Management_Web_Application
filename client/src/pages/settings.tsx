@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Plus, Trash2, Mail, User, Calendar, FileText, Download, Settings as SettingsIcon, Pencil } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { ExportDialog } from "@/components/export-dialog";
@@ -38,6 +39,15 @@ interface CustomField {
   type: string;
   required: boolean;
   departmentId?: number;
+}
+
+interface DropdownOption {
+  id: number;
+  fieldId: number;
+  departmentId: number;
+  optionValue: string;
+  optionLabel: string;
+  sortOrder: number;
 }
 
 interface AuditLog {
@@ -170,6 +180,10 @@ export default function Settings() {
   const [location] = useLocation();
   const [newFieldName, setNewFieldName] = useState("");
   const [newFieldType, setNewFieldType] = useState("text");
+  const [showDropdownDialog, setShowDropdownDialog] = useState(false);
+  const [selectedField, setSelectedField] = useState<CustomField | null>(null);
+  const [newOptionValue, setNewOptionValue] = useState("");
+  const [newOptionLabel, setNewOptionLabel] = useState("");
 
   // Determine active tab based on route
   const getActiveTab = () => {
@@ -181,6 +195,22 @@ export default function Settings() {
   // Fetch all fields
   const { data: fields = [], isLoading: fieldsLoading } = useQuery<CustomField[]>({
     queryKey: ['/api/fields'],
+  });
+
+  // Fetch dropdown options for selected field
+  const { data: dropdownOptions = [], isLoading: optionsLoading } = useQuery<DropdownOption[]>({
+    queryKey: ['/api/field-dropdown-options', selectedField?.id],
+    queryFn: async () => {
+      if (!selectedField?.id) return [];
+      const response = await apiRequest('GET', `/api/field-dropdown-options/${selectedField.id}`);
+      return response.json();
+    },
+    enabled: !!selectedField?.id,
+  });
+
+  // Fetch departments
+  const { data: departments = [] } = useQuery({
+    queryKey: ['/api/departments'],
   });
 
   const createFieldMutation = useMutation({
@@ -209,6 +239,36 @@ export default function Settings() {
     },
     onError: () => {
       toast({ title: "Error", description: "Failed to delete field", variant: "destructive" });
+    },
+  });
+
+  // Dropdown option mutations
+  const createOptionMutation = useMutation({
+    mutationFn: async (optionData: { fieldId: number; departmentId: number; optionValue: string; optionLabel: string }) => {
+      const response = await apiRequest('POST', '/api/field-dropdown-options', optionData);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/field-dropdown-options', selectedField?.id] });
+      toast({ title: "Success", description: "Dropdown option added successfully" });
+      setNewOptionValue("");
+      setNewOptionLabel("");
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to create dropdown option", variant: "destructive" });
+    },
+  });
+
+  const deleteOptionMutation = useMutation({
+    mutationFn: async (optionId: number) => {
+      await apiRequest('DELETE', `/api/field-dropdown-options/${optionId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/field-dropdown-options', selectedField?.id] });
+      toast({ title: "Success", description: "Dropdown option deleted successfully" });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to delete dropdown option", variant: "destructive" });
     },
   });
   const [smtpData, setSmtpData] = useState({
@@ -514,8 +574,8 @@ export default function Settings() {
                                       variant="ghost" 
                                       size="sm"
                                       onClick={() => {
-                                        // TODO: Open dropdown options dialog
-                                        toast({ title: "Feature", description: "Dropdown options management coming soon!" });
+                                        setSelectedField(field);
+                                        setShowDropdownDialog(true);
                                       }}
                                       data-testid={`button-manage-dropdown-${field.id}`}
                                       title="Manage dropdown options"
@@ -575,6 +635,128 @@ export default function Settings() {
               </Card>
             </TabsContent>
           </Tabs>
+
+          {/* Dropdown Options Management Dialog */}
+          {showDropdownDialog && selectedField && (
+            <Dialog open={showDropdownDialog} onOpenChange={setShowDropdownDialog}>
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>Manage Dropdown Options for "{selectedField.name}"</DialogTitle>
+                </DialogHeader>
+                
+                <div className="space-y-4">
+                  {/* Add new option form */}
+                  <div className="border rounded-lg p-4">
+                    <h4 className="font-medium mb-3">Add New Option</h4>
+                    <div className="grid grid-cols-3 gap-3">
+                      <div>
+                        <Label htmlFor="option-value">Option Value</Label>
+                        <Input
+                          id="option-value"
+                          placeholder="e.g., value1"
+                          value={newOptionValue}
+                          onChange={(e) => setNewOptionValue(e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="option-label">Option Label</Label>
+                        <Input
+                          id="option-label"
+                          placeholder="e.g., Display Text"
+                          value={newOptionLabel}
+                          onChange={(e) => setNewOptionLabel(e.target.value)}
+                        />
+                      </div>
+                      <div className="flex items-end">
+                        <Button 
+                          onClick={() => {
+                            if (newOptionValue.trim() && newOptionLabel.trim()) {
+                              // Use the first department if available, or default to 1
+                              const departmentId = departments[0]?.id || 1;
+                              createOptionMutation.mutate({
+                                fieldId: selectedField.id,
+                                departmentId,
+                                optionValue: newOptionValue.trim(),
+                                optionLabel: newOptionLabel.trim()
+                              });
+                            } else {
+                              toast({ title: "Error", description: "Please fill in both value and label", variant: "destructive" });
+                            }
+                          }}
+                          disabled={createOptionMutation.isPending}
+                        >
+                          {createOptionMutation.isPending ? "Adding..." : "Add Option"}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Existing options list */}
+                  <div className="border rounded-lg">
+                    <div className="p-4 border-b">
+                      <h4 className="font-medium">Existing Options</h4>
+                    </div>
+                    <div className="p-4">
+                      {optionsLoading ? (
+                        <div className="text-center py-4">Loading options...</div>
+                      ) : dropdownOptions.length === 0 ? (
+                        <div className="text-center py-4 text-slate-500">
+                          No options created yet. Add your first option above.
+                        </div>
+                      ) : (
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Value</TableHead>
+                              <TableHead>Label</TableHead>
+                              <TableHead>Actions</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {dropdownOptions.map((option) => (
+                              <TableRow key={option.id}>
+                                <TableCell className="font-mono text-sm">{option.optionValue}</TableCell>
+                                <TableCell>{option.optionLabel}</TableCell>
+                                <TableCell>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                      if (confirm(`Are you sure you want to delete the option "${option.optionLabel}"?`)) {
+                                        deleteOptionMutation.mutate(option.id);
+                                      }
+                                    }}
+                                    disabled={deleteOptionMutation.isPending}
+                                    className="text-red-600 hover:text-red-800"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <DialogFooter>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => {
+                      setShowDropdownDialog(false);
+                      setSelectedField(null);
+                      setNewOptionValue("");
+                      setNewOptionLabel("");
+                    }}
+                  >
+                    Close
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          )}
         </div>
       </div>
     </main>

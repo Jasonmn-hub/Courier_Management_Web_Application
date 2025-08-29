@@ -28,7 +28,7 @@ export const sessions = pgTable(
 
 // Enums
 export const roleEnum = pgEnum('role', ['admin', 'manager', 'user']);
-export const statusEnum = pgEnum('status', ['on_the_way', 'received', 'completed', 'deleted']);
+export const statusEnum = pgEnum('status', ['on_the_way', 'received', 'completed', 'delivered', 'deleted']);
 export const fieldTypeEnum = pgEnum('field_type', ['text', 'calendar', 'dropdown']);
 
 // User storage table (required for Replit Auth with extensions)
