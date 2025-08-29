@@ -650,6 +650,96 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Field dropdown options routes
+  app.get('/api/field-dropdown-options/:fieldId', authenticateToken, async (req: any, res) => {
+    try {
+      const fieldId = parseInt(req.params.fieldId);
+      if (isNaN(fieldId)) {
+        return res.status(400).json({ message: "Invalid field ID" });
+      }
+
+      const options = await storage.getFieldDropdownOptions(fieldId);
+      res.json(options);
+    } catch (error) {
+      console.error("Error fetching field dropdown options:", error);
+      res.status(500).json({ message: "Failed to fetch dropdown options" });
+    }
+  });
+
+  app.post('/api/field-dropdown-options', authenticateToken, requireRole(['admin']), setCurrentUser(), async (req: any, res) => {
+    try {
+      const { fieldId, departmentId, optionValue, optionLabel, sortOrder } = req.body;
+      
+      if (!fieldId || !departmentId || !optionValue || !optionLabel) {
+        return res.status(400).json({ message: "fieldId, departmentId, optionValue, and optionLabel are required" });
+      }
+
+      const option = await storage.createFieldDropdownOption({
+        fieldId,
+        departmentId,
+        optionValue,
+        optionLabel,
+        sortOrder: sortOrder || 0
+      });
+
+      await logAudit(req.currentUser.id, 'CREATE', 'field_dropdown_option', option.id);
+      
+      res.status(201).json(option);
+    } catch (error) {
+      console.error("Error creating field dropdown option:", error);
+      res.status(500).json({ message: "Failed to create dropdown option" });
+    }
+  });
+
+  app.put('/api/field-dropdown-options/:id', authenticateToken, requireRole(['admin']), setCurrentUser(), async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid option ID" });
+      }
+
+      const { optionValue, optionLabel, sortOrder } = req.body;
+      
+      const option = await storage.updateFieldDropdownOption(id, {
+        optionValue,
+        optionLabel,
+        sortOrder
+      });
+
+      if (!option) {
+        return res.status(404).json({ message: "Dropdown option not found" });
+      }
+
+      await logAudit(req.currentUser.id, 'UPDATE', 'field_dropdown_option', id);
+      
+      res.json(option);
+    } catch (error) {
+      console.error("Error updating field dropdown option:", error);
+      res.status(500).json({ message: "Failed to update dropdown option" });
+    }
+  });
+
+  app.delete('/api/field-dropdown-options/:id', authenticateToken, requireRole(['admin']), setCurrentUser(), async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid option ID" });
+      }
+
+      const success = await storage.deleteFieldDropdownOption(id);
+      if (!success) {
+        return res.status(404).json({ message: "Dropdown option not found" });
+      }
+
+      await logAudit(req.currentUser.id, 'DELETE', 'field_dropdown_option', id);
+      
+      res.json({ message: "Dropdown option deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting field dropdown option:", error);
+      res.status(500).json({ message: "Failed to delete dropdown option" });
+    }
+  });
+
   // Department routes
   app.get('/api/departments', authenticateToken, async (req: any, res) => {
     try {
@@ -1366,7 +1456,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const csvContent = req.file.buffer?.toString('utf-8') || req.file.path ? 
-        require('fs').readFileSync(req.file.path, 'utf-8') : null;
+        fs.readFileSync(req.file.path, 'utf-8') : null;
       
       if (!csvContent) {
         return res.status(400).json({ message: "Failed to read CSV file content" });
@@ -2993,14 +3083,26 @@ Jigar Jodhani
         }
       };
 
-      // Configure TLS/SSL
-      if (smtpSettings.useSSL) {
-        transportConfig.secure = true; // Use SSL (port 465)
-      } else if (smtpSettings.useTLS) {
-        transportConfig.secure = false; // Use TLS (port 587)
-        transportConfig.requireTLS = true;
-      } else {
+      // Configure TLS/SSL based on port and settings
+      const port = smtpSettings.port || 587;
+      
+      if (port === 465 || smtpSettings.useSSL) {
+        // SSL mode (port 465)
+        transportConfig.secure = true;
+      } else if (port === 587 || smtpSettings.useTLS) {
+        // TLS mode (port 587) - STARTTLS
         transportConfig.secure = false;
+        transportConfig.requireTLS = true;
+        transportConfig.tls = {
+          rejectUnauthorized: false, // Allow self-signed certificates
+          ciphers: 'SSLv3'
+        };
+      } else {
+        // No encryption (port 25 or custom)
+        transportConfig.secure = false;
+        transportConfig.tls = {
+          rejectUnauthorized: false
+        };
       }
 
       const transporter = nodemailer.createTransport(transportConfig);

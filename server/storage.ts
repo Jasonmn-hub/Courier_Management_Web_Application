@@ -9,6 +9,7 @@ import {
   auditLogs,
   authorityLetterTemplates,
   authorityLetterFields,
+  fieldDropdownOptions,
   branches,
   userPolicies,
   userDepartments,
@@ -141,6 +142,12 @@ export interface IStorage {
   createAuthorityLetterField(field: InsertAuthorityLetterField): Promise<AuthorityLetterField>;
   updateAuthorityLetterField(id: number, field: Partial<InsertAuthorityLetterField>): Promise<AuthorityLetterField | undefined>;
   deleteAuthorityLetterField(id: number): Promise<boolean>;
+  
+  // Field Dropdown Options operations
+  getFieldDropdownOptions(fieldId: number): Promise<any[]>;
+  createFieldDropdownOption(option: { fieldId: number; departmentId: number; optionValue: string; optionLabel: string; sortOrder?: number }): Promise<any>;
+  updateFieldDropdownOption(id: number, option: { optionValue?: string; optionLabel?: string; sortOrder?: number }): Promise<any>;
+  deleteFieldDropdownOption(id: number): Promise<boolean>;
   
   // Branch operations
   getAllBranches(filters?: {
@@ -1120,6 +1127,29 @@ export class DatabaseStorage implements IStorage {
 
   async deleteAuthorityLetterField(id: number): Promise<boolean> {
     const result = await db.delete(authorityLetterFields).where(eq(authorityLetterFields.id, id));
+    return result.length > 0;
+  }
+
+  // Field Dropdown Options methods
+  async getFieldDropdownOptions(fieldId: number): Promise<any[]> {
+    return await db.select().from(fieldDropdownOptions).where(eq(fieldDropdownOptions.fieldId, fieldId)).orderBy(fieldDropdownOptions.sortOrder);
+  }
+
+  async createFieldDropdownOption(option: { fieldId: number; departmentId: number; optionValue: string; optionLabel: string; sortOrder?: number }): Promise<any> {
+    const [newOption] = await db.insert(fieldDropdownOptions).values(option).returning();
+    return newOption;
+  }
+
+  async updateFieldDropdownOption(id: number, option: { optionValue?: string; optionLabel?: string; sortOrder?: number }): Promise<any> {
+    const [updatedOption] = await db.update(fieldDropdownOptions)
+      .set(option)
+      .where(eq(fieldDropdownOptions.id, id))
+      .returning();
+    return updatedOption;
+  }
+
+  async deleteFieldDropdownOption(id: number): Promise<boolean> {
+    const result = await db.delete(fieldDropdownOptions).where(eq(fieldDropdownOptions.id, id));
     return result.length > 0;
   }
 
