@@ -39,6 +39,7 @@ export const users = pgTable("users", {
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
   name: varchar("name", { length: 100 }),
+  employeeCode: varchar("employee_code", { length: 50 }),
   password: text("password"),
   role: roleEnum("role").default('user'),
   departmentId: integer("department_id").references(() => departments.id), // Keep for backward compatibility

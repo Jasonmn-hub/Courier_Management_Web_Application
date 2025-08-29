@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Trash2, Mail, User, Calendar, FileText, Download } from "lucide-react";
+import { Plus, Trash2, Mail, User, Calendar, FileText, Download, Settings as SettingsIcon, Pencil } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { ExportDialog } from "@/components/export-dialog";
 
@@ -19,6 +19,7 @@ interface User {
   id: string;
   name: string;
   email: string;
+  employeeCode?: string;
   role: string;
 }
 
@@ -120,7 +121,9 @@ function AuditLogsTable() {
                   <User className="h-4 w-4" />
                   <div>
                     <div className="font-medium">{log.user?.name || 'Unknown'}</div>
-                    <div className="text-sm text-slate-500">{log.user?.email}</div>
+                    <div className="text-sm text-slate-500">
+                      {log.user?.employeeCode && `${log.user.employeeCode} • `}{log.user?.email}
+                    </div>
                   </div>
                 </div>
               </TableCell>
@@ -505,19 +508,48 @@ export default function Settings() {
                                 {field.departmentId ? `Department ${field.departmentId}` : "All Departments"}
                               </TableCell>
                               <TableCell>
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm"
-                                  onClick={() => {
-                                    if (confirm(`Are you sure you want to delete the field "${field.name}"?`)) {
-                                      deleteFieldMutation.mutate(field.id);
-                                    }
-                                  }}
-                                  disabled={deleteFieldMutation.isPending}
-                                  data-testid={`button-delete-field-${field.id}`}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
+                                <div className="flex gap-1">
+                                  {field.type === 'dropdown' && (
+                                    <Button 
+                                      variant="ghost" 
+                                      size="sm"
+                                      onClick={() => {
+                                        // TODO: Open dropdown options dialog
+                                        toast({ title: "Feature", description: "Dropdown options management coming soon!" });
+                                      }}
+                                      data-testid={`button-manage-dropdown-${field.id}`}
+                                      title="Manage dropdown options"
+                                    >
+                                      <Settings className="h-4 w-4" />
+                                    </Button>
+                                  )}
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    onClick={() => {
+                                      // TODO: Open edit field dialog
+                                      toast({ title: "Feature", description: "Edit field functionality coming soon!" });
+                                    }}
+                                    data-testid={`button-edit-field-${field.id}`}
+                                    title="Edit field"
+                                  >
+                                    <Pencil className="h-4 w-4" />
+                                  </Button>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    onClick={() => {
+                                      if (confirm(`Are you sure you want to delete the field "${field.name}"?`)) {
+                                        deleteFieldMutation.mutate(field.id);
+                                      }
+                                    }}
+                                    disabled={deleteFieldMutation.isPending}
+                                    data-testid={`button-delete-field-${field.id}`}
+                                    title="Delete field"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
                               </TableCell>
                             </TableRow>
                           ))

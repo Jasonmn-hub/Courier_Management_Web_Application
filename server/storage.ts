@@ -177,10 +177,11 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  async createUser(userData: { name: string; email: string; password: string; role: string; departmentId?: number | null }): Promise<User> {
+  async createUser(userData: { name: string; email: string; employeeCode?: string | null; password: string; role: string; departmentId?: number | null }): Promise<User> {
     const [user] = await db.insert(users).values({
       name: userData.name,
       email: userData.email,
+      employeeCode: userData.employeeCode,
       password: userData.password,
       role: userData.role as any,
       departmentId: userData.departmentId
@@ -192,11 +193,12 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(users).orderBy(users.createdAt);
   }
 
-  async updateUser(id: string, userData: { name: string; email: string; role: string; departmentId?: number | null }): Promise<User | undefined> {
+  async updateUser(id: string, userData: { name: string; email: string; employeeCode?: string | null; role: string; departmentId?: number | null }): Promise<User | undefined> {
     const [user] = await db.update(users)
       .set({
         name: userData.name,
         email: userData.email,
+        employeeCode: userData.employeeCode,
         role: userData.role as any,
         departmentId: userData.departmentId,
         updatedAt: new Date()

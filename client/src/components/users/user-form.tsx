@@ -27,6 +27,7 @@ import { isUnauthorizedError } from "@/lib/authUtils";
 const createUserSchema = z.object({
   name: z.string().min(1, "Name is required"),
   email: z.string().email("Valid email is required"),
+  employeeCode: z.string().optional(),
   role: z.enum(["admin", "manager", "user"], {
     required_error: "Role is required",
   }),
@@ -37,6 +38,7 @@ const createUserSchema = z.object({
 const updateUserSchema = z.object({
   name: z.string().min(1, "Name is required"),
   email: z.string().email("Valid email is required"),
+  employeeCode: z.string().optional(),
   role: z.enum(["admin", "manager", "user"], {
     required_error: "Role is required",
   }),
@@ -59,6 +61,7 @@ export default function UserForm({ user, onClose, onSuccess }: UserFormProps) {
     defaultValues: {
       name: user?.name || "",
       email: user?.email || "",
+      employeeCode: user?.employeeCode || "",
       role: user?.role || "user",
       departmentId: user?.departmentId?.toString() || "",
       password: "",
@@ -161,6 +164,25 @@ export default function UserForm({ user, onClose, onSuccess }: UserFormProps) {
                       placeholder="user@example.com" 
                       {...field} 
                       data-testid="input-user-email"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Employee Code */}
+            <FormField
+              control={form.control}
+              name="employeeCode"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Employee Code</FormLabel>
+                  <FormControl>
+                    <Input 
+                      placeholder="Enter employee code" 
+                      {...field} 
+                      data-testid="input-user-employee-code"
                     />
                   </FormControl>
                   <FormMessage />

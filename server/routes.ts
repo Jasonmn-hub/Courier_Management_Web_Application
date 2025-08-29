@@ -404,7 +404,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/users', authenticateToken, requireRole(['admin']), setCurrentUser(), async (req: any, res) => {
     try {
-      const { name, email, password, role = 'user', departmentId } = req.body;
+      const { name, email, employeeCode, password, role = 'user', departmentId } = req.body;
       
       if (!name || !email) {
         return res.status(400).json({ message: 'Name and email are required' });
@@ -425,6 +425,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const newUser = await storage.createUser({
         name,
         email,
+        employeeCode: employeeCode || null,
         password: hashedPassword,
         role: role as any,
         departmentId: departmentId || null
@@ -442,7 +443,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put('/api/users/:id', authenticateToken, requireRole(['admin']), setCurrentUser(), async (req: any, res) => {
     try {
       const userId = req.params.id;
-      const { name, email, role, departmentId, password } = req.body;
+      const { name, email, employeeCode, role, departmentId, password } = req.body;
       
       if (!name || !email) {
         return res.status(400).json({ message: 'Name and email are required' });
@@ -451,6 +452,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const updateData: any = {
         name,
         email,
+        employeeCode: employeeCode || null,
         role: role as any,
         departmentId: departmentId || null
       };
@@ -507,7 +509,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
-      const expectedHeaders = ['name', 'email', 'role', 'departmentName', 'password'];
+      const expectedHeaders = ['name', 'email', 'employeeCode', 'role', 'departmentName', 'password'];
       
       // Validate headers
       const missingHeaders = expectedHeaders.filter(h => !headers.includes(h));
@@ -530,7 +532,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             userData[header] = values[index] || '';
           });
 
-          // Validate required fields
+          // Validate required fields (employeeCode is optional)
           if (!userData.name || !userData.email || !userData.role || !userData.password) {
             errors++;
             continue;
@@ -560,6 +562,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const newUser = await storage.createUser({
             name: userData.name,
             email: userData.email,
+            employeeCode: userData.employeeCode || null,
             password: hashedPassword,
             role: userData.role,
             departmentId
@@ -1534,11 +1537,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (branchCode) csvBranchCodes.add(branchCode.toLowerCase());
 
           const branchData = insertBranchSchema.parse({
+            srNo: row.srNo ? parseInt(row.srNo) : undefined,
             branchName,
             branchCode,
             branchAddress: row.branchAddress?.trim(),
             pincode: row.pincode?.trim(),
             state: row.state?.trim(),
+            email: row.email?.trim() || undefined,
             latitude: row.latitude?.trim() || undefined,
             longitude: row.longitude?.trim() || undefined,
             status: row.status?.trim() || 'active'
@@ -1612,6 +1617,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         'Branch Address': branch.branchAddress,
         'Pincode': branch.pincode,
         'State': branch.state,
+        'Email': branch.email || '',
         'Latitude': branch.latitude || '',
         'Longitude': branch.longitude || '',
         'Status': branch.status,
@@ -3089,17 +3095,21 @@ Jigar Jodhani
       if (port === 465 || smtpSettings.useSSL) {
         // SSL mode (port 465)
         transportConfig.secure = true;
-      } else if (port === 587 || smtpSettings.useTLS) {
+        transportConfig.tls = {
+          rejectUnauthorized: false
+        };
+      } else if (port === 587 || smtpSettings.useTLS || port === 25) {
         // TLS mode (port 587) - STARTTLS
         transportConfig.secure = false;
-        transportConfig.requireTLS = true;
         transportConfig.tls = {
           rejectUnauthorized: false, // Allow self-signed certificates
-          ciphers: 'SSLv3'
+          ciphers: 'TLSv1.2',
+          minVersion: 'TLSv1.2'
         };
       } else {
-        // No encryption (port 25 or custom)
+        // No encryption fallback
         transportConfig.secure = false;
+        transportConfig.ignoreTLS = true;
         transportConfig.tls = {
           rejectUnauthorized: false
         };
