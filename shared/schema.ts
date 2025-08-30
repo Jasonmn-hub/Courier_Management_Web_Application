@@ -222,7 +222,7 @@ export const authorityLetterFields = pgTable('authority_letter_fields', {
 // Dropdown field options table for custom fields
 export const fieldDropdownOptions = pgTable('field_dropdown_options', {
   id: serial('id').primaryKey(),
-  fieldId: integer('field_id').references(() => authorityLetterFields.id, { onDelete: 'cascade' }),
+  fieldId: integer('field_id').references(() => fields.id, { onDelete: 'cascade' }),
   departmentId: integer('department_id').references(() => departments.id),
   optionValue: varchar('option_value', { length: 255 }).notNull(),
   optionLabel: varchar('option_label', { length: 255 }).notNull(),

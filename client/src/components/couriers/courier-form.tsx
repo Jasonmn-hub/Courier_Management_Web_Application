@@ -498,35 +498,15 @@ export default function CourierForm({ courier, onClose, onSuccess }: CourierForm
             )}
             </div>
 
-            {/* Courier Details */}
-            <FormField
-              control={form.control}
-              name="details"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Courier Details (Assets/Documents)</FormLabel>
-                  <FormControl>
-                    <Textarea 
-                      rows={3}
-                      placeholder="Describe the contents being shipped..." 
-                      {...field} 
-                      data-testid="textarea-details"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
             {/* POD Copy Upload */}
             <div className="space-y-2">
               <label className="text-sm font-medium">POD Copy (Optional)</label>
               <Card className="border-dashed border-2">
-                <CardContent className="p-6">
+                <CardContent className="p-4">
                   {selectedFile ? (
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-2">
-                        <Upload className="h-5 w-5 text-primary" />
+                        <Upload className="h-4 w-4 text-primary" />
                         <span className="text-sm">{selectedFile.name}</span>
                         <span className="text-xs text-slate-500">
                           ({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
@@ -544,7 +524,7 @@ export default function CourierForm({ courier, onClose, onSuccess }: CourierForm
                     </div>
                   ) : (
                     <div className="text-center">
-                      <Upload className="h-8 w-8 text-slate-400 mx-auto mb-2" />
+                      <Upload className="h-6 w-6 text-slate-400 mx-auto mb-1" />
                       <div className="text-sm text-slate-600">
                         <label className="relative cursor-pointer bg-white rounded-md font-medium text-primary hover:text-blue-600 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-primary">
                           <span>Upload a file</span>
@@ -558,7 +538,7 @@ export default function CourierForm({ courier, onClose, onSuccess }: CourierForm
                         </label>
                         <span className="pl-1">or drag and drop</span>
                       </div>
-                      <p className="text-xs text-slate-500 mt-1">PDF, PNG, JPG up to 10MB</p>
+                      <p className="text-xs text-slate-500">PDF, PNG, JPG up to 10MB</p>
                     </div>
                   )}
                 </CardContent>
