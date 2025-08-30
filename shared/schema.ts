@@ -40,6 +40,7 @@ export const users = pgTable("users", {
   profileImageUrl: varchar("profile_image_url"),
   name: varchar("name", { length: 100 }),
   employeeCode: varchar("employee_code", { length: 50 }),
+  mobileNumber: varchar("mobile_number", { length: 15 }),
   password: text("password"),
   role: roleEnum("role").default('user'),
   departmentId: integer("department_id").references(() => departments.id), // Keep for backward compatibility
@@ -137,6 +138,7 @@ export const auditLogs = pgTable("audit_logs", {
   action: varchar("action", { length: 50 }),
   entityType: varchar("entity_type", { length: 50 }),
   entityId: varchar("entity_id", { length: 100 }),
+  emailId: varchar("email_id", { length: 255 }), // Track email ID for email confirmations
   timestamp: timestamp("timestamp").defaultNow(),
 });
 

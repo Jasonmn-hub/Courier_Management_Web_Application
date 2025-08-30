@@ -173,6 +173,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         receivedDate: new Date().toISOString().split('T')[0]
       });
 
+      // Log audit for email confirmation
+      await logAudit('email_confirmation', 'UPDATE', 'courier', courier.id, courier.email);
+
       // Success response
       res.send(`
         <html>
@@ -250,6 +253,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         status: 'received' as any,
         confirmationToken: null
       });
+
+      // Log audit for email confirmation
+      await logAudit('email_confirmation', 'UPDATE', 'received_courier', courier.id, (courier as any).emailId);
 
       // Success response
       res.send(`
@@ -562,7 +568,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/users', authenticateToken, requireRole(['admin']), setCurrentUser(), async (req: any, res) => {
     try {
-      const { name, email, employeeCode, password, role = 'user', departmentId } = req.body;
+      const { name, email, employeeCode, mobileNumber, password, role = 'user', departmentId } = req.body;
       
       if (!name || !email) {
         return res.status(400).json({ message: 'Name and email are required' });
@@ -584,6 +590,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         name,
         email,
         employeeCode: employeeCode || null,
+        mobileNumber: mobileNumber || null,
         password: hashedPassword,
         role: role as any,
         departmentId: departmentId || null
@@ -601,7 +608,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put('/api/users/:id', authenticateToken, requireRole(['admin']), setCurrentUser(), async (req: any, res) => {
     try {
       const userId = req.params.id;
-      const { name, email, employeeCode, role, departmentId, password } = req.body;
+      const { name, email, employeeCode, mobileNumber, role, departmentId, password } = req.body;
       
       if (!name || !email) {
         return res.status(400).json({ message: 'Name and email are required' });
@@ -611,6 +618,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         name,
         email,
         employeeCode: employeeCode || null,
+        mobileNumber: mobileNumber || null,
         role: role as any,
         departmentId: departmentId || null
       };
@@ -667,7 +675,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
-      const expectedHeaders = ['name', 'email', 'employeeCode', 'role', 'departmentName', 'password'];
+      const expectedHeaders = ['name', 'email', 'employeeCode', 'mobileNumber', 'role', 'departmentName', 'password'];
       
       // Validate headers
       const missingHeaders = expectedHeaders.filter(h => !headers.includes(h));
@@ -721,6 +729,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             name: userData.name,
             email: userData.email,
             employeeCode: userData.employeeCode || null,
+            mobileNumber: userData.mobileNumber || null,
             password: hashedPassword,
             role: userData.role,
             departmentId
@@ -748,7 +757,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Helper function to log audit
-  const logAudit = async (userId: string, action: string, entityType: string, entityId?: string | number) => {
+  const logAudit = async (userId: string, action: string, entityType: string, entityId?: string | number, emailId?: string) => {
     try {
       // For temp users, create audit logs with null userId to avoid foreign key constraint
       await storage.createAuditLog({
@@ -756,6 +765,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         action,
         entityType,
         entityId: typeof entityId === 'number' ? entityId.toString() : entityId,
+        emailId: emailId || null,
       });
     } catch (error) {
       console.error("Failed to log audit:", error);
@@ -2318,8 +2328,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           await transporter.sendMail(mailOptions);
           
-          // Log audit
-          await logAudit(userId, 'DISPATCH_EMAIL', 'received_courier', id);
+          // Log audit with email tracking
+          await logAudit(userId, 'DISPATCH_EMAIL', 'received_courier', id, (courier as any).emailId);
           
           res.json({ 
             message: "Status updated to dispatched and email notification sent successfully",

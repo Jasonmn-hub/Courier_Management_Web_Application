@@ -28,6 +28,7 @@ const createUserSchema = z.object({
   name: z.string().min(1, "Name is required"),
   email: z.string().email("Valid email is required"),
   employeeCode: z.string().optional(),
+  mobileNumber: z.string().optional(),
   role: z.enum(["admin", "manager", "user"], {
     required_error: "Role is required",
   }),
@@ -39,6 +40,7 @@ const updateUserSchema = z.object({
   name: z.string().min(1, "Name is required"),
   email: z.string().email("Valid email is required"),
   employeeCode: z.string().optional(),
+  mobileNumber: z.string().optional(),
   role: z.enum(["admin", "manager", "user"], {
     required_error: "Role is required",
   }),
@@ -62,6 +64,7 @@ export default function UserForm({ user, onClose, onSuccess }: UserFormProps) {
       name: user?.name || "",
       email: user?.email || "",
       employeeCode: user?.employeeCode || "",
+      mobileNumber: user?.mobileNumber || "",
       role: user?.role || "user",
       departmentId: user?.departmentId?.toString() || "",
       password: "",
@@ -183,6 +186,25 @@ export default function UserForm({ user, onClose, onSuccess }: UserFormProps) {
                       placeholder="Enter employee code" 
                       {...field} 
                       data-testid="input-user-employee-code"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Mobile Number */}
+            <FormField
+              control={form.control}
+              name="mobileNumber"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Mobile Number</FormLabel>
+                  <FormControl>
+                    <Input 
+                      placeholder="Enter mobile number" 
+                      {...field} 
+                      data-testid="input-user-mobile-number"
                     />
                   </FormControl>
                   <FormMessage />

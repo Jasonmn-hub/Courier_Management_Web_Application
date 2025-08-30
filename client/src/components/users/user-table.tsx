@@ -157,6 +157,7 @@ export default function UserTable({ onEdit, onManageDepartments }: UserTableProp
             <TableRow>
               <TableHead>Name</TableHead>
               <TableHead>Email</TableHead>
+              <TableHead>Mobile</TableHead>
               <TableHead>Role</TableHead>
               <TableHead>Departments</TableHead>
               <TableHead>Created</TableHead>
@@ -166,7 +167,7 @@ export default function UserTable({ onEdit, onManageDepartments }: UserTableProp
           <TableBody>
             {!Array.isArray(users) || users.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-slate-500">
+                <TableCell colSpan={7} className="text-center py-8 text-slate-500">
                   No users found. Add your first user to get started.
                 </TableCell>
               </TableRow>
@@ -181,6 +182,9 @@ export default function UserTable({ onEdit, onManageDepartments }: UserTableProp
                   </TableCell>
                   <TableCell data-testid={`text-email-${user.id}`}>
                     {user.email}
+                  </TableCell>
+                  <TableCell data-testid={`text-mobile-${user.id}`}>
+                    {user.mobileNumber || '-'}
                   </TableCell>
                   <TableCell data-testid={`badge-role-${user.id}`}>
                     <Badge className={getRoleColor(user.role)} variant="secondary">

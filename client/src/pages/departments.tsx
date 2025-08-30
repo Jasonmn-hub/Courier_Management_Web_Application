@@ -317,7 +317,7 @@ export default function Departments() {
                       <TableRow>
                         <TableHead>Name</TableHead>
                         <TableHead>Created</TableHead>
-                        <TableHead className="text-center">Manage Files</TableHead>
+                        <TableHead className="text-center">Authority Letter</TableHead>
                         <TableHead className="text-center">Actions</TableHead>
                       </TableRow>
                     </TableHeader>

@@ -46,8 +46,8 @@ export interface IStorage {
   getUserByEmail(email: string): Promise<User | undefined>;
   getAllUsers(): Promise<User[]>;
   getUsersWithDepartments(searchTerm?: string): Promise<Array<User & { departments: Array<{ id: number; name: string }> }>>;
-  createUser(user: { name: string; email: string; password: string; role: string; departmentId?: number | null }): Promise<User>;
-  updateUser(id: string, userData: { name: string; email: string; role: string; departmentId?: number | null }): Promise<User | undefined>;
+  createUser(user: { name: string; email: string; employeeCode?: string | null; mobileNumber?: string | null; password: string; role: string; departmentId?: number | null }): Promise<User>;
+  updateUser(id: string, userData: { name: string; email: string; employeeCode?: string | null; mobileNumber?: string | null; role: string; departmentId?: number | null; password?: string }): Promise<User | undefined>;
   deleteUser(id: string): Promise<boolean>;
   upsertUser(user: UpsertUser): Promise<User>;
   getUserDepartments(userId: string): Promise<number[]>;
@@ -177,11 +177,12 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  async createUser(userData: { name: string; email: string; employeeCode?: string | null; password: string; role: string; departmentId?: number | null }): Promise<User> {
+  async createUser(userData: { name: string; email: string; employeeCode?: string | null; mobileNumber?: string | null; password: string; role: string; departmentId?: number | null }): Promise<User> {
     const [user] = await db.insert(users).values({
       name: userData.name,
       email: userData.email,
       employeeCode: userData.employeeCode,
+      mobileNumber: userData.mobileNumber,
       password: userData.password,
       role: userData.role as any,
       departmentId: userData.departmentId
@@ -193,16 +194,23 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(users).orderBy(users.createdAt);
   }
 
-  async updateUser(id: string, userData: { name: string; email: string; employeeCode?: string | null; role: string; departmentId?: number | null }): Promise<User | undefined> {
+  async updateUser(id: string, userData: { name: string; email: string; employeeCode?: string | null; mobileNumber?: string | null; role: string; departmentId?: number | null; password?: string }): Promise<User | undefined> {
+    const updateData: any = {
+      name: userData.name,
+      email: userData.email,
+      employeeCode: userData.employeeCode,
+      mobileNumber: userData.mobileNumber,
+      role: userData.role as any,
+      departmentId: userData.departmentId,
+      updatedAt: new Date()
+    };
+    
+    if (userData.password) {
+      updateData.password = userData.password;
+    }
+    
     const [user] = await db.update(users)
-      .set({
-        name: userData.name,
-        email: userData.email,
-        employeeCode: userData.employeeCode,
-        role: userData.role as any,
-        departmentId: userData.departmentId,
-        updatedAt: new Date()
-      })
+      .set(updateData)
       .where(eq(users.id, id))
       .returning();
     return user;
