@@ -368,8 +368,8 @@ export default function CourierForm({ courier, onClose, onSuccess }: CourierForm
                         {vendors
                           .filter((vendor: any) => vendor.isActive)
                           .map((vendor: any) => (
-                            <SelectItem key={vendor.id} value={vendor.name}>
-                              {vendor.name}
+                            <SelectItem key={vendor.id} value={vendor.vendorName}>
+                              {vendor.vendorName}
                             </SelectItem>
                           ))}
                         <SelectItem value="Others">Others</SelectItem>
@@ -607,7 +607,6 @@ export default function CourierForm({ courier, onClose, onSuccess }: CourierForm
                             <SelectValue placeholder={`Select ${field.name.toLowerCase()}`} />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="">Select {field.name}</SelectItem>
                             {/* TODO: Add dropdown options when available */}
                           </SelectContent>
                         </Select>
