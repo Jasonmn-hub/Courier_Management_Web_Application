@@ -28,7 +28,7 @@ export const sessions = pgTable(
 
 // Enums
 export const roleEnum = pgEnum('role', ['admin', 'manager', 'user']);
-export const statusEnum = pgEnum('status', ['on_the_way', 'received', 'completed', 'delivered', 'deleted']);
+export const statusEnum = pgEnum('status', ['on_the_way', 'received', 'completed', 'delivered', 'deleted', 'dispatched']);
 export const fieldTypeEnum = pgEnum('field_type', ['text', 'calendar', 'dropdown']);
 
 // User storage table (required for Replit Auth with extensions)
@@ -113,6 +113,7 @@ export const receivedCouriers = pgTable("received_couriers", {
   sendEmailNotification: boolean("send_email_notification").default(false),
   customDepartment: varchar("custom_department", { length: 100 }),
   remarks: text("remarks"),
+  status: statusEnum("status").default('received'),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

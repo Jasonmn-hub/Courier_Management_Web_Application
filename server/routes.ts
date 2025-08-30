@@ -548,7 +548,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Find department by name
           let departmentId = null;
           if (userData.departmentName) {
-            const departments = await storage.getDepartments();
+            const departments = await storage.getAllDepartments();
             const department = departments.find(d => d.name.toLowerCase() === userData.departmentName.toLowerCase());
             if (department) {
               departmentId = department.id;
@@ -1981,6 +1981,170 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       console.error("Error creating received courier:", error);
       res.status(500).json({ message: "Failed to create received courier" });
+    }
+  });
+
+  // Update received courier status and send email notification
+  app.post('/api/received-couriers/:id/dispatch', authenticateToken, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const userId = req.user.id;
+      
+      // Get the received courier
+      const courier = await storage.getReceivedCourierById(id);
+      if (!courier) {
+        return res.status(404).json({ message: "Received courier not found" });
+      }
+
+      // Check if email exists
+      if (!(courier as any).emailId) {
+        return res.status(400).json({ message: "No email address found for this courier" });
+      }
+
+      // Update status to dispatched
+      const updatedCourier = await storage.updateReceivedCourier(id, { 
+        status: 'dispatched' as any
+      });
+
+      // Send email notification
+      try {
+        const smtpSettings = await storage.getSmtpSettings();
+        if (smtpSettings && smtpSettings.host && smtpSettings.username && smtpSettings.password) {
+          const transportConfig: any = {
+            host: smtpSettings.host,
+            port: smtpSettings.port || 587,
+            auth: {
+              user: smtpSettings.username,
+              pass: smtpSettings.password,
+            }
+          };
+
+          if (smtpSettings.useSSL) {
+            transportConfig.secure = true;
+          } else if (smtpSettings.useTLS) {
+            transportConfig.secure = false;
+            transportConfig.requireTLS = true;
+          } else {
+            transportConfig.secure = false;
+          }
+
+          const transporter = nodemailer.createTransport(transportConfig);
+
+          const mailOptions = {
+            from: smtpSettings.fromEmail || smtpSettings.username,
+            to: (courier as any).emailId,
+            subject: 'Courier Dispatched - Courier Management System',
+            html: `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width" />
+  <title>Courier Dispatched</title>
+</head>
+<body style="margin:0;padding:0;background:#f4f6f8;">
+  <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background:#f4f6f8;">
+    <tr>
+      <td align="center" style="padding:24px 12px;">
+        <table role="presentation" cellpadding="0" cellspacing="0" width="600" style="max-width:600px;background:#ffffff;border-radius:12px;overflow:hidden;font-family:Segoe UI,Arial,Helvetica,sans-serif;">
+          
+          <!-- Header -->
+          <tr>
+            <td style="background:#16a34a;color:#fff;padding:18px 24px;font-size:18px;font-weight:600;">
+              Courier Dispatched ✅
+            </td>
+          </tr>
+          
+          <!-- Intro -->
+          <tr>
+            <td style="padding:20px 24px;color:#111827;font-size:14px;line-height:1.5;">
+              Dear ${(courier as any).receiverName || 'Team'},<br><br>
+              This is to notify you that the courier with POD Number <strong>${courier.podNumber}</strong> 
+              has been <strong>dispatched back</strong> from our office.
+            </td>
+          </tr>
+          
+          <!-- Details Table -->
+          <tr>
+            <td style="padding:0 24px 12px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e5e7eb;border-radius:10px;">
+                <tr>
+                  <td style="padding:12px 16px;background:#f9fafb;font-weight:600;font-size:13px;">
+                    Dispatch Details
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:12px 16px;">
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:13px;color:#374151;">
+                      <tr>
+                        <td style="padding:4px 0;font-weight:600;">POD Number:</td>
+                        <td style="padding:4px 0;">${courier.podNumber}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding:4px 0;font-weight:600;">Received Date:</td>
+                        <td style="padding:4px 0;">${courier.receivedDate ? new Date(courier.receivedDate + 'T00:00:00').toLocaleDateString() : 'N/A'}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding:4px 0;font-weight:600;">From Location:</td>
+                        <td style="padding:4px 0;">${courier.fromLocation}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding:4px 0;font-weight:600;">Courier Vendor:</td>
+                        <td style="padding:4px 0;">${courier.courierVendor === 'Others' && (courier as any).customVendor ? (courier as any).customVendor : courier.courierVendor}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding:4px 0;font-weight:600;">Status:</td>
+                        <td style="padding:4px 0;"><span style="background:#dcfce7;color:#166534;padding:2px 8px;border-radius:4px;font-size:12px;">DISPATCHED</span></td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          
+          <!-- Footer -->
+          <tr>
+            <td style="padding:20px 24px;color:#6b7280;font-size:12px;border-top:1px solid #e5e7eb;">
+              This is an automated message from the Courier Management System.<br>
+              Please contact us if you have any questions.
+            </td>
+          </tr>
+          
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`
+          };
+
+          await transporter.sendMail(mailOptions);
+          
+          // Log audit
+          await logAudit(userId, 'DISPATCH_EMAIL', 'received_courier', id);
+          
+          res.json({ 
+            message: "Status updated to dispatched and email notification sent successfully",
+            courier: updatedCourier
+          });
+        } else {
+          // Update status but note email couldn't be sent
+          res.json({ 
+            message: "Status updated to dispatched but email notification could not be sent (SMTP not configured)",
+            courier: updatedCourier
+          });
+        }
+      } catch (emailError) {
+        console.error("Error sending dispatch email:", emailError);
+        res.json({ 
+          message: "Status updated to dispatched but email notification failed",
+          courier: updatedCourier
+        });
+      }
+    } catch (error) {
+      console.error("Error dispatching received courier:", error);
+      res.status(500).json({ message: "Failed to dispatch courier" });
     }
   });
 

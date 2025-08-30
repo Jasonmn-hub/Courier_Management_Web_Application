@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, Mail } from "lucide-react";
 import { Autocomplete } from "@/components/ui/autocomplete";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -154,6 +154,27 @@ export default function ReceivedCouriers() {
     },
   });
 
+  const dispatchMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await apiRequest('POST', `/api/received-couriers/${id}/dispatch`, {});
+      return res.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/received-couriers'] });
+      toast({ 
+        title: "Success", 
+        description: data.message || "Courier dispatched and email sent successfully" 
+      });
+    },
+    onError: () => {
+      toast({ 
+        title: "Error", 
+        description: "Failed to dispatch courier", 
+        variant: "destructive" 
+      });
+    },
+  });
+
   const resetForm = () => {
     setFormData({
       podNumber: "",
@@ -259,7 +280,9 @@ export default function ReceivedCouriers() {
                         <TableHead>Receiver</TableHead>
                         <TableHead>Courier Vendor</TableHead>
                         <TableHead>Email</TableHead>
+                        <TableHead>Status</TableHead>
                         <TableHead>Remarks</TableHead>
+                        <TableHead>Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -291,8 +314,32 @@ export default function ReceivedCouriers() {
                               <span className="ml-1 text-green-600">📧</span>
                             )}
                           </TableCell>
+                          <TableCell data-testid={`text-status-${courier.id}`}>
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                              (courier as any).status === 'dispatched' 
+                                ? 'bg-green-100 text-green-800' 
+                                : 'bg-blue-100 text-blue-800'
+                            }`}>
+                              {(courier as any).status === 'dispatched' ? 'Dispatched' : 'Received'}
+                            </span>
+                          </TableCell>
                           <TableCell data-testid={`text-remarks-${courier.id}`}>
                             {courier.remarks || '-'}
+                          </TableCell>
+                          <TableCell data-testid={`actions-${courier.id}`}>
+                            {(courier as any).emailId && (courier as any).status !== 'dispatched' && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => dispatchMutation.mutate(courier.id)}
+                                disabled={dispatchMutation.isPending}
+                                data-testid={`button-dispatch-${courier.id}`}
+                                className="text-green-600 border-green-600 hover:bg-green-50"
+                              >
+                                <Mail className="h-4 w-4 mr-1" />
+                                {dispatchMutation.isPending ? 'Sending...' : 'Dispatch'}
+                              </Button>
+                            )}
                           </TableCell>
                         </TableRow>
                       ))}
