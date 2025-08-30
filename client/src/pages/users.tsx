@@ -41,6 +41,7 @@ export default function Users() {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['/api/users'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
       toast({
         title: "Success",
         description: `Successfully processed ${data.processed || 0} users. ${data.errors ? `${data.errors} errors occurred.` : ''}`,
