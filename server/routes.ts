@@ -174,7 +174,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       // Log audit for email confirmation with email address for tracking
-      await logAudit(null, 'EMAIL_CONFIRM_RECEIVED', 'courier', courier.id.toString(), courier.email);
+      await logAudit(null, 'EMAIL_CONFIRM_RECEIVED', 'courier', `${courier.id} (${courier.email})`, courier.email);
 
       // Success response
       res.send(`
@@ -255,7 +255,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       // Log audit for email confirmation with email address for tracking
-      await logAudit(null, 'EMAIL_CONFIRM_RECEIVED', 'received_courier', courier.id.toString(), (courier as any).emailId);
+      await logAudit(null, 'EMAIL_CONFIRM_RECEIVED', 'received_courier', `${courier.id} (${(courier as any).emailId})`, (courier as any).emailId);
 
       // Success response
       res.send(`
@@ -2776,7 +2776,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           await transporter.sendMail(mailOptions);
           
           // Log audit with email tracking
-          await logAudit(userId, 'DISPATCH_EMAIL', 'received_courier', id, (courier as any).emailId);
+          await logAudit(userId, 'DISPATCH_EMAIL', 'received_courier', `${id} (${(courier as any).emailId})`, (courier as any).emailId);
           
           res.json({ 
             message: "Status updated to dispatched and email notification sent successfully",

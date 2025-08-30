@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Download, Plus, FileText, Trash2, Mail, User, Calendar, Search } from "lucide-react";
+import { Download, Plus, FileText, Trash2, Mail, User, Calendar, Search, Pencil, Settings as SettingsIcon } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { ExportDialog } from "@/components/export-dialog";
 
@@ -57,7 +57,8 @@ interface AuditLog {
   entityType: string;
   entityId: number;
   timestamp: string;
-  user: User;
+  user?: User;
+  emailId?: string;
 }
 
 function AuditLogsTable() {
@@ -67,6 +68,7 @@ function AuditLogsTable() {
   });
 
   const [searchTerm, setSearchTerm] = useState("");
+  const [viewingLog, setViewingLog] = useState<AuditLog | null>(null);
 
   const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(event.target.value);
@@ -83,8 +85,9 @@ function AuditLogsTable() {
     return (
       log.entityType.toLowerCase().includes(term) ||
       log.entityId.toString().includes(term) ||
-      log.user?.name.toLowerCase().includes(term) ||
-      log.action.toLowerCase().includes(term)
+      (log.user?.name?.toLowerCase().includes(term) ?? false) ||
+      log.action.toLowerCase().includes(term) ||
+      (log.emailId?.toLowerCase().includes(term) ?? false)
     );
   });
 
@@ -131,15 +134,17 @@ function AuditLogsTable() {
           <TableRow>
             <TableHead>Action</TableHead>
             <TableHead>Entity</TableHead>
-            <TableHead>User</TableHead>
-            <TableHead>Date & Time</TableHead>
             <TableHead>Details</TableHead>
+            <TableHead>User/Confirmation</TableHead>
+            <TableHead>Email/Status</TableHead>
+            <TableHead>Date & Time</TableHead>
+            <TableHead>Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {filteredLogs.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={5} className="text-center py-8 text-slate-500">
+              <TableCell colSpan={7} className="text-center py-8 text-slate-500">
                 {searchTerm ? "No audit logs found matching your search." : "No audit logs found"}
               </TableCell>
             </TableRow>
@@ -159,20 +164,25 @@ function AuditLogsTable() {
                   <div className="text-sm text-slate-500">ID: {log.entityId}</div>
                 </TableCell>
                 <TableCell>
-                  <div className="flex items-center gap-2">
-                    <User className="h-4 w-4" />
-                    <div>
-                      <div className="font-medium">{log.user?.name || 'Unknown'}</div>
-                      <div className="text-sm text-slate-500">
-                        {log.user?.employeeCode && `${log.user.employeeCode} • `}{log.user?.email}
-                      </div>
-                    </div>
-                  </div>
+                  {log.action === 'EMAIL_CONFIRM_RECEIVED' ?
+                    (log.emailId ? `Email Confirmed: ${log.emailId}` : 'Email Confirmation') :
+                    (log.entityId ? `Entity ID: ${log.entityId}` : 'N/A')
+                  }
                 </TableCell>
                 <TableCell>
-                  <div className="text-sm">
-                    {new Date(log.timestamp).toLocaleDateString()}
-                  </div>
+                  {log.action === 'EMAIL_CONFIRM_RECEIVED' ?
+                    'User clicked email confirmation link' :
+                    (log.user?.name || 'Unknown')
+                  }
+                </TableCell>
+                <TableCell>
+                  {log.action === 'EMAIL_CONFIRM_RECEIVED' ?
+                    (log.emailId || 'N/A') :
+                    (log.user?.email || 'N/A')
+                  }
+                </TableCell>
+                <TableCell className="text-sm">
+                  {new Date(log.timestamp).toLocaleDateString()}
                   <div className="text-xs text-slate-500">
                     {new Date(log.timestamp).toLocaleTimeString()}
                   </div>
@@ -181,12 +191,7 @@ function AuditLogsTable() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => {
-                      toast({
-                        title: "Audit Log Details",
-                        description: `${log.action} action on ${log.entityType} (ID: ${log.entityId}) by ${log.user?.name || 'Unknown'} at ${new Date(log.timestamp).toLocaleString()}`,
-                      });
-                    }}
+                    onClick={() => setViewingLog(log)}
                     data-testid={`button-view-details-${log.id}`}
                   >
                     View Details
@@ -197,6 +202,71 @@ function AuditLogsTable() {
           )}
         </TableBody>
       </Table>
+
+      {/* Log Details Dialog */}
+      <Dialog open={!!viewingLog} onOpenChange={(open) => { if (!open) setViewingLog(null); }}>
+        <DialogContent className="max-w-xl">
+          <DialogHeader>
+            <DialogTitle>Audit Log Details</DialogTitle>
+          </DialogHeader>
+          {viewingLog && (
+            <div className="space-y-4">
+              <div>
+                <Label className="font-semibold">Action</Label>
+                <p>{viewingLog.action}</p>
+              </div>
+              <div>
+                <Label className="font-semibold">Entity Type</Label>
+                <p>{viewingLog.entityType}</p>
+              </div>
+              <div>
+                <Label className="font-semibold">Entity ID</Label>
+                <p>{viewingLog.entityId || 'N/A'}</p>
+              </div>
+              {viewingLog.action === 'EMAIL_CONFIRM_RECEIVED' ? (
+                <>
+                  <div>
+                    <Label className="font-semibold">Confirmation Type</Label>
+                    <p>Email Link Confirmation</p>
+                  </div>
+                  <div>
+                    <Label className="font-semibold">Email Address</Label>
+                    <p className="text-blue-600">{viewingLog.emailId || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <Label className="font-semibold">Confirmation Method</Label>
+                    <p>User clicked email confirmation link</p>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div>
+                    <Label className="font-semibold">User</Label>
+                    <p>{viewingLog.user?.name || 'Unknown'}</p>
+                  </div>
+                  <div>
+                    <Label className="font-semibold">User Email</Label>
+                    <p>{viewingLog.user?.email || 'N/A'}</p>
+                  </div>
+                </>
+              )}
+              {viewingLog.emailId && viewingLog.action !== 'EMAIL_CONFIRM_RECEIVED' && (
+                <div>
+                  <Label className="font-semibold">Related Email</Label>
+                  <p className="text-blue-600">{viewingLog.emailId}</p>
+                </div>
+              )}
+              <div>
+                <Label className="font-semibold">Timestamp</Label>
+                <p>{viewingLog.timestamp ? new Date(viewingLog.timestamp).toLocaleString() : 'N/A'}</p>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setViewingLog(null)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
