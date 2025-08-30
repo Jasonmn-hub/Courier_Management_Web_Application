@@ -793,7 +793,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/users/bulk-upload', authenticateToken, requireRole(['admin']), setCurrentUser(), upload.single('file'), async (req: any, res) => {
+  app.post('/api/users/bulk-upload', authenticateToken, requireRole(['admin']), setCurrentUser(), csvUpload.single('file'), async (req: any, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ message: 'No file uploaded' });
