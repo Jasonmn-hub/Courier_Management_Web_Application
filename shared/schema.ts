@@ -114,6 +114,7 @@ export const receivedCouriers = pgTable("received_couriers", {
   customDepartment: varchar("custom_department", { length: 100 }),
   remarks: text("remarks"),
   status: statusEnum("status").default('received'),
+  confirmationToken: varchar("confirmation_token", { length: 255 }), // For email confirmation
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
