@@ -1237,7 +1237,7 @@ export class DatabaseStorage implements IStorage {
       countQuery = countQuery.where(whereClause) as any;
     }
 
-    query = query.orderBy(desc(branches.createdAt)) as any;
+    query = query.orderBy(branches.srNo) as any;
 
     if (filters?.limit) {
       query = query.limit(filters.limit) as any;
@@ -1264,10 +1264,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createBranch(branch: InsertBranch): Promise<Branch> {
-    // Auto-assign Sr. No if not provided - get count instead of max to ensure sequential numbering
+    // Auto-assign Sr. No if not provided - use max + 1 for proper sequential numbering
     if (!branch.srNo) {
-      const [countResult] = await db.select({ count: sql`COUNT(*)` }).from(branches);
-      branch.srNo = (Number(countResult?.count) || 0) + 1;
+      const [maxResult] = await db.select({ maxSrNo: sql`COALESCE(MAX(${branches.srNo}), 0)` }).from(branches);
+      branch.srNo = (Number(maxResult?.maxSrNo) || 0) + 1;
     }
     
     const [newBranch] = await db.insert(branches).values(branch).returning();
