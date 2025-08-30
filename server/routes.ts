@@ -1079,7 +1079,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         courierData.podCopyPath = `/uploads/${fileName}`;
       }
 
-      const validatedData = insertCourierSchema.parse(courierData);
+      // Generate confirmation token for email button
+      const confirmationToken = Buffer.from(`${Date.now()}-${Math.random()}`).toString('base64url');
+      
+      const validatedData = insertCourierSchema.parse({
+        ...courierData,
+        confirmationToken: confirmationToken
+      });
       const courier = await storage.createCourier(validatedData);
       
       // Send email notification if requested
@@ -1202,6 +1208,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   </td>
                 </tr>
               </table>
+            </td>
+          </tr>
+          
+          <!-- Received Button -->
+          <tr>
+            <td style="padding:20px 24px;text-align:center;">
+              <a href="${process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : 'http://localhost:5000'}/api/couriers/confirm-received?token=${confirmationToken}" 
+                 style="display:inline-block;background:#16a34a;color:#fff;padding:12px 32px;text-decoration:none;border-radius:8px;font-weight:600;font-size:16px;">
+                ✅ Click Here to Confirm Received
+              </a>
+              <br><br>
+              <p style="color:#6b7280;font-size:12px;margin:0;">
+                Click the button above when you have received the courier to update the status automatically.
+              </p>
             </td>
           </tr>
           
@@ -1981,6 +2001,86 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       console.error("Error creating received courier:", error);
       res.status(500).json({ message: "Failed to create received courier" });
+    }
+  });
+
+  // Email confirmation endpoint for regular couriers
+  app.get('/api/couriers/confirm-received', async (req: any, res) => {
+    try {
+      const token = req.query.token;
+      
+      if (!token) {
+        return res.status(400).send(`
+          <html>
+            <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
+              <h2 style="color: #dc2626;">❌ Invalid Link</h2>
+              <p>The confirmation link is invalid or missing.</p>
+            </body>
+          </html>
+        `);
+      }
+
+      // Find courier by token
+      const allCouriers = await storage.getAllCouriers({});
+      const courier = allCouriers.couriers.find(c => (c as any).confirmationToken === token);
+      
+      if (!courier) {
+        return res.status(404).send(`
+          <html>
+            <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
+              <h2 style="color: #dc2626;">❌ Courier Not Found</h2>
+              <p>The courier confirmation link is invalid or has expired.</p>
+            </body>
+          </html>
+        `);
+      }
+
+      // Check if already confirmed
+      if ((courier as any).status === 'received') {
+        return res.send(`
+          <html>
+            <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
+              <h2 style="color: #16a34a;">✅ Already Confirmed</h2>
+              <p>This courier (POD: ${courier.podNo}) has already been marked as received.</p>
+              <p style="color: #6b7280; font-size: 14px;">Thank you for confirming the delivery.</p>
+            </body>
+          </html>
+        `);
+      }
+
+      // Update status to received and clear token
+      await storage.updateCourier(courier.id, { 
+        status: 'received' as any,
+        confirmationToken: null,
+        receivedDate: new Date().toISOString().split('T')[0]
+      });
+
+      // Success response
+      res.send(`
+        <html>
+          <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
+            <h2 style="color: #16a34a;">✅ Courier Received Successfully</h2>
+            <p>Thank you for confirming the receipt of courier:</p>
+            <div style="background: #f9fafb; padding: 20px; border-radius: 8px; margin: 20px auto; max-width: 400px;">
+              <p><strong>POD Number:</strong> ${courier.podNo}</p>
+              <p><strong>To Branch:</strong> ${courier.toBranch}</p>
+              <p><strong>Vendor:</strong> ${courier.vendor || courier.customVendor || 'N/A'}</p>
+              <p><strong>Status:</strong> <span style="background: #dcfce7; color: #166534; padding: 4px 8px; border-radius: 4px;">RECEIVED</span></p>
+            </div>
+            <p style="color: #6b7280; font-size: 14px;">The status has been updated in our system.</p>
+          </body>
+        </html>
+      `);
+    } catch (error) {
+      console.error("Error confirming courier:", error);
+      res.status(500).send(`
+        <html>
+          <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
+            <h2 style="color: #dc2626;">❌ Error</h2>
+            <p>There was an error processing your confirmation. Please try again or contact support.</p>
+          </body>
+        </html>
+      `);
     }
   });
 

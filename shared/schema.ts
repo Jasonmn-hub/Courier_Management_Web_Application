@@ -95,6 +95,7 @@ export const couriers = pgTable("couriers", {
   receivedDate: date("received_date"),
   receivedRemarks: text("received_remarks"),
   podCopyPath: varchar("pod_copy_path"),
+  confirmationToken: varchar("confirmation_token", { length: 255 }), // For email confirmation
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
