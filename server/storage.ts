@@ -652,6 +652,7 @@ export class DatabaseStorage implements IStorage {
         action: auditLogs.action,
         entityType: auditLogs.entityType,
         entityId: auditLogs.entityId,
+        emailId: auditLogs.emailId,
         timestamp: auditLogs.timestamp,
         user: users,
       })
@@ -1044,6 +1045,8 @@ export class DatabaseStorage implements IStorage {
         sendEmailNotification: receivedCouriers.sendEmailNotification,
         customDepartment: receivedCouriers.customDepartment,
         remarks: receivedCouriers.remarks,
+        status: receivedCouriers.status,
+        confirmationToken: receivedCouriers.confirmationToken,
         createdAt: receivedCouriers.createdAt,
         updatedAt: receivedCouriers.updatedAt,
         department: departments,

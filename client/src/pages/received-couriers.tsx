@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Plus, Mail } from "lucide-react";
+import { Plus, Mail, Eye } from "lucide-react";
 import { Autocomplete } from "@/components/ui/autocomplete";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -61,6 +61,7 @@ export default function ReceivedCouriers() {
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [viewingCourier, setViewingCourier] = useState<any>(null);
   const [formData, setFormData] = useState<Partial<InsertReceivedCourier>>({
     podNumber: "",
     receivedDate: "",
@@ -316,31 +317,53 @@ export default function ReceivedCouriers() {
                             )}
                           </TableCell>
                           <TableCell data-testid={`text-status-${courier.id}`}>
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                              (courier as any).status === 'dispatched' 
-                                ? 'bg-green-100 text-green-800' 
-                                : 'bg-blue-100 text-blue-800'
-                            }`}>
-                              {(courier as any).status === 'dispatched' ? 'Dispatched' : 'Received'}
-                            </span>
+                            <div className="flex flex-col gap-1">
+                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                (courier as any).status === 'received' 
+                                  ? 'bg-green-100 text-green-800' 
+                                  : (courier as any).status === 'dispatched'
+                                  ? 'bg-blue-100 text-blue-800'
+                                  : 'bg-gray-100 text-gray-800'
+                              }`}>
+                                {(courier as any).status === 'received' ? 'Confirmed Received' : 
+                                 (courier as any).status === 'dispatched' ? 'Dispatched' : 'Pending'}
+                              </span>
+                              {(courier as any).status === 'received' && (
+                                <span className="text-xs text-green-600 font-medium">
+                                  ✅ Confirmed via Email
+                                </span>
+                              )}
+                            </div>
                           </TableCell>
                           <TableCell data-testid={`text-remarks-${courier.id}`}>
                             {courier.remarks || '-'}
                           </TableCell>
                           <TableCell data-testid={`actions-${courier.id}`}>
-                            {(courier as any).emailId && (courier as any).status !== 'dispatched' && (
+                            <div className="flex gap-2">
                               <Button
                                 size="sm"
                                 variant="outline"
-                                onClick={() => dispatchMutation.mutate(courier.id)}
-                                disabled={dispatchMutation.isPending}
-                                data-testid={`button-dispatch-${courier.id}`}
-                                className="text-green-600 border-green-600 hover:bg-green-50"
+                                onClick={() => setViewingCourier(courier)}
+                                data-testid={`button-view-${courier.id}`}
+                                className="text-blue-600 border-blue-600 hover:bg-blue-50"
                               >
-                                <Mail className="h-4 w-4 mr-1" />
-                                {dispatchMutation.isPending ? 'Sending...' : 'Dispatch'}
+                                <Eye className="h-4 w-4" />
                               </Button>
-                            )}
+                              
+                              {(courier as any).emailId && (courier as any).status !== 'dispatched' && (courier as any).status !== 'received' && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => dispatchMutation.mutate(courier.id)}
+                                  disabled={dispatchMutation.isPending}
+                                  data-testid={`button-dispatch-${courier.id}`}
+                                  className="text-green-600 border-green-600 hover:bg-green-50"
+                                >
+                                  <Mail className="h-4 w-4 mr-1" />
+                                  {dispatchMutation.isPending ? 'Sending...' : 'Dispatch'}
+                                </Button>
+                              )}
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -608,6 +631,112 @@ export default function ReceivedCouriers() {
               </Button>
             </div>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Courier Details Dialog */}
+      <Dialog open={!!viewingCourier} onOpenChange={() => setViewingCourier(null)}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Received Courier Details</DialogTitle>
+          </DialogHeader>
+          
+          {viewingCourier && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="font-semibold">POD Number</Label>
+                  <p className="text-sm">{viewingCourier.podNumber || 'N/A'}</p>
+                </div>
+                
+                <div>
+                  <Label className="font-semibold">Status</Label>
+                  <div className="flex flex-col gap-1 mt-1">
+                    <span className={`inline-flex items-center w-fit px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                      viewingCourier.status === 'received' 
+                        ? 'bg-green-100 text-green-800' 
+                        : viewingCourier.status === 'dispatched'
+                        ? 'bg-blue-100 text-blue-800'
+                        : 'bg-gray-100 text-gray-800'
+                    }`}>
+                      {viewingCourier.status === 'received' ? 'Confirmed Received' : 
+                       viewingCourier.status === 'dispatched' ? 'Dispatched' : 'Pending'}
+                    </span>
+                    {viewingCourier.status === 'received' && (
+                      <span className="text-xs text-green-600 font-medium">
+                        ✅ Confirmed via Email Link
+                      </span>
+                    )}
+                  </div>
+                </div>
+                
+                <div>
+                  <Label className="font-semibold">From Location</Label>
+                  <p className="text-sm">{viewingCourier.fromLocation || 'N/A'}</p>
+                </div>
+                
+                <div>
+                  <Label className="font-semibold">Received Date</Label>
+                  <p className="text-sm">
+                    {viewingCourier.receivedDate ? new Date(viewingCourier.receivedDate + 'T00:00:00').toLocaleDateString() : 'N/A'}
+                  </p>
+                </div>
+                
+                <div>
+                  <Label className="font-semibold">Courier Vendor</Label>
+                  <p className="text-sm">
+                    {viewingCourier.courierVendor === 'Others' && viewingCourier.customVendor 
+                      ? viewingCourier.customVendor 
+                      : viewingCourier.courierVendor || 'N/A'}
+                  </p>
+                </div>
+                
+                <div>
+                  <Label className="font-semibold">Receiver Name</Label>
+                  <p className="text-sm">{viewingCourier.receiverName || 'N/A'}</p>
+                </div>
+                
+                <div>
+                  <Label className="font-semibold">Email ID</Label>
+                  <p className="text-sm">{viewingCourier.emailId || 'N/A'}</p>
+                </div>
+                
+                <div>
+                  <Label className="font-semibold">Department</Label>
+                  <p className="text-sm">{viewingCourier.departmentName || viewingCourier.customDepartment || 'N/A'}</p>
+                </div>
+              </div>
+              
+              {viewingCourier.remarks && (
+                <div>
+                  <Label className="font-semibold">Remarks</Label>
+                  <p className="text-sm">{viewingCourier.remarks}</p>
+                </div>
+              )}
+              
+              {viewingCourier.status === 'received' && (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <h4 className="font-semibold text-green-800 mb-2">Email Confirmation Details</h4>
+                  <div className="text-sm text-green-700">
+                    <p>✅ Recipient confirmed receipt via email link</p>
+                    <p>📧 Confirmation sent to: {viewingCourier.emailId}</p>
+                    <p>📅 Last updated: {viewingCourier.updatedAt ? new Date(viewingCourier.updatedAt).toLocaleString() : 'N/A'}</p>
+                  </div>
+                </div>
+              )}
+              
+              {viewingCourier.status === 'dispatched' && viewingCourier.emailId && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <h4 className="font-semibold text-blue-800 mb-2">Dispatch Details</h4>
+                  <div className="text-sm text-blue-700">
+                    <p>📤 Courier has been dispatched</p>
+                    <p>📧 Notification sent to: {viewingCourier.emailId}</p>
+                    <p>⏳ Awaiting email confirmation of receipt</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </main>
