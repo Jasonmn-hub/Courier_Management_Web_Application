@@ -35,6 +35,7 @@ export function Autocomplete({
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    // Show suggestions after 2 characters are typed
     if (isOpen && value && value.length >= 2) {
       const filtered = options.filter(option =>
         option.label.toLowerCase().includes(value.toLowerCase()) ||
@@ -43,11 +44,12 @@ export function Autocomplete({
       setFilteredOptions(filtered);
       setHighlightedIndex(-1);
     } else if (isOpen && value && value.length < 2) {
-      // Show empty state when less than 2 characters
+      // Show empty state when less than 2 characters and dropdown is open
       setFilteredOptions([]);
       setHighlightedIndex(-1);
-    } else {
-      setFilteredOptions(options);
+    } else if (!isOpen) {
+      // When dropdown is closed, reset filtered options and highlighted index
+      setFilteredOptions([]);
       setHighlightedIndex(-1);
     }
   }, [value, options, isOpen]);
@@ -79,6 +81,8 @@ export function Autocomplete({
     if (!isOpen) {
       if (e.key === 'ArrowDown' || e.key === 'Enter') {
         setIsOpen(true);
+        // Trigger useEffect to filter options based on current input value
+        // This ensures that when the dropdown opens, it's already filtered
         return;
       }
     }
@@ -98,7 +102,7 @@ export function Autocomplete({
         e.preventDefault();
         if (highlightedIndex >= 0 && highlightedIndex < filteredOptions.length) {
           handleOptionSelect(filteredOptions[highlightedIndex]);
-        } else if (value && !options.find(opt => opt.value === value) && onAddNew) {
+        } else if (value && !options.find(opt => opt.value.toLowerCase() === value.toLowerCase()) && onAddNew) {
           onAddNew(value);
           setIsOpen(false);
         }
@@ -116,6 +120,27 @@ export function Autocomplete({
     }
   };
 
+  const handleFocus = () => {
+    // When the input is focused, and the value has at least 2 characters, open the dropdown and show filtered options
+    if (value && value.length >= 2) {
+      setIsOpen(true);
+      const filtered = options.filter(option =>
+        option.label.toLowerCase().includes(value.toLowerCase()) ||
+        option.value.toLowerCase().includes(value.toLowerCase())
+      );
+      setFilteredOptions(filtered);
+      setHighlightedIndex(-1);
+    } else if (value && value.length < 2) {
+      // If less than 2 characters, show the "Type at least 2 characters" message
+      setFilteredOptions([]);
+      setIsOpen(true);
+    } else {
+      // If input is empty, show all options or handle as needed
+      setFilteredOptions(options); // Or setFilteredOptions([]) if you don't want to show anything initially
+      setIsOpen(true);
+    }
+  };
+
   const showAddButton = value && 
     !options.find(opt => opt.value.toLowerCase() === value.toLowerCase()) && 
     onAddNew;
@@ -127,16 +152,20 @@ export function Autocomplete({
         type="text"
         value={value}
         onChange={handleInputChange}
-        onFocus={() => setIsOpen(true)}
+        onFocus={handleFocus} // Use the new handleFocus function
         onKeyDown={handleKeyDown}
         placeholder={placeholder}
         data-testid={testId}
         className="w-full"
       />
-      
+
       {isOpen && (
         <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto">
-          {filteredOptions.length > 0 ? (
+          {value && value.length < 2 ? (
+            <div className="px-3 py-2 text-gray-500 text-sm">
+              Type at least 2 characters to see suggestions...
+            </div>
+          ) : filteredOptions.length > 0 ? (
             filteredOptions.map((option, index) => (
               <div
                 key={option.value}
@@ -153,10 +182,10 @@ export function Autocomplete({
             ))
           ) : (
             <div className="px-3 py-2 text-gray-500 text-sm">
-              {value && value.length < 2 ? "Type at least 2 characters to see suggestions..." : "No matches found"}
+              No matches found
             </div>
           )}
-          
+
           {showAddButton && (
             <div className="border-t border-gray-200 p-2">
               <Button
