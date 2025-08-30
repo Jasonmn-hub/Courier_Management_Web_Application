@@ -4235,6 +4235,122 @@ Jigar Jodhani
     }
   });
 
+  // 24-hour reminder email system
+  async function sendReminderEmails() {
+    try {
+      const overdueCouriers = await storage.getOverdueCouriers();
+      console.log(`Checking for overdue couriers: ${overdueCouriers.length} found`);
+      
+      if (overdueCouriers.length === 0) {
+        return;
+      }
+
+      const smtpSettings = await storage.getSmtpSettings();
+      if (!smtpSettings || !smtpSettings.host || !smtpSettings.username || !smtpSettings.password) {
+        console.log('SMTP settings not configured, skipping reminder emails');
+        return;
+      }
+
+      const transportConfig: any = {
+        host: smtpSettings.host,
+        port: smtpSettings.port || 587,
+        auth: {
+          user: smtpSettings.username,
+          pass: smtpSettings.password,
+        }
+      };
+
+      if (smtpSettings.useSSL) {
+        transportConfig.secure = true;
+      } else if (smtpSettings.useTLS) {
+        transportConfig.secure = false;
+        transportConfig.requireTLS = true;
+      } else {
+        transportConfig.secure = false;
+      }
+
+      const transporter = nodemailer.createTransport(transportConfig);
+
+      for (const courier of overdueCouriers) {
+        if (!courier.email) continue;
+        
+        try {
+          const mailOptions = {
+            from: smtpSettings.fromEmail || smtpSettings.username,
+            to: courier.email,
+            cc: courier.contactDetails,
+            subject: 'Courier Status Reminder - 24 Hours Overdue',
+            html: `
+              <!DOCTYPE html>
+              <html lang="en">
+              <head>
+                <meta charset="UTF-8" />
+                <meta name="viewport" content="width=device-width" />
+                <title>Courier Status Reminder</title>
+              </head>
+              <body style="margin:0;padding:0;background:#f4f6f8;">
+                <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background:#f4f6f8;">
+                  <tr>
+                    <td align="center" style="padding:24px 12px;">
+                      <table role="presentation" cellpadding="0" cellspacing="0" width="600" style="max-width:600px;background:#ffffff;border-radius:12px;overflow:hidden;font-family:Segoe UI,Arial,Helvetica,sans-serif;">
+                        <tr>
+                          <td style="background:#dc2626;color:#fff;padding:18px 24px;font-size:18px;font-weight:600;">
+                            Courier Management System • Status Update Reminder
+                          </td>
+                        </tr>
+                        <tr>
+                          <td style="padding:20px 24px;color:#111827;font-size:14px;line-height:1.5;">
+                            Dear ${courier.receiverName || 'Team'},<br><br>
+                            This is a reminder that a courier sent to you <strong>24 hours ago</strong> has not been marked as delivered yet.
+                            <br><br>
+                            <strong>Courier Details:</strong><br>
+                            POD Number: ${courier.podNo}<br>
+                            Sent Date: ${courier.courierDate}<br>
+                            From: ${courier.department?.name || 'N/A'}<br>
+                            Details: ${courier.details}<br>
+                            <br>
+                            Please confirm receipt or contact us if there are any issues with the delivery.
+                            <br><br>
+                            Thank you for your cooperation.
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                </table>
+              </body>
+              </html>
+            `
+          };
+
+          await transporter.sendMail(mailOptions);
+          await storage.markReminderEmailSent(courier.id);
+          console.log(`Reminder email sent for courier ID: ${courier.id}`);
+          
+        } catch (emailError) {
+          console.error(`Failed to send reminder email for courier ID ${courier.id}:`, emailError);
+        }
+      }
+    } catch (error) {
+      console.error('Error in reminder email system:', error);
+    }
+  }
+
+  // API endpoint to manually trigger reminder email check
+  app.post('/api/couriers/send-reminders', authenticateToken, requireRole(['admin']), async (req: any, res) => {
+    try {
+      await sendReminderEmails();
+      res.json({ message: "Reminder emails checked and sent if needed" });
+    } catch (error) {
+      console.error("Error sending reminder emails:", error);
+      res.status(500).json({ message: "Failed to send reminder emails" });
+    }
+  });
+
+  // Set up periodic reminder email checks (every 2 hours)
+  setInterval(sendReminderEmails, 2 * 60 * 60 * 1000);
+  console.log('24-hour reminder email system initialized - checking every 2 hours');
+
   const httpServer = createServer(app);
   return httpServer;
 }

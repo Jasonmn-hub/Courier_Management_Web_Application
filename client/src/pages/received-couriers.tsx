@@ -430,14 +430,14 @@ export default function ReceivedCouriers() {
                       b.branchName === value || `${b.branchName} (${b.branchCode})` === value
                     );
                     if (selectedBranch && selectedBranch.email) {
-                      setFormData(prev => ({ ...prev, emailId: selectedBranch.email }));
+                      setFormData(prev => ({ ...prev, emailId: selectedBranch.email, sendEmailNotification: true }));
                     } else {
                       // Check if it's a user
                       const selectedUser = usersData?.users?.find((u: any) => 
                         u.name === value || u.email === value
                       );
                       if (selectedUser && selectedUser.email) {
-                        setFormData(prev => ({ ...prev, emailId: selectedUser.email }));
+                        setFormData(prev => ({ ...prev, emailId: selectedUser.email, sendEmailNotification: true }));
                       }
                     }
                   }}
@@ -579,7 +579,7 @@ export default function ReceivedCouriers() {
                   id="emailId"
                   type="email"
                   value={formData.emailId || ""}
-                  onChange={(e) => setFormData({ ...formData, emailId: e.target.value })}
+                  onChange={(e) => setFormData({ ...formData, emailId: e.target.value, sendEmailNotification: e.target.value ? true : false })}
                   placeholder="email@example.com"
                   data-testid="input-email-id"
                 />

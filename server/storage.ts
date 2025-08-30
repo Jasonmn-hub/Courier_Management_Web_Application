@@ -407,6 +407,8 @@ export class DatabaseStorage implements IStorage {
         receivedRemarks: couriers.receivedRemarks,
         podCopyPath: couriers.podCopyPath,
         confirmationToken: couriers.confirmationToken,
+        reminderEmailSent: couriers.reminderEmailSent,
+        reminderEmailSentAt: couriers.reminderEmailSentAt,
         createdAt: couriers.createdAt,
         updatedAt: couriers.updatedAt,
         department: departments,
@@ -500,6 +502,8 @@ export class DatabaseStorage implements IStorage {
         receivedRemarks: couriers.receivedRemarks,
         podCopyPath: couriers.podCopyPath,
         confirmationToken: couriers.confirmationToken,
+        reminderEmailSent: couriers.reminderEmailSent,
+        reminderEmailSentAt: couriers.reminderEmailSentAt,
         createdAt: couriers.createdAt,
         updatedAt: couriers.updatedAt,
         department: departments,
@@ -1446,7 +1450,8 @@ export class DatabaseStorage implements IStorage {
     return await query;
   }
 
-  async getUserPolicy(departmentId: number, tabName: string): Promise<UserPolicy | undefined> {
+  async getUserPolicy(departmentId: number | null | undefined, tabName: string): Promise<UserPolicy | undefined> {
+    if (!departmentId) return undefined;
     const [policy] = await db.select().from(userPolicies)
       .where(and(eq(userPolicies.departmentId, departmentId), eq(userPolicies.tabName, tabName)));
     return policy;
@@ -1455,7 +1460,7 @@ export class DatabaseStorage implements IStorage {
   async createOrUpdateUserPolicy(policy: InsertUserPolicy): Promise<UserPolicy> {
     const existing = await this.getUserPolicy(policy.departmentId, policy.tabName);
     
-    if (existing) {
+    if (existing && policy.departmentId !== null && policy.departmentId !== undefined) {
       const [updated] = await db.update(userPolicies)
         .set({ isEnabled: policy.isEnabled, updatedAt: new Date() })
         .where(and(eq(userPolicies.departmentId, policy.departmentId), eq(userPolicies.tabName, policy.tabName)))
@@ -1465,6 +1470,61 @@ export class DatabaseStorage implements IStorage {
       const [created] = await db.insert(userPolicies).values(policy).returning();
       return created;
     }
+  }
+
+  // Reminder Email operations
+  async getOverdueCouriers(): Promise<(Courier & { department?: Department; creator?: User })[]> {
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    
+    const results = await db
+      .select({
+        id: couriers.id,
+        departmentId: couriers.departmentId,
+        createdBy: couriers.createdBy,
+        toBranch: couriers.toBranch,
+        email: couriers.email,
+        courierDate: couriers.courierDate,
+        vendor: couriers.vendor,
+        customVendor: couriers.customVendor,
+        podNo: couriers.podNo,
+        details: couriers.details,
+        contactDetails: couriers.contactDetails,
+        receiverName: couriers.receiverName,
+        remarks: couriers.remarks,
+        status: couriers.status,
+        receivedDate: couriers.receivedDate,
+        receivedRemarks: couriers.receivedRemarks,
+        podCopyPath: couriers.podCopyPath,
+        confirmationToken: couriers.confirmationToken,
+        reminderEmailSent: couriers.reminderEmailSent,
+        reminderEmailSentAt: couriers.reminderEmailSentAt,
+        createdAt: couriers.createdAt,
+        updatedAt: couriers.updatedAt,
+        department: departments,
+        creator: users,
+      })
+      .from(couriers)
+      .leftJoin(departments, eq(couriers.departmentId, departments.id))
+      .leftJoin(users, eq(couriers.createdBy, users.id))
+      .where(
+        and(
+          eq(couriers.status, 'on_the_way'),
+          eq(couriers.reminderEmailSent, false),
+          sql`${couriers.createdAt} <= ${twentyFourHoursAgo.toISOString()}`
+        )
+      );
+    
+    return results.map(r => ({
+      ...r,
+      department: r.department || undefined,
+      creator: r.creator || undefined
+    }));
+  }
+
+  async markReminderEmailSent(courierId: number): Promise<void> {
+    await db.update(couriers)
+      .set({ reminderEmailSent: true, reminderEmailSentAt: new Date(), updatedAt: new Date() })
+      .where(eq(couriers.id, courierId));
   }
 }
 

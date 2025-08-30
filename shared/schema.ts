@@ -97,6 +97,8 @@ export const couriers = pgTable("couriers", {
   receivedRemarks: text("received_remarks"),
   podCopyPath: varchar("pod_copy_path"),
   confirmationToken: varchar("confirmation_token", { length: 255 }), // For email confirmation
+  reminderEmailSent: boolean("reminder_email_sent").default(false), // Track if 24-hour reminder sent
+  reminderEmailSentAt: timestamp("reminder_email_sent_at"), // When reminder was sent
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
