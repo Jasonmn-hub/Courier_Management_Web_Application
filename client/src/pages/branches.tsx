@@ -67,7 +67,7 @@ export default function Branches() {
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState<'active' | 'closed'>('active');
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize] = useState(10); // 10 branches per page for better scrolling
+  const [pageSize] = useState(20); // 20 branches per page for better performance
   const [showBranchForm, setShowBranchForm] = useState(false);
   const [showBulkUpload, setShowBulkUpload] = useState(false);
   const [showExportDialog, setShowExportDialog] = useState(false);
@@ -821,9 +821,9 @@ function BranchesTable({
   return (
     <Card>
       <CardContent className="p-0">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
           <Table>
-            <TableHeader>
+            <TableHeader className="sticky top-0 bg-white z-10">
               <TableRow>
                 <TableHead>Sr. No</TableHead>
                 <TableHead>Branch Name</TableHead>
@@ -925,7 +925,8 @@ function PaginationControls({
 }) {
   const totalPages = Math.ceil(totalItems / pageSize);
   
-  if (totalPages <= 1) return null;
+  // Always show pagination controls if there are items, even if only 1 page
+  if (totalItems === 0) return null;
   
   return (
     <div className="flex items-center justify-between px-4 py-3 bg-white border-t border-gray-200">
@@ -944,13 +945,13 @@ function PaginationControls({
           Previous
         </Button>
         <span className="text-sm text-gray-700">
-          Page {currentPage} of {totalPages}
+          Page {currentPage} of {Math.max(1, totalPages)}
         </span>
         <Button
           variant="outline"
           size="sm"
           onClick={() => onPageChange(currentPage + 1)}
-          disabled={currentPage >= totalPages}
+          disabled={currentPage >= totalPages || totalPages <= 1}
           data-testid="button-next-page"
         >
           Next
