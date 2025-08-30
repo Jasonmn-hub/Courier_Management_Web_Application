@@ -2293,7 +2293,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Vendor Management endpoints
-  app.get('/api/vendors', authenticateToken, requireRole(['admin']), async (req: any, res) => {
+  app.get('/api/vendors', authenticateToken, async (req: any, res) => {
     try {
       const { search, limit = 20, offset = 0 } = req.query;
       

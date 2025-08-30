@@ -111,9 +111,30 @@ export default function CourierForm({ courier, onClose, onSuccess }: CourierForm
     enabled: !!user, // Enable when user is authenticated
   });
 
+  // Get department custom fields
+  const { data: departmentFields = [] } = useQuery({
+    queryKey: ['/api/departments/fields', user?.departmentId],
+    queryFn: async () => {
+      if (!user?.departmentId) return [];
+      const response = await apiRequest('GET', `/api/departments/${user.departmentId}/fields`);
+      return response.json();
+    },
+    enabled: !!user?.departmentId,
+  });
+
   const branches = branchesData?.branches || [];
   const users = usersData?.users || [];
   const vendors = vendorsData?.vendors || [];
+
+  // State for custom field values
+  const [customFieldValues, setCustomFieldValues] = useState<Record<string, string>>({});
+
+  const handleCustomFieldChange = (fieldName: string, value: string) => {
+    setCustomFieldValues(prev => ({
+      ...prev,
+      [fieldName]: value
+    }));
+  };
 
   const mutation = useMutation({
     mutationFn: async (data: z.infer<typeof courierSchema>) => {
@@ -129,6 +150,11 @@ export default function CourierForm({ courier, onClose, onSuccess }: CourierForm
       // Add user's department ID
       if (user?.departmentId) {
         formData.append('departmentId', user.departmentId.toString());
+      }
+
+      // Add custom field values
+      if (Object.keys(customFieldValues).length > 0) {
+        formData.append('customFields', JSON.stringify(customFieldValues));
       }
 
       // Append file if selected
@@ -559,6 +585,46 @@ export default function CourierForm({ courier, onClose, onSuccess }: CourierForm
                 )}
               />
             </div>
+
+            {/* Custom Department Fields */}
+            {departmentFields.length > 0 && (
+              <div className="space-y-4">
+                <div className="border-t border-slate-200 pt-4">
+                  <h3 className="text-lg font-medium">Department Specific Fields</h3>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {departmentFields.map((field: any) => (
+                    <div key={field.id}>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        {field.name}
+                      </label>
+                      {field.type === 'dropdown' ? (
+                        <Select 
+                          onValueChange={(value) => handleCustomFieldChange(field.name, value)}
+                          value={customFieldValues[field.name] || ''}
+                        >
+                          <SelectTrigger data-testid={`select-${field.name.toLowerCase().replace(/\s+/g, '-')}`}>
+                            <SelectValue placeholder={`Select ${field.name.toLowerCase()}`} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="">Select {field.name}</SelectItem>
+                            {/* TODO: Add dropdown options when available */}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <Input
+                          type={field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text'}
+                          placeholder={`Enter ${field.name.toLowerCase()}`}
+                          value={customFieldValues[field.name] || ''}
+                          onChange={(e) => handleCustomFieldChange(field.name, e.target.value)}
+                          data-testid={`input-${field.name.toLowerCase().replace(/\s+/g, '-')}`}
+                        />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Form Actions */}
             <div className="flex justify-end space-x-3 pt-6 border-t border-slate-200">
