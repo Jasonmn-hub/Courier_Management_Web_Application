@@ -248,7 +248,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUsersWithDepartments(searchTerm?: string): Promise<Array<User & { departments: Array<{ id: number; name: string }> }>> {
-    const usersWithDeps = await db.select({
+    // First get all users with their primary department
+    const allUsers = await db.select({
       id: users.id,
       email: users.email,
       firstName: users.firstName,
@@ -261,39 +262,63 @@ export class DatabaseStorage implements IStorage {
       departmentId: users.departmentId,
       createdAt: users.createdAt,
       updatedAt: users.updatedAt,
-      assignedDepartmentId: userDepartments.departmentId,
-      assignedDepartmentName: departments.name,
+      primaryDepartmentName: departments.name,
     })
     .from(users)
-    .leftJoin(userDepartments, eq(users.id, userDepartments.userId))
+    .leftJoin(departments, eq(users.departmentId, departments.id));
+
+    // Then get all additional department assignments
+    const userDeptAssignments = await db.select({
+      userId: userDepartments.userId,
+      departmentId: userDepartments.departmentId,
+      departmentName: departments.name,
+    })
+    .from(userDepartments)
     .leftJoin(departments, eq(userDepartments.departmentId, departments.id));
 
-    // Group by user
+    // Build user map with all departments
     const userMap = new Map();
-    usersWithDeps.forEach(row => {
-      if (!userMap.has(row.id)) {
-        userMap.set(row.id, {
-          id: row.id,
-          email: row.email,
-          firstName: row.firstName,
-          lastName: row.lastName,
-          profileImageUrl: row.profileImageUrl,
-          name: row.name,
-          employeeCode: row.employeeCode,
-          password: row.password,
-          role: row.role,
-          departmentId: row.departmentId,
-          createdAt: row.createdAt,
-          updatedAt: row.updatedAt,
-          departments: []
+    
+    allUsers.forEach(user => {
+      const departmentsList = [];
+      
+      // Add primary department if it exists
+      if (user.departmentId && user.primaryDepartmentName) {
+        departmentsList.push({
+          id: user.departmentId,
+          name: user.primaryDepartmentName
         });
       }
       
-      if (row.assignedDepartmentId) {
-        userMap.get(row.id).departments.push({
-          id: row.assignedDepartmentId,
-          name: row.assignedDepartmentName
-        });
+      userMap.set(user.id, {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        profileImageUrl: user.profileImageUrl,
+        name: user.name,
+        employeeCode: user.employeeCode,
+        password: user.password,
+        role: user.role,
+        departmentId: user.departmentId,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+        departments: departmentsList
+      });
+    });
+
+    // Add additional department assignments
+    userDeptAssignments.forEach(assignment => {
+      const user = userMap.get(assignment.userId);
+      if (user && assignment.departmentId && assignment.departmentName) {
+        // Check if this department is not already added (avoid duplicates with primary dept)
+        const existingDept = user.departments.find((d: any) => d.id === assignment.departmentId);
+        if (!existingDept) {
+          user.departments.push({
+            id: assignment.departmentId,
+            name: assignment.departmentName
+          });
+        }
       }
     });
 
