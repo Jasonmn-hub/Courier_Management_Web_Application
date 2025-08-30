@@ -522,7 +522,7 @@ export default function CourierForm({ courier, onClose, onSuccess }: CourierForm
                             </SelectItem>
                           ))
                         ) : (
-                          <SelectItem value="" disabled>
+                          <SelectItem value="no-options" disabled>
                             No options available - Contact admin to add options
                           </SelectItem>
                         )}
