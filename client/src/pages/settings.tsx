@@ -277,7 +277,9 @@ export default function Settings() {
     useTLS: false,
     useSSL: false,
     username: "",
-    password: ""
+    password: "",
+    fromEmail: "",
+    applicationUrl: ""
   });
   
   const [testEmail, setTestEmail] = useState("");
@@ -296,7 +298,9 @@ export default function Settings() {
         useTLS: (existingSmtpSettings as any).useTLS || false,
         useSSL: (existingSmtpSettings as any).useSSL || false,
         username: (existingSmtpSettings as any).username || "",
-        password: (existingSmtpSettings as any).password || ""
+        password: (existingSmtpSettings as any).password || "",
+        fromEmail: (existingSmtpSettings as any).fromEmail || "",
+        applicationUrl: (existingSmtpSettings as any).applicationUrl || ""
       });
     }
   }, [existingSmtpSettings]);
@@ -423,6 +427,29 @@ export default function Settings() {
                         value={smtpData.password}
                         onChange={(e) => setSmtpData({ ...smtpData, password: e.target.value })}
                       />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="smtp-from">From Email (Optional)</Label>
+                      <Input
+                        id="smtp-from"
+                        type="email"
+                        placeholder="noreply@yourcompany.com"
+                        value={smtpData.fromEmail}
+                        onChange={(e) => setSmtpData({ ...smtpData, fromEmail: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="app-url">Application URL</Label>
+                      <Input
+                        id="app-url"
+                        type="url"
+                        placeholder="https://your-app-domain.com"
+                        value={smtpData.applicationUrl}
+                        onChange={(e) => setSmtpData({ ...smtpData, applicationUrl: e.target.value })}
+                      />
+                      <p className="text-sm text-muted-foreground">
+                        This URL will be used in login links sent via email
+                      </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-4">
@@ -580,7 +607,7 @@ export default function Settings() {
                                       data-testid={`button-manage-dropdown-${field.id}`}
                                       title="Manage dropdown options"
                                     >
-                                      <Settings className="h-4 w-4" />
+                                      <SettingsIcon className="h-4 w-4" />
                                     </Button>
                                   )}
                                   <Button 
@@ -672,7 +699,7 @@ export default function Settings() {
                           onClick={() => {
                             if (newOptionValue.trim() && newOptionLabel.trim()) {
                               // Use the first department if available, or default to 1
-                              const departmentId = departments[0]?.id || 1;
+                              const departmentId = (departments as any)[0]?.id || 1;
                               createOptionMutation.mutate({
                                 fieldId: selectedField.id,
                                 departmentId,

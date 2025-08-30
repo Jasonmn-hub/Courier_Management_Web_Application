@@ -598,6 +598,138 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       await logAudit(req.currentUser.id, 'CREATE', 'user', newUser.id);
 
+      // Send email notification to new user
+      try {
+        const smtpSettings = await storage.getSmtpSettings();
+        if (smtpSettings && smtpSettings.host && smtpSettings.username && smtpSettings.password) {
+          const transportConfig: any = {
+            host: smtpSettings.host,
+            port: smtpSettings.port || 587,
+            auth: {
+              user: smtpSettings.username,
+              pass: smtpSettings.password,
+            }
+          };
+
+          if (smtpSettings.useSSL) {
+            transportConfig.secure = true;
+          } else if (smtpSettings.useTLS) {
+            transportConfig.secure = false;
+            transportConfig.requireTLS = true;
+          } else {
+            transportConfig.secure = false;
+          }
+
+          const transporter = nodemailer.createTransport(transportConfig);
+
+          // Get login URL from SMTP settings, env, or default to current domain
+          const loginUrl = smtpSettings.applicationUrl || 
+            (process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : `https://${req.get('host')}`);
+
+          const mailOptions = {
+            from: smtpSettings.fromEmail || smtpSettings.username,
+            to: email,
+            subject: 'Welcome to Courier Management System - Account Created',
+            html: `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width" />
+  <title>Account Created</title>
+</head>
+<body style="margin:0;padding:0;background:#f4f6f8;">
+  <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background:#f4f6f8;">
+    <tr>
+      <td align="center" style="padding:24px 12px;">
+        <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width:600px;background:#fff;border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,0.1);">
+          
+          <!-- Header -->
+          <tr>
+            <td style="background:#0b5fff;color:#fff;padding:18px 24px;font-size:18px;font-weight:600;border-radius:12px 12px 0 0;">
+              <span style="font-size:24px;">🔐</span> Account Created Successfully
+            </td>
+          </tr>
+          
+          <!-- Welcome Message -->
+          <tr>
+            <td style="padding:24px 24px 20px;color:#111827;font-size:14px;line-height:1.6;">
+              <h2 style="margin:0 0 16px;color:#111827;font-size:20px;">Welcome, ${name}!</h2>
+              <p style="margin:0 0 16px;">Your account has been successfully created in the Courier Management System. Below are your login credentials:</p>
+            </td>
+          </tr>
+          
+          <!-- Account Details -->
+          <tr>
+            <td style="padding:0 24px 20px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e5e7eb;border-radius:8px;background:#f9fafb;">
+                <tr>
+                  <td style="padding:16px;">
+                    <div style="margin-bottom:12px;">
+                      <span style="font-weight:600;color:#374151;">Email:</span>
+                      <span style="color:#0b5fff;margin-left:8px;">${email}</span>
+                    </div>
+                    <div style="margin-bottom:12px;">
+                      <span style="font-weight:600;color:#374151;">Employee Code:</span>
+                      <span style="margin-left:8px;">${employeeCode || 'Not assigned'}</span>
+                    </div>
+                    <div style="margin-bottom:12px;">
+                      <span style="font-weight:600;color:#374151;">Role:</span>
+                      <span style="margin-left:8px;text-transform:capitalize;">${role}</span>
+                    </div>
+                    <div>
+                      <span style="font-weight:600;color:#374151;">Password:</span>
+                      <span style="margin-left:8px;font-family:monospace;background:#fff;padding:4px 8px;border-radius:4px;border:1px solid #d1d5db;">${password}</span>
+                    </div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Login Button -->
+          <tr>
+            <td style="padding:0 24px 24px;text-align:center;">
+              <a href="${loginUrl}" style="display:inline-block;background:#0b5fff;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:600;font-size:14px;">
+                🔗 Access Your Account
+              </a>
+            </td>
+          </tr>
+
+          <!-- Security Note -->
+          <tr>
+            <td style="padding:0 24px 20px;color:#6b7280;font-size:13px;line-height:1.5;">
+              <div style="background:#f3f4f6;padding:16px;border-radius:8px;border-left:4px solid #f59e0b;">
+                <p style="margin:0 0 8px;font-weight:600;color:#92400e;">🔒 Security Reminder:</p>
+                <p style="margin:0;">Please change your password after your first login. Keep your login credentials secure and do not share them with anyone.</p>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="padding:20px 24px;text-align:center;border-top:1px solid #e5e7eb;color:#6b7280;font-size:12px;">
+              <p style="margin:0;">This is an automated message from the Courier Management System.</p>
+              <p style="margin:4px 0 0;">If you didn't expect this email, please contact your administrator.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+            `
+          };
+
+          await transporter.sendMail(mailOptions);
+          console.log(`Welcome email sent to ${email}`);
+        }
+      } catch (emailError) {
+        console.error('Error sending welcome email:', emailError);
+        // Don't fail user creation if email fails
+      }
+
       res.status(201).json(newUser);
     } catch (error) {
       console.error('User creation error:', error);
@@ -3785,7 +3917,7 @@ Jigar Jodhani
 
   app.post('/api/smtp-settings', authenticateToken, requireRole(['admin']), setCurrentUser(), async (req: any, res) => {
     try {
-      const { host, port, username, password, useTLS, useSSL } = req.body;
+      const { host, port, username, password, useTLS, useSSL, fromEmail, applicationUrl } = req.body;
       
       const smtpData = {
         host: host?.trim(),
@@ -3793,7 +3925,9 @@ Jigar Jodhani
         username: username?.trim(),
         password: password?.trim(),
         useTLS: Boolean(useTLS),
-        useSSL: Boolean(useSSL)
+        useSSL: Boolean(useSSL),
+        fromEmail: fromEmail?.trim(),
+        applicationUrl: applicationUrl?.trim()
       };
 
       const settings = await storage.updateSmtpSettings(smtpData);

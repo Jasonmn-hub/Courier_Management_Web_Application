@@ -15,8 +15,10 @@ import { Plus, Search, Edit, Trash2 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 
 const vendorSchema = z.object({
-  name: z.string().min(1, "Vendor name is required"),
+  vendorName: z.string().min(1, "Vendor name is required"),
   mobileNumber: z.string().min(10, "Valid mobile number is required"),
+  email: z.string().email("Valid email is required").optional(),
+  address: z.string().optional(),
   isActive: z.boolean().optional().default(true),
 });
 
@@ -24,8 +26,10 @@ type VendorFormData = z.infer<typeof vendorSchema>;
 
 interface Vendor {
   id: number;
-  name: string;
+  vendorName: string;
   mobileNumber: string;
+  email?: string;
+  address?: string;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -41,8 +45,10 @@ export default function Vendors() {
   const form = useForm<VendorFormData>({
     resolver: zodResolver(vendorSchema),
     defaultValues: {
-      name: "",
+      vendorName: "",
       mobileNumber: "",
+      email: "",
+      address: "",
       isActive: true,
     },
   });
@@ -157,8 +163,10 @@ export default function Vendors() {
   const handleEdit = (vendor: Vendor) => {
     setEditingVendor(vendor);
     form.reset({
-      name: vendor.name,
+      vendorName: vendor.vendorName,
       mobileNumber: vendor.mobileNumber,
+      email: vendor.email || "",
+      address: vendor.address || "",
       isActive: vendor.isActive,
     });
   };
@@ -202,7 +210,7 @@ export default function Vendors() {
               <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
                 <FormField
                   control={form.control}
-                  name="name"
+                  name="vendorName"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Vendor Name</FormLabel>
@@ -229,6 +237,43 @@ export default function Vendors() {
                           placeholder="Enter mobile number"
                           {...field}
                           data-testid="input-vendor-mobile"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email (Optional)</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="email"
+                          placeholder="Enter email address"
+                          {...field}
+                          data-testid="input-vendor-email"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="address"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Address (Optional)</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Enter vendor address"
+                          {...field}
+                          data-testid="input-vendor-address"
                         />
                       </FormControl>
                       <FormMessage />
@@ -308,7 +353,7 @@ export default function Vendors() {
             <Card key={vendor.id} data-testid={`card-vendor-${vendor.id}`}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-lg font-medium">
-                  {vendor.name}
+                  {vendor.vendorName}
                 </CardTitle>
                 <Badge variant={vendor.isActive ? "default" : "secondary"}>
                   {vendor.isActive ? "Active" : "Inactive"}
@@ -319,6 +364,16 @@ export default function Vendors() {
                   <div className="text-sm text-muted-foreground">
                     <strong>Mobile:</strong> {vendor.mobileNumber}
                   </div>
+                  {vendor.email && (
+                    <div className="text-sm text-muted-foreground">
+                      <strong>Email:</strong> {vendor.email}
+                    </div>
+                  )}
+                  {vendor.address && (
+                    <div className="text-sm text-muted-foreground">
+                      <strong>Address:</strong> {vendor.address}
+                    </div>
+                  )}
                   <div className="text-sm text-muted-foreground">
                     <strong>Created:</strong> {new Date(vendor.createdAt).toLocaleDateString()}
                   </div>
