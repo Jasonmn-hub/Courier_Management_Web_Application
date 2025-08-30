@@ -173,8 +173,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         receivedDate: new Date().toISOString().split('T')[0]
       });
 
-      // Log audit for email confirmation
-      await logAudit('email_confirmation', 'UPDATE', 'courier', courier.id, courier.email);
+      // Log audit for email confirmation (null userId for email confirmations)
+      await logAudit(null, 'UPDATE', 'courier', courier.id, courier.email);
 
       // Success response
       res.send(`
@@ -254,8 +254,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         confirmationToken: null
       });
 
-      // Log audit for email confirmation
-      await logAudit('email_confirmation', 'UPDATE', 'received_courier', courier.id, (courier as any).emailId);
+      // Log audit for email confirmation (null userId for email confirmations)
+      await logAudit(null, 'UPDATE', 'received_courier', courier.id, (courier as any).emailId);
 
       // Success response
       res.send(`
@@ -757,11 +757,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Helper function to log audit
-  const logAudit = async (userId: string, action: string, entityType: string, entityId?: string | number, emailId?: string) => {
+  const logAudit = async (userId: string | null, action: string, entityType: string, entityId?: string | number, emailId?: string) => {
     try {
-      // For temp users, create audit logs with null userId to avoid foreign key constraint
+      // For temp users or email confirmations, create audit logs with null userId to avoid foreign key constraint
       await storage.createAuditLog({
-        userId: userId.startsWith('temp_') ? null : userId,
+        userId: (userId && userId.startsWith('temp_')) ? null : userId,
         action,
         entityType,
         entityId: typeof entityId === 'number' ? entityId.toString() : entityId,

@@ -270,7 +270,8 @@ export default function ReceivedCouriers() {
                     No received couriers found. Add your first received courier to get started.
                   </div>
                 ) : (
-                  <Table>
+                  <div className="max-h-96 overflow-y-auto">
+                    <Table>
                     <TableHeader>
                       <TableRow>
                         <TableHead>POD Number</TableHead>
@@ -345,6 +346,7 @@ export default function ReceivedCouriers() {
                       ))}
                     </TableBody>
                   </Table>
+                  </div>
                 )}
               </CardContent>
             </Card>

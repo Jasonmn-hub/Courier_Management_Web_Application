@@ -91,19 +91,19 @@ export default function Couriers() {
                 <TabsTrigger value="deleted" data-testid="tab-deleted" className="flex-1">Deleted</TabsTrigger>
               </TabsList>
               
-              <TabsContent value="all" className="mt-6">
+              <TabsContent value="all" className="mt-6 max-h-96 overflow-y-auto">
                 <CourierTable onEdit={handleEdit} />
               </TabsContent>
               
-              <TabsContent value="on_the_way" className="mt-6">
+              <TabsContent value="on_the_way" className="mt-6 max-h-96 overflow-y-auto">
                 <CourierTable status="on_the_way" onEdit={handleEdit} />
               </TabsContent>
               
-              <TabsContent value="received" className="mt-6">
+              <TabsContent value="received" className="mt-6 max-h-96 overflow-y-auto">
                 <CourierTable status="received" onEdit={handleEdit} />
               </TabsContent>
               
-              <TabsContent value="deleted" className="mt-6">
+              <TabsContent value="deleted" className="mt-6 max-h-96 overflow-y-auto">
                 <CourierTable status="deleted" onEdit={handleEdit} showRestore />
               </TabsContent>
               

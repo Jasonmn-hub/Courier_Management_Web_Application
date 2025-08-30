@@ -70,10 +70,10 @@ export default function Users() {
 
   const downloadTemplate = () => {
     // Create a CSV template with headers
-    const headers = ['name', 'email', 'role', 'departmentName', 'password'];
+    const headers = ['name', 'email', 'employeeCode', 'mobileNumber', 'role', 'departmentName', 'password'];
     const sampleData = [
-      ['John Doe', 'john@example.com', 'user', 'IT Department', 'password123'],
-      ['Jane Smith', 'jane@example.com', 'manager', 'HR Department', 'password456']
+      ['John Doe', 'john@example.com', 'EMP001', '9123456789', 'user', 'IT Department', 'password123'],
+      ['Jane Smith', 'jane@example.com', 'EMP002', '9876543210', 'manager', 'HR Department', 'password456']
     ];
     
     const csvContent = [

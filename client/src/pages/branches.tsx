@@ -36,7 +36,9 @@ import {
   Archive,
   CheckCircle,
   XCircle,
-  ExternalLink
+  ExternalLink,
+  ChevronLeft,
+  ChevronRight
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
@@ -64,6 +66,8 @@ export default function Branches() {
 
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState<'active' | 'closed'>('active');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize] = useState(20); // 20 branches per page
   const [showBranchForm, setShowBranchForm] = useState(false);
   const [showBulkUpload, setShowBulkUpload] = useState(false);
   const [showExportDialog, setShowExportDialog] = useState(false);
@@ -110,13 +114,15 @@ export default function Branches() {
     enabled: isAuthenticated,
   });
 
-  // Fetch branches
+  // Fetch branches with pagination
   const { data: branchesData, isLoading: branchesLoading, refetch: refetchBranches } = useQuery({
-    queryKey: ['/api/branches', { status: activeTab, search: searchTerm }],
+    queryKey: ['/api/branches', { status: activeTab, search: searchTerm, page: currentPage, pageSize }],
     queryFn: async () => {
       const params = new URLSearchParams();
       params.set('status', activeTab);
       if (searchTerm) params.set('search', searchTerm);
+      params.set('limit', pageSize.toString());
+      params.set('offset', ((currentPage - 1) * pageSize).toString());
       
       const response = await apiRequest('GET', `/api/branches?${params.toString()}`);
       return response.json();
@@ -269,6 +275,11 @@ export default function Branches() {
     setEditingBranch(null);
   };
 
+  // Reset to first page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeTab, searchTerm]);
+
   const handleEdit = (branch: Branch) => {
     setEditingBranch(branch);
     setFormData({
@@ -418,7 +429,7 @@ export default function Branches() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="active" className="space-y-4">
+        <TabsContent value="active" className="space-y-4 max-h-96 overflow-y-auto">
           <BranchesTable 
             branches={branches} 
             onEdit={handleEdit} 
@@ -427,9 +438,16 @@ export default function Branches() {
             isLoading={branchesLoading}
             showStatusActions={true}
           />
+          {/* Pagination Controls */}
+          <PaginationControls 
+            currentPage={currentPage}
+            totalItems={totalBranches}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+          />
         </TabsContent>
 
-        <TabsContent value="closed" className="space-y-4">
+        <TabsContent value="closed" className="space-y-4 max-h-96 overflow-y-auto">
           <BranchesTable 
             branches={branches} 
             onEdit={handleEdit} 
@@ -437,6 +455,13 @@ export default function Branches() {
             onStatusChange={handleStatusChange}
             isLoading={branchesLoading}
             showStatusActions={true}
+          />
+          {/* Pagination Controls */}
+          <PaginationControls 
+            currentPage={currentPage}
+            totalItems={totalBranches}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
           />
         </TabsContent>
       </Tabs>
@@ -875,5 +900,55 @@ function BranchesTable({
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+// Pagination Controls Component
+function PaginationControls({ 
+  currentPage, 
+  totalItems, 
+  pageSize, 
+  onPageChange 
+}: {
+  currentPage: number;
+  totalItems: number;
+  pageSize: number;
+  onPageChange: (page: number) => void;
+}) {
+  const totalPages = Math.ceil(totalItems / pageSize);
+  
+  if (totalPages <= 1) return null;
+  
+  return (
+    <div className="flex items-center justify-between px-4 py-3 bg-white border-t border-gray-200">
+      <div className="flex items-center text-sm text-gray-700">
+        Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, totalItems)} of {totalItems} branches
+      </div>
+      <div className="flex items-center space-x-2">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => onPageChange(currentPage - 1)}
+          disabled={currentPage <= 1}
+          data-testid="button-previous-page"
+        >
+          <ChevronLeft className="h-4 w-4 mr-1" />
+          Previous
+        </Button>
+        <span className="text-sm text-gray-700">
+          Page {currentPage} of {totalPages}
+        </span>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => onPageChange(currentPage + 1)}
+          disabled={currentPage >= totalPages}
+          data-testid="button-next-page"
+        >
+          Next
+          <ChevronRight className="h-4 w-4 ml-1" />
+        </Button>
+      </div>
+    </div>
   );
 }
