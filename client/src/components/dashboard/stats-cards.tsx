@@ -16,6 +16,7 @@ export default function StatsCards() {
     thisMonthReceived: number;
   }>({
     queryKey: ['/api/stats'],
+    refetchInterval: 10000, // Refresh every 10 seconds
   });
 
   if (isLoading) {

@@ -45,6 +45,7 @@ export default function CourierTable({
 
   const { data: couriersResult, isLoading } = useQuery({
     queryKey: ['/api/couriers', statusFilter, search, pageSize, currentPage, departmentFilter],
+    refetchInterval: 8000, // Refresh every 8 seconds for real-time updates
     queryFn: async () => {
       const params = new URLSearchParams();
       if (statusFilter !== "all") params.append('status', statusFilter);

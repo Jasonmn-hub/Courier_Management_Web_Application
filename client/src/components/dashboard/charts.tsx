@@ -7,6 +7,7 @@ const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4'
 export default function Charts() {
   const { data: stats, isLoading } = useQuery({
     queryKey: ['/api/stats'],
+    refetchInterval: 10000, // Refresh every 10 seconds
   });
   
   const { data: monthlyStats = [], isLoading: isMonthlyLoading } = useQuery<Array<{
@@ -15,7 +16,10 @@ export default function Charts() {
     completed: number;
     sent: number;
     received: number;
-  }>>({ queryKey: ['/api/stats/monthly'] });
+  }>>({ 
+    queryKey: ['/api/stats/monthly'],
+    refetchInterval: 15000, // Refresh every 15 seconds
+  });
 
   if (isLoading || isMonthlyLoading) {
     return (
