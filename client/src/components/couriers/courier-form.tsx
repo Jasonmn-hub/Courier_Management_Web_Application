@@ -88,16 +88,17 @@ export default function CourierForm({ courier, onClose, onSuccess }: CourierForm
       const response = await apiRequest('GET', `/api/branches?${params.toString()}`);
       return response.json();
     },
+    enabled: !!user, // Enable when user is authenticated
   });
   
   // Get users for autocomplete
   const { data: usersData } = useQuery({
-    queryKey: ['/api/users', { departmentId: user?.departmentId }],
+    queryKey: ['/api/users'],
     queryFn: async () => {
       const response = await apiRequest('GET', '/api/users');
       return response.json();
     },
-    enabled: !!user?.departmentId,
+    enabled: !!user, // Enable when user is authenticated
   });
   
   const branches = branchesData?.branches || [];
