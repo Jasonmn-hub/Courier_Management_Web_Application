@@ -36,6 +36,7 @@ const AVAILABLE_TABS = [
   { name: 'authority-letter', label: 'Authority Letters', description: 'Generate and manage authority letters' },
   { name: 'couriers', label: 'Courier Management', description: 'Send and track courier items' },
   { name: 'received-couriers', label: 'Received Couriers', description: 'View received courier items' },
+  { name: 'view_all_couriers', label: 'View All Couriers', description: 'View couriers from all departments for tracking' },
 ];
 
 export default function UserPolicies() {
@@ -254,7 +255,8 @@ export default function UserPolicies() {
           <div className="text-sm text-slate-600 space-y-2">
             <p>• <strong>Enabled tabs</strong> will appear in the navigation for users and managers in that department</p>
             <p>• <strong>Disabled tabs</strong> will be hidden from the navigation for that department</p>
-            <p>• <strong>Admin users</strong> always see all tabs regardless of these policies</p>
+            <p>• <strong>View All Couriers</strong> allows departments to see couriers from all departments for tracking purposes</p>
+            <p>• <strong>Admin users</strong> always see all tabs and can view all departments regardless of these policies</p>
             <p>• Changes take effect immediately for all logged-in users</p>
           </div>
         </CardContent>

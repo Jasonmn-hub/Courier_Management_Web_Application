@@ -278,6 +278,7 @@ export default function CourierTable({
                     <TableHead>To</TableHead>
                     <TableHead>Vendor</TableHead>
                     <TableHead>Date</TableHead>
+                    <TableHead>Department</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
@@ -285,7 +286,7 @@ export default function CourierTable({
                 <TableBody>
                   {((couriersResult as any)?.couriers?.length === 0) ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center py-8 text-slate-500">
+                      <TableCell colSpan={7} className="text-center py-8 text-slate-500">
                         No couriers found. {!status && "Create your first courier to get started."}
                       </TableCell>
                     </TableRow>
@@ -304,6 +305,13 @@ export default function CourierTable({
                         <TableCell>{courier.vendor}</TableCell>
                         <TableCell>
                           {courier.courierDate ? new Date(courier.courierDate).toLocaleDateString() : '-'}
+                        </TableCell>
+                        <TableCell>
+                          <div className="text-sm">
+                            <Badge variant="secondary" className="bg-blue-50 text-blue-700 border-blue-200">
+                              {courier.department?.name || 'N/A'}
+                            </Badge>
+                          </div>
                         </TableCell>
                         <TableCell>
                           {getStatusBadge(courier.status)}

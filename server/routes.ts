@@ -899,13 +899,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (limit) filters.limit = parseInt(limit);
       if (offset) filters.offset = parseInt(offset);
       
-      // Apply department filtering based on user role
+      // Apply department filtering based on user role and policies
       if (user.role === 'admin') {
         // Admin can see all departments or filter by specific department
         if (departmentId) filters.departmentId = parseInt(departmentId);
       } else {
-        // Non-admin users can only see their department's couriers
-        filters.departmentId = user.departmentId;
+        // Check if user's department has permission to view all couriers
+        let canViewAllCouriers = false;
+        if (user.departmentId) {
+          try {
+            const viewAllPolicy = await storage.getUserPolicy(user.departmentId, 'view_all_couriers');
+            canViewAllCouriers = viewAllPolicy?.isEnabled || false;
+          } catch (error) {
+            console.error('Error checking view_all_couriers policy:', error);
+          }
+        }
+
+        if (canViewAllCouriers) {
+          // User can see all departments or filter by specific department
+          if (departmentId) filters.departmentId = parseInt(departmentId);
+        } else {
+          // Non-admin users can only see their department's couriers
+          filters.departmentId = user.departmentId;
+        }
       }
       
       const result = await storage.getAllCouriers(filters);
@@ -935,10 +951,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         endDate
       };
       
-      // Non-admin users can only export their department's data
+      // Apply department filtering for export based on user role and policies
       if (user.role !== 'admin') {
-        courierFilters.departmentId = user.departmentId;
-        receivedFilters.departmentId = user.departmentId;
+        // Check if user's department has permission to view all couriers
+        let canViewAllCouriers = false;
+        if (user.departmentId) {
+          try {
+            const viewAllPolicy = await storage.getUserPolicy(user.departmentId, 'view_all_couriers');
+            canViewAllCouriers = viewAllPolicy?.isEnabled || false;
+          } catch (error) {
+            console.error('Error checking view_all_couriers policy for export:', error);
+          }
+        }
+
+        if (!canViewAllCouriers) {
+          // Non-admin users without view_all_couriers permission can only export their department's data
+          courierFilters.departmentId = user.departmentId;
+          receivedFilters.departmentId = user.departmentId;
+        }
+        // If canViewAllCouriers is true, no departmentId filter is applied (export all departments)
       }
       
       // Get sent couriers with date and department filtering
