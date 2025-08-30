@@ -96,6 +96,7 @@ export default function UserForm({ user, onClose, onSuccess }: UserFormProps) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/users'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
       onSuccess();
     },
     onError: (error) => {

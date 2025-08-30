@@ -98,7 +98,7 @@ export default function UserTable({ onEdit, onManageDepartments }: UserTableProp
   });
 
   const handleDelete = (id: string) => {
-    const user = data?.find((u: any) => u.id === id);
+    const user = users?.find((u: any) => u.id === id);
     const userName = user?.name || user?.email || 'this user';
     
     if (confirm(`Are you sure you want to delete ${userName}? This action cannot be undone.`)) {

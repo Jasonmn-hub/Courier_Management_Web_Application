@@ -902,7 +902,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 transportConfig.secure = false;
               }
 
-              const transporter = nodemailer.createTransporter(transportConfig);
+              const transporter = nodemailer.createTransport(transportConfig);
 
               // Get login URL from SMTP settings, env, or default to current domain
               const loginUrl = smtpSettings.applicationUrl || 
