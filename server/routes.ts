@@ -10,6 +10,7 @@ import fs from "fs";
 import PizZip from "pizzip";
 import Docxtemplater from "docxtemplater";
 import { PDFGenerator } from "./pdf-generator";
+import { WordGenerator } from "./word-generator";
 import Papa from "papaparse";
 import nodemailer from "nodemailer";
 

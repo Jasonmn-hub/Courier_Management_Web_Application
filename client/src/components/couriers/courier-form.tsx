@@ -477,6 +477,26 @@ export default function CourierForm({ courier, onClose, onSuccess }: CourierForm
                 )}
               />
 
+              {/* Courier Details */}
+              <FormField
+                control={form.control}
+                name="details"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Courier Details</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        rows={3}
+                        placeholder="Describe the courier contents/details" 
+                        {...field} 
+                        data-testid="textarea-details"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
             {/* Render Custom Fields Inline */}
             {departmentFields.map((field: any) => {
               const dropdownField = dropdownFields.find((df: any) => df.id === field.id);
@@ -495,11 +515,17 @@ export default function CourierForm({ courier, onClose, onSuccess }: CourierForm
                         <SelectValue placeholder={`Select ${field.name.toLowerCase()}`} />
                       </SelectTrigger>
                       <SelectContent>
-                        {dropdownField?.options?.map((option: any) => (
-                          <SelectItem key={option.id} value={option.optionValue}>
-                            {option.optionLabel}
+                        {dropdownField?.options?.length > 0 ? (
+                          dropdownField.options.map((option: any) => (
+                            <SelectItem key={option.id} value={option.optionValue}>
+                              {option.optionLabel}
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <SelectItem value="" disabled>
+                            No options available - Contact admin to add options
                           </SelectItem>
-                        ))}
+                        )}
                       </SelectContent>
                     </Select>
                   ) : (

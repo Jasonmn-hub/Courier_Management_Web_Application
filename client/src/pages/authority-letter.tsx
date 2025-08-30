@@ -41,6 +41,7 @@ export default function AuthorityLetter() {
   const [selectedFilenameField, setSelectedFilenameField] = useState("");
   const [showBulkUpload, setShowBulkUpload] = useState(false);
   const [csvFile, setCsvFile] = useState<File | null>(null);
+  const [downloadFormat, setDownloadFormat] = useState<'pdf' | 'word'>('pdf');
 
   // Redirect to home if not authenticated
   useEffect(() => {
@@ -103,8 +104,8 @@ export default function AuthorityLetter() {
     return `${sanitized}_authority_letter`;
   };
 
-  // Download letter mutation - Updated to generate PDF
-  const downloadMutation = useMutation({
+  // Download PDF letter mutation
+  const downloadPDFMutation = useMutation({
     mutationFn: async (data: { departmentId: number; fieldValues: Record<string, string>; fileName?: string }) => {
       const token = localStorage.getItem('auth_token');
       if (!token) throw new Error('No auth token');
@@ -144,6 +145,50 @@ export default function AuthorityLetter() {
     },
     onError: (error: any) => {
       toast({ title: "Error", description: error.message || "Failed to generate authority letter", variant: "destructive" });
+    },
+  });
+
+  // Download Word letter mutation
+  const downloadWordMutation = useMutation({
+    mutationFn: async (data: { departmentId: number; fieldValues: Record<string, string>; fileName?: string }) => {
+      const token = localStorage.getItem('auth_token');
+      if (!token) throw new Error('No auth token');
+      
+      const response = await fetch('/api/authority-letter/generate-from-department', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(data)
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to generate Word document');
+      }
+      
+      // Handle Word document download
+      const blob = await response.blob();
+      const filename = data.fileName || 'authority-letter.docx';
+      
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename.endsWith('.docx') ? filename : `${filename}.docx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+      
+      return { filename };
+    },
+    onSuccess: (data) => {
+      toast({ title: "Success", description: `Word document downloaded: ${data.filename}` });
+      setShowFilenameDialog(false);
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Failed to generate Word document", variant: "destructive" });
     },
   });
 
@@ -195,21 +240,39 @@ export default function AuthorityLetter() {
     previewMutation.mutate({ departmentId: selectedDepartment, fieldValues });
   };
 
-  const handleDownload = () => {
+  const handleDownloadPDF = () => {
     if (!selectedDepartment || !fieldValues) {
       toast({ title: "Error", description: "Please select a department and fill required fields", variant: "destructive" });
       return;
     }
     setShowFilenameDialog(true);
+    setDownloadFormat('pdf');
+  };
+
+  const handleDownloadWord = () => {
+    if (!selectedDepartment || !fieldValues) {
+      toast({ title: "Error", description: "Please select a department and fill required fields", variant: "destructive" });
+      return;
+    }
+    setShowFilenameDialog(true);
+    setDownloadFormat('word');
   };
 
   const handleConfirmDownload = () => {
     const fileName = generateFilename();
-    downloadMutation.mutate({ 
-      departmentId: selectedDepartment!, 
-      fieldValues, 
-      fileName 
-    });
+    if (downloadFormat === 'word') {
+      downloadWordMutation.mutate({ 
+        departmentId: selectedDepartment!, 
+        fieldValues, 
+        fileName 
+      });
+    } else {
+      downloadPDFMutation.mutate({ 
+        departmentId: selectedDepartment!, 
+        fieldValues, 
+        fileName 
+      });
+    }
   };
 
   const handleBulkUpload = () => {
@@ -402,15 +465,27 @@ export default function AuthorityLetter() {
                   >
                     {previewMutation.isPending ? "Generating..." : "Preview"}
                   </Button>
-                  <Button 
-                    onClick={handleDownload}
-                    disabled={downloadMutation.isPending}
-                    className="flex items-center gap-2"
-                    data-testid="button-download"
-                  >
-                    <FileDown className="h-4 w-4" />
-                    {downloadMutation.isPending ? "Generating..." : "Download PDF"}
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button 
+                      onClick={handleDownloadPDF}
+                      disabled={downloadPDFMutation.isPending}
+                      className="flex items-center gap-2"
+                      data-testid="button-download-pdf"
+                    >
+                      <FileDown className="h-4 w-4" />
+                      {downloadPDFMutation.isPending ? "Generating..." : "Download PDF"}
+                    </Button>
+                    <Button 
+                      onClick={handleDownloadWord}
+                      disabled={downloadWordMutation.isPending}
+                      variant="outline"
+                      className="flex items-center gap-2"
+                      data-testid="button-download-word"
+                    >
+                      <FileDown className="h-4 w-4" />
+                      {downloadWordMutation.isPending ? "Generating..." : "Download Word"}
+                    </Button>
+                  </div>
                 </div>
               )}
             </CardContent>
@@ -478,15 +553,15 @@ export default function AuthorityLetter() {
             </div>
             
             <div className="text-sm text-slate-600">
-              Preview: <code>{generateFilename()}.pdf</code>
+              Preview: <code>{generateFilename()}.{downloadFormat === 'word' ? 'docx' : 'pdf'}</code>
             </div>
             
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setShowFilenameDialog(false)}>
                 Cancel
               </Button>
-              <Button onClick={handleConfirmDownload} disabled={downloadMutation.isPending}>
-                {downloadMutation.isPending ? "Generating..." : "Download PDF"}
+              <Button onClick={handleConfirmDownload} disabled={downloadPDFMutation.isPending || downloadWordMutation.isPending}>
+                {(downloadPDFMutation.isPending || downloadWordMutation.isPending) ? "Generating..." : `Download ${downloadFormat === 'word' ? 'Word' : 'PDF'}`}
               </Button>
             </div>
           </div>
