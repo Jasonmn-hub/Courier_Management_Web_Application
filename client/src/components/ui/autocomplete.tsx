@@ -35,12 +35,16 @@ export function Autocomplete({
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (isOpen && value) {
+    if (isOpen && value && value.length >= 2) {
       const filtered = options.filter(option =>
         option.label.toLowerCase().includes(value.toLowerCase()) ||
         option.value.toLowerCase().includes(value.toLowerCase())
       );
       setFilteredOptions(filtered);
+      setHighlightedIndex(-1);
+    } else if (isOpen && value && value.length < 2) {
+      // Show empty state when less than 2 characters
+      setFilteredOptions([]);
       setHighlightedIndex(-1);
     } else {
       setFilteredOptions(options);
@@ -149,7 +153,7 @@ export function Autocomplete({
             ))
           ) : (
             <div className="px-3 py-2 text-gray-500 text-sm">
-              No matches found
+              {value && value.length < 2 ? "Type at least 2 characters to see suggestions..." : "No matches found"}
             </div>
           )}
           

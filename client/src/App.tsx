@@ -17,6 +17,7 @@ import Users from "@/pages/users";
 import UserPolicies from "@/pages/user-policies";
 import Departments from "@/pages/departments";
 import Branches from "@/pages/branches";
+import Vendors from "@/pages/vendors";
 import Settings from "@/pages/settings";
 import AppLayout from "@/components/layout/app-layout";
 
@@ -52,6 +53,7 @@ function Router() {
             <Route path="/user-policies" component={UserPolicies} />
             <Route path="/departments" component={Departments} />
             <Route path="/branches" component={Branches} />
+            <Route path="/vendors" component={Vendors} />
             <Route path="/custom-fields" component={Settings} />
             <Route path="/audit-logs" component={Settings} />
             <Route path="/settings" component={Settings} />

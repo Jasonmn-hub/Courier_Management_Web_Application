@@ -1292,6 +1292,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
               }
             }
 
+            // Determine greeting based on destination type (branch vs user)
+            let greeting = `Dear ${courier.receiverName || 'Team'}`;
+            const toBranchLower = (courier.toBranch || '').toLowerCase();
+            const isBranchDestination = await storage.getAllBranches({ search: courier.toBranch || '', limit: 1 });
+            
+            if (isBranchDestination.branches.length > 0) {
+              greeting = 'Dear Branch Team';
+            }
+
+            // Get vendor contact details if available
+            let vendorContactInfo = '';
+            const vendorName = courier.vendor === 'Others' ? courier.customVendor : courier.vendor;
+            
+            if (vendorName && vendorName !== 'Others') {
+              try {
+                const vendorData = await storage.getAllVendors({ search: vendorName, limit: 1 });
+                if (vendorData.vendors.length > 0) {
+                  const vendor = vendorData.vendors[0];
+                  if (vendor.mobileNumber) {
+                    vendorContactInfo = `For any assistance regarding this courier, you may coordinate directly with our courier vendor at ${vendor.mobileNumber}.`;
+                  }
+                }
+              } catch (error) {
+                console.error('Error fetching vendor contact details:', error);
+              }
+            }
+
             const mailOptions = {
               from: smtpSettings.fromEmail || smtpSettings.username,
               to: req.body.email,
@@ -1320,9 +1347,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           <!-- Intro -->
           <tr>
             <td style="padding:20px 24px;color:#111827;font-size:14px;line-height:1.5;">
-              Dear ${courier.receiverName || 'Team'},<br><br>
+              ${greeting},<br><br>
               This is to notify you that a courier has been 
-              <strong>sent to you from ${courier.vendor || courier.customVendor || 'N/A'} courier services</strong>.
+              <strong>sent to you from ${vendorName || 'N/A'} courier services</strong>.
+              ${vendorContactInfo ? `<br><br>${vendorContactInfo}` : ''}
             </td>
           </tr>
           
@@ -1970,6 +1998,135 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching branch stats:", error);
       res.status(500).json({ message: "Failed to fetch branch stats" });
+    }
+  });
+
+  // Vendor Management endpoints
+  app.get('/api/vendors', authenticateToken, requireRole(['admin']), async (req: any, res) => {
+    try {
+      const { search, limit = 20, offset = 0 } = req.query;
+      
+      const filters: any = {};
+      if (search) filters.search = search;
+      if (limit) filters.limit = parseInt(limit);
+      if (offset) filters.offset = parseInt(offset);
+      
+      const result = await storage.getAllVendors(filters);
+      res.json(result);
+    } catch (error) {
+      console.error("Error fetching vendors:", error);
+      res.status(500).json({ message: "Failed to fetch vendors" });
+    }
+  });
+
+  app.get('/api/vendors/:id', authenticateToken, requireRole(['admin']), async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid vendor ID" });
+      }
+      
+      const vendor = await storage.getVendorById(id);
+      
+      if (!vendor) {
+        return res.status(404).json({ message: "Vendor not found" });
+      }
+      
+      res.json(vendor);
+    } catch (error) {
+      console.error("Error fetching vendor:", error);
+      res.status(500).json({ message: "Failed to fetch vendor" });
+    }
+  });
+
+  app.post('/api/vendors', authenticateToken, requireRole(['admin']), setCurrentUser(), async (req: any, res) => {
+    try {
+      const { insertVendorSchema } = await import('@shared/schema');
+      const validatedData = insertVendorSchema.parse(req.body);
+      const vendor = await storage.createVendor(validatedData);
+      
+      await logAudit(req.currentUser.id, 'CREATE', 'vendor', vendor.id);
+      
+      res.status(201).json(vendor);
+    } catch (error) {
+      if (error instanceof Error && error.name === 'ZodError') {
+        return res.status(400).json({ message: "Validation error", errors: (error as any).errors });
+      }
+      console.error("Error creating vendor:", error);
+      res.status(500).json({ message: "Failed to create vendor" });
+    }
+  });
+
+  app.put('/api/vendors/:id', authenticateToken, requireRole(['admin']), setCurrentUser(), async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid vendor ID" });
+      }
+
+      const { insertVendorSchema } = await import('@shared/schema');
+      const validatedData = insertVendorSchema.parse(req.body);
+      const vendor = await storage.updateVendor(id, validatedData);
+      
+      if (!vendor) {
+        return res.status(404).json({ message: "Vendor not found" });
+      }
+      
+      await logAudit(req.currentUser.id, 'UPDATE', 'vendor', vendor.id);
+      
+      res.json(vendor);
+    } catch (error) {
+      if (error instanceof Error && error.name === 'ZodError') {
+        return res.status(400).json({ message: "Validation error", errors: (error as any).errors });
+      }
+      console.error("Error updating vendor:", error);
+      res.status(500).json({ message: "Failed to update vendor" });
+    }
+  });
+
+  app.delete('/api/vendors/:id', authenticateToken, requireRole(['admin']), setCurrentUser(), async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid vendor ID" });
+      }
+
+      const deleted = await storage.deleteVendor(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ message: "Vendor not found" });
+      }
+      
+      await logAudit(req.currentUser.id, 'DELETE', 'vendor', id);
+      
+      res.json({ message: "Vendor deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting vendor:", error);
+      res.status(500).json({ message: "Failed to delete vendor" });
+    }
+  });
+
+  app.patch('/api/vendors/:id/status', authenticateToken, requireRole(['admin']), setCurrentUser(), async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { isActive } = req.body;
+      
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid vendor ID" });
+      }
+      
+      const vendor = await storage.updateVendorStatus(id, isActive);
+      
+      if (!vendor) {
+        return res.status(404).json({ message: "Vendor not found" });
+      }
+      
+      await logAudit(req.currentUser.id, 'UPDATE', 'vendor', vendor.id);
+      
+      res.json(vendor);
+    } catch (error) {
+      console.error("Error updating vendor status:", error);
+      res.status(500).json({ message: "Failed to update vendor status" });
     }
   });
 

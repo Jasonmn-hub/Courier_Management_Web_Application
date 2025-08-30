@@ -180,6 +180,18 @@ export const passwordResetTokens = pgTable("password_reset_tokens", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Vendor management table
+export const vendors = pgTable("vendors", {
+  id: serial("id").primaryKey(),
+  vendorName: varchar("vendor_name", { length: 100 }).notNull(),
+  mobileNumber: varchar("mobile_number", { length: 15 }),
+  email: varchar("email", { length: 100 }),
+  address: text("address"),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Authority letter templates table - Enhanced for PDF generation
 export const authorityLetterTemplates = pgTable('authority_letter_templates', {
   id: serial('id').primaryKey(),
@@ -374,6 +386,12 @@ export const insertUserPolicySchema = createInsertSchema(userPolicies).omit({
   updatedAt: true,
 });
 
+export const insertVendorSchema = createInsertSchema(vendors).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Types
 export type UpsertUser = z.infer<typeof upsertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -398,3 +416,5 @@ export type Branch = typeof branches.$inferSelect;
 export type InsertBranch = z.infer<typeof insertBranchSchema>;
 export type UserPolicy = typeof userPolicies.$inferSelect;
 export type InsertUserPolicy = z.infer<typeof insertUserPolicySchema>;
+export type Vendor = typeof vendors.$inferSelect;
+export type InsertVendor = z.infer<typeof insertVendorSchema>;

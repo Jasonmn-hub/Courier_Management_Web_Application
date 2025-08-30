@@ -17,7 +17,8 @@ import {
   User,
   LogOut,
   FileText,
-  Shield
+  Shield,
+  Store
 } from "lucide-react";
 
 interface SidebarProps {
@@ -46,6 +47,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     { name: "User Policies", href: "/user-policies", icon: Shield, current: location === "/user-policies", group: "management" },
     { name: "Departments", href: "/departments", icon: Building2, current: location === "/departments", group: "management" },
     ...(shouldShowBranches ? [{ name: "Branch List", href: "/branches", icon: MapPin, current: location === "/branches", group: "management" }] : []),
+    { name: "Vendor Master", href: "/vendors", icon: Store, current: location === "/vendors", group: "management" },
     { name: "Settings", href: "/settings", icon: Settings, current: location === "/settings", group: "settings" },
     { name: "Custom Fields", href: "/custom-fields", icon: FormInput, current: location === "/custom-fields", group: "settings" },
     { name: "Audit Logs", href: "/audit-logs", icon: History, current: location === "/audit-logs", group: "settings" },

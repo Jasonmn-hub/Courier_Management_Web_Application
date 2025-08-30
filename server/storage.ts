@@ -14,6 +14,7 @@ import {
   userPolicies,
   userDepartments,
   passwordResetTokens,
+  vendors,
   type User,
   type UpsertUser,
   type Department,
@@ -36,6 +37,8 @@ import {
   type InsertBranch,
   type UserPolicy,
   type InsertUserPolicy,
+  type Vendor,
+  type InsertVendor,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, ilike, or, sql, lt, gt } from "drizzle-orm";
@@ -163,6 +166,18 @@ export interface IStorage {
   updateBranchStatus(id: number, status: string): Promise<Branch | undefined>;
   createBulkBranches(branches: InsertBranch[]): Promise<Branch[]>;
   exportBranches(status?: string): Promise<Branch[]>;
+  
+  // Vendor operations
+  getAllVendors(filters?: {
+    search?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<{ vendors: Vendor[]; total: number }>;
+  getVendorById(id: number): Promise<Vendor | undefined>;
+  createVendor(vendor: InsertVendor): Promise<Vendor>;
+  updateVendor(id: number, vendor: Partial<InsertVendor>): Promise<Vendor | undefined>;
+  deleteVendor(id: number): Promise<boolean>;
+  updateVendorStatus(id: number, isActive: boolean): Promise<Vendor | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1322,6 +1337,90 @@ export class DatabaseStorage implements IStorage {
     }
     
     return await (query as any).orderBy(branches.srNo, branches.branchName);
+  }
+
+  // Vendor operations
+  async getAllVendors(filters?: {
+    search?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<{ vendors: Vendor[]; total: number }> {
+    let query = db.select().from(vendors);
+    let countQuery = db.select({ count: sql`count(*)` }).from(vendors);
+
+    const conditions: any[] = [];
+
+    if (filters?.search) {
+      conditions.push(
+        or(
+          ilike(vendors.vendorName, `%${filters.search}%`),
+          ilike(vendors.mobileNumber, `%${filters.search}%`),
+          ilike(vendors.email, `%${filters.search}%`)
+        )
+      );
+    }
+
+    if (conditions.length > 0) {
+      const whereClause = and(...conditions);
+      query = query.where(whereClause) as any;
+      countQuery = countQuery.where(whereClause) as any;
+    }
+
+    query = query.orderBy(vendors.vendorName) as any;
+
+    if (filters?.limit) {
+      query = query.limit(filters.limit) as any;
+    }
+
+    if (filters?.offset) {
+      query = query.offset(filters.offset) as any;
+    }
+
+    const [vendorsResult, countResult] = await Promise.all([
+      query,
+      countQuery
+    ]);
+
+    return {
+      vendors: vendorsResult,
+      total: Number((countResult[0] as any).count)
+    };
+  }
+
+  async getVendorById(id: number): Promise<Vendor | undefined> {
+    const [vendor] = await db.select().from(vendors).where(eq(vendors.id, id));
+    return vendor;
+  }
+
+  async createVendor(vendor: InsertVendor): Promise<Vendor> {
+    const [newVendor] = await db.insert(vendors).values(vendor).returning();
+    return newVendor;
+  }
+
+  async updateVendor(id: number, vendor: Partial<InsertVendor>): Promise<Vendor | undefined> {
+    const [updatedVendor] = await db.update(vendors)
+      .set({ ...vendor, updatedAt: new Date() })
+      .where(eq(vendors.id, id))
+      .returning();
+    return updatedVendor;
+  }
+
+  async deleteVendor(id: number): Promise<boolean> {
+    try {
+      const result = await db.delete(vendors).where(eq(vendors.id, id));
+      return (result as any).rowCount > 0 || result.length > 0;
+    } catch (error) {
+      console.error("Error deleting vendor:", error);
+      return false;
+    }
+  }
+
+  async updateVendorStatus(id: number, isActive: boolean): Promise<Vendor | undefined> {
+    const [updatedVendor] = await db.update(vendors)
+      .set({ isActive, updatedAt: new Date() })
+      .where(eq(vendors.id, id))
+      .returning();
+    return updatedVendor;
   }
 
   // User Policy operations

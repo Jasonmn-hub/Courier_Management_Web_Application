@@ -67,7 +67,7 @@ export default function Branches() {
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState<'active' | 'closed'>('active');
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize] = useState(20); // 20 branches per page
+  const [pageSize] = useState(10); // 10 branches per page for better scrolling
   const [showBranchForm, setShowBranchForm] = useState(false);
   const [showBulkUpload, setShowBulkUpload] = useState(false);
   const [showExportDialog, setShowExportDialog] = useState(false);
@@ -280,6 +280,14 @@ export default function Branches() {
     setCurrentPage(1);
   }, [activeTab, searchTerm]);
 
+  // Handle page change with proper validation
+  const handlePageChange = (newPage: number) => {
+    const totalPages = Math.ceil(totalBranches / pageSize);
+    if (newPage >= 1 && newPage <= totalPages) {
+      setCurrentPage(newPage);
+    }
+  };
+
   const handleEdit = (branch: Branch) => {
     setEditingBranch(branch);
     setFormData({
@@ -429,7 +437,7 @@ export default function Branches() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="active" className="space-y-4 max-h-96 overflow-y-auto">
+        <TabsContent value="active" className="space-y-4">
           <BranchesTable 
             branches={branches} 
             onEdit={handleEdit} 
@@ -443,11 +451,11 @@ export default function Branches() {
             currentPage={currentPage}
             totalItems={totalBranches}
             pageSize={pageSize}
-            onPageChange={setCurrentPage}
+            onPageChange={handlePageChange}
           />
         </TabsContent>
 
-        <TabsContent value="closed" className="space-y-4 max-h-96 overflow-y-auto">
+        <TabsContent value="closed" className="space-y-4">
           <BranchesTable 
             branches={branches} 
             onEdit={handleEdit} 
@@ -461,7 +469,7 @@ export default function Branches() {
             currentPage={currentPage}
             totalItems={totalBranches}
             pageSize={pageSize}
-            onPageChange={setCurrentPage}
+            onPageChange={handlePageChange}
           />
         </TabsContent>
       </Tabs>

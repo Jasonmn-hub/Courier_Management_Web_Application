@@ -101,8 +101,19 @@ export default function CourierForm({ courier, onClose, onSuccess }: CourierForm
     enabled: !!user, // Enable when user is authenticated
   });
   
+  // Get vendors for dropdown
+  const { data: vendorsData } = useQuery({
+    queryKey: ['/api/vendors'],
+    queryFn: async () => {
+      const response = await apiRequest('GET', '/api/vendors');
+      return response.json();
+    },
+    enabled: !!user, // Enable when user is authenticated
+  });
+
   const branches = branchesData?.branches || [];
   const users = usersData?.users || [];
+  const vendors = vendorsData?.vendors || [];
 
   const mutation = useMutation({
     mutationFn: async (data: z.infer<typeof courierSchema>) => {
@@ -211,16 +222,6 @@ export default function CourierForm({ courier, onClose, onSuccess }: CourierForm
     setSelectedFile(null);
   };
 
-  const vendors = [
-    "Maruti Courier",
-    "India Post",
-    "Professional Couriers",
-    "Blue Dart",
-    "DHL Express",
-    "FedEx",
-    "DTDC",
-    "Others"
-  ];
 
   return (
     <Dialog open onOpenChange={onClose}>
@@ -338,11 +339,14 @@ export default function CourierForm({ courier, onClose, onSuccess }: CourierForm
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {vendors.map((vendor) => (
-                          <SelectItem key={vendor} value={vendor}>
-                            {vendor}
-                          </SelectItem>
-                        ))}
+                        {vendors
+                          .filter((vendor: any) => vendor.isActive)
+                          .map((vendor: any) => (
+                            <SelectItem key={vendor.id} value={vendor.name}>
+                              {vendor.name}
+                            </SelectItem>
+                          ))}
+                        <SelectItem value="Others">Others</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
