@@ -90,12 +90,22 @@ export default function Branches() {
     status: 'active' as 'active' | 'closed'
   });
 
-  // Redirect if not authenticated or not admin
+  // Check user permissions for branches
+  const { data: userPermissions } = useQuery({
+    queryKey: ["/api/user-permissions"],
+    enabled: !!user,
+    retry: false,
+  });
+
+  const canViewBranches = (user as any)?.role === 'admin' || userPermissions?.accessibleTabs?.includes('branches');
+  const canModifyBranches = (user as any)?.role === 'admin';
+
+  // Redirect if not authenticated or no branch permissions
   useEffect(() => {
-    if (!isLoading && (!isAuthenticated || (user as any)?.role !== 'admin')) {
+    if (!isLoading && (!isAuthenticated || !canViewBranches)) {
       toast({
         title: "Unauthorized",
-        description: "You need admin privileges to access this page.",
+        description: "You don't have permission to access this page.",
         variant: "destructive",
       });
       setTimeout(() => {
@@ -103,7 +113,7 @@ export default function Branches() {
       }, 500);
       return;
     }
-  }, [isAuthenticated, isLoading, user, toast]);
+  }, [isAuthenticated, isLoading, canViewBranches, toast]);
 
   // Fetch Indian states
   const { data: statesData } = useQuery({
@@ -128,7 +138,7 @@ export default function Branches() {
       const response = await apiRequest('GET', `/api/branches?${params.toString()}`);
       return response.json();
     },
-    enabled: isAuthenticated && (user as any)?.role === 'admin',
+    enabled: isAuthenticated && canViewBranches,
   });
 
   const branches = branchesData?.branches || [];
@@ -393,14 +403,18 @@ export default function Branches() {
             <Download className="h-4 w-4 mr-2" />
             Export
           </Button>
-          <Button onClick={() => setShowBulkUpload(true)} variant="outline" data-testid="button-bulk-upload">
-            <Upload className="h-4 w-4 mr-2" />
-            Bulk Upload
-          </Button>
-          <Button onClick={() => setShowBranchForm(true)} data-testid="button-add-branch">
-            <Plus className="h-4 w-4 mr-2" />
-            Add Branch
-          </Button>
+          {canModifyBranches && (
+            <>
+              <Button onClick={() => setShowBulkUpload(true)} variant="outline" data-testid="button-bulk-upload">
+                <Upload className="h-4 w-4 mr-2" />
+                Bulk Upload
+              </Button>
+              <Button onClick={() => setShowBranchForm(true)} data-testid="button-add-branch">
+                <Plus className="h-4 w-4 mr-2" />
+                Add Branch
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
@@ -446,6 +460,7 @@ export default function Branches() {
             onStatusChange={handleStatusChange}
             isLoading={branchesLoading}
             showStatusActions={true}
+            canModify={canModifyBranches}
           />
           {/* Pagination Controls */}
           <PaginationControls 
@@ -464,6 +479,7 @@ export default function Branches() {
             onStatusChange={handleStatusChange}
             isLoading={branchesLoading}
             showStatusActions={true}
+            canModify={canModifyBranches}
           />
           {/* Pagination Controls */}
           <PaginationControls 
@@ -784,7 +800,8 @@ function BranchesTable({
   onDelete, 
   onStatusChange, 
   isLoading,
-  showStatusActions = false
+  showStatusActions = false,
+  canModify = false
 }: {
   branches: Branch[];
   onEdit: (branch: Branch) => void;
@@ -792,6 +809,7 @@ function BranchesTable({
   onStatusChange: (branch: Branch, status: 'active' | 'closed') => void;
   isLoading: boolean;
   showStatusActions?: boolean;
+  canModify?: boolean;
 }) {
   if (isLoading) {
     return (
@@ -876,15 +894,17 @@ function BranchesTable({
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={() => onEdit(branch)}
-                        data-testid={`button-edit-${branch.id}`}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      {showStatusActions && (
+                      {canModify && (
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => onEdit(branch)}
+                          data-testid={`button-edit-${branch.id}`}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                      )}
+                      {showStatusActions && canModify && (
                         <Button
                           variant="ghost"
                           size="sm"
@@ -895,15 +915,20 @@ function BranchesTable({
                           {branch.status === 'active' ? <XCircle className="h-4 w-4" /> : <CheckCircle className="h-4 w-4" />}
                         </Button>
                       )}
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={() => onDelete(branch.id)}
-                        className="text-red-600 hover:text-red-800"
-                        data-testid={`button-delete-${branch.id}`}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      {canModify && (
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => onDelete(branch.id)}
+                          className="text-red-600 hover:text-red-800"
+                          data-testid={`button-delete-${branch.id}`}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                      {!canModify && (
+                        <span className="text-sm text-slate-500">View Only</span>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>

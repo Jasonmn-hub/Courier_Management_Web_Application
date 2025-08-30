@@ -1613,6 +1613,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const mailOptions = {
               from: smtpSettings.fromEmail || smtpSettings.username,
               to: req.body.email,
+              cc: req.body.ccEmails ? req.body.ccEmails.split(',').map((email: string) => email.trim()).filter((email: string) => email) : undefined,
               subject: 'Courier Dispatch Notification - Courier Management System',
               html: `
 <!DOCTYPE html>
