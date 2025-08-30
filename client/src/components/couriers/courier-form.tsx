@@ -122,9 +122,28 @@ export default function CourierForm({ courier, onClose, onSuccess }: CourierForm
     enabled: !!user?.departmentId,
   });
 
+  // Get dropdown options for each dropdown field
+  const dropdownFieldsWithOptions = useQuery({
+    queryKey: ['/api/field-dropdown-options', departmentFields],
+    queryFn: async () => {
+      const fieldsWithOptions = await Promise.all(
+        departmentFields
+          .filter((field: any) => field.type === 'dropdown')
+          .map(async (field: any) => {
+            const response = await apiRequest('GET', `/api/field-dropdown-options/${field.id}`);
+            const options = await response.json();
+            return { ...field, options };
+          })
+      );
+      return fieldsWithOptions;
+    },
+    enabled: departmentFields.length > 0,
+  });
+
   const branches = branchesData?.branches || [];
   const users = usersData?.users || [];
   const vendors = vendorsData?.vendors || [];
+  const dropdownFields = dropdownFieldsWithOptions.data || [];
 
   // State for custom field values
   const [customFieldValues, setCustomFieldValues] = useState<Record<string, string>>({});
@@ -458,44 +477,43 @@ export default function CourierForm({ courier, onClose, onSuccess }: CourierForm
                 )}
               />
 
-            {/* Custom Department Fields */}
-            {departmentFields.length > 0 && (
-              <div className="space-y-4">
-                <div className="border-t border-slate-200 pt-4">
-                  <h3 className="text-lg font-medium">Department Specific Fields</h3>
+            {/* Render Custom Fields Inline */}
+            {departmentFields.map((field: any) => {
+              const dropdownField = dropdownFields.find((df: any) => df.id === field.id);
+              
+              return (
+                <div key={field.id} className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    {field.name}
+                  </label>
+                  {field.type === 'dropdown' ? (
+                    <Select
+                      onValueChange={(value) => handleCustomFieldChange(field.name, value)}
+                      value={customFieldValues[field.name] || ''}
+                    >
+                      <SelectTrigger data-testid={`select-${field.name.toLowerCase().replace(/\s+/g, '-')}`}>
+                        <SelectValue placeholder={`Select ${field.name.toLowerCase()}`} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {dropdownField?.options?.map((option: any) => (
+                          <SelectItem key={option.id} value={option.optionValue}>
+                            {option.optionLabel}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Input
+                      type={field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text'}
+                      placeholder={`Enter ${field.name.toLowerCase()}`}
+                      value={customFieldValues[field.name] || ''}
+                      onChange={(e) => handleCustomFieldChange(field.name, e.target.value)}
+                      data-testid={`input-${field.name.toLowerCase().replace(/\s+/g, '-')}`}
+                    />
+                  )}
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {departmentFields.map((field: any) => (
-                    <div key={field.id}>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        {field.name}
-                      </label>
-                      {field.type === 'dropdown' ? (
-                        <Select 
-                          onValueChange={(value) => handleCustomFieldChange(field.name, value)}
-                          value={customFieldValues[field.name] || ''}
-                        >
-                          <SelectTrigger data-testid={`select-${field.name.toLowerCase().replace(/\s+/g, '-')}`}>
-                            <SelectValue placeholder={`Select ${field.name.toLowerCase()}`} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {/* TODO: Add dropdown options when available */}
-                          </SelectContent>
-                        </Select>
-                      ) : (
-                        <Input
-                          type={field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text'}
-                          placeholder={`Enter ${field.name.toLowerCase()}`}
-                          value={customFieldValues[field.name] || ''}
-                          onChange={(e) => handleCustomFieldChange(field.name, e.target.value)}
-                          data-testid={`input-${field.name.toLowerCase().replace(/\s+/g, '-')}`}
-                        />
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+              );
+            })}
             </div>
 
             {/* POD Copy Upload */}
