@@ -174,7 +174,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       // Log audit for email confirmation with email address for tracking
-      await logAudit(null, 'EMAIL_CONFIRM_RECEIVED', 'courier', courier.id, courier.email);
+      await logAudit(null, 'EMAIL_CONFIRM_RECEIVED', 'courier', courier.id.toString(), courier.email);
 
       // Success response
       res.send(`
@@ -255,7 +255,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       // Log audit for email confirmation with email address for tracking
-      await logAudit(null, 'EMAIL_CONFIRM_RECEIVED', 'received_courier', courier.id, (courier as any).emailId);
+      await logAudit(null, 'EMAIL_CONFIRM_RECEIVED', 'received_courier', courier.id.toString(), (courier as any).emailId);
 
       // Success response
       res.send(`

@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Plus, Trash2, Mail, User, Calendar, FileText, Download, Settings as SettingsIcon, Pencil } from "lucide-react";
+import { Download, Plus, FileText, Trash2, Mail, User, Calendar, Search } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { ExportDialog } from "@/components/export-dialog";
 
@@ -66,11 +66,27 @@ function AuditLogsTable() {
     queryKey: ['/api/audit-logs'],
   });
 
+  const [searchTerm, setSearchTerm] = useState("");
+
+  const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(event.target.value);
+  };
+
   if (isLoading) {
     return <div className="text-center py-4">Loading audit logs...</div>;
   }
 
   const logs = (auditLogs as any)?.logs || [];
+
+  const filteredLogs = logs.filter((log: AuditLog) => {
+    const term = searchTerm.toLowerCase();
+    return (
+      log.entityType.toLowerCase().includes(term) ||
+      log.entityId.toString().includes(term) ||
+      log.user?.name.toLowerCase().includes(term) ||
+      log.action.toLowerCase().includes(term)
+    );
+  });
 
   const getActionIcon = (action: string) => {
     switch (action) {
@@ -94,12 +110,21 @@ function AuditLogsTable() {
     <div className="border rounded-lg">
       <div className="flex justify-between items-center p-4 border-b">
         <h3 className="text-lg font-semibold">Audit Logs</h3>
-        <ExportDialog title="Audit Logs" exportType="audit-logs">
-          <Button variant="outline" size="sm" data-testid="button-export-audit-logs">
-            <Download className="h-4 w-4 mr-2" />
-            Export Audit Logs
-          </Button>
-        </ExportDialog>
+        <div className="flex items-center gap-2">
+          <Input
+            type="search"
+            placeholder="Search logs..."
+            value={searchTerm}
+            onChange={handleSearchChange}
+            className="w-64"
+          />
+          <ExportDialog title="Audit Logs" exportType="audit-logs">
+            <Button variant="outline" size="sm" data-testid="button-export-audit-logs">
+              <Download className="h-4 w-4 mr-2" />
+              Export Audit Logs
+            </Button>
+          </ExportDialog>
+        </div>
       </div>
       <Table>
         <TableHeader>
@@ -112,63 +137,66 @@ function AuditLogsTable() {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {logs.map((log: AuditLog) => (
-            <TableRow key={log.id} className="cursor-pointer hover:bg-slate-50" data-testid={`audit-log-${log.id}`}>
-              <TableCell>
-                <div className="flex items-center gap-2">
-                  {getActionIcon(log.action)}
-                  <Badge className={getActionColor(log.action)}>
-                    {log.action}
-                  </Badge>
-                </div>
-              </TableCell>
-              <TableCell>
-                <div className="font-medium">{log.entityType}</div>
-                <div className="text-sm text-slate-500">ID: {log.entityId}</div>
-              </TableCell>
-              <TableCell>
-                <div className="flex items-center gap-2">
-                  <User className="h-4 w-4" />
-                  <div>
-                    <div className="font-medium">{log.user?.name || 'Unknown'}</div>
-                    <div className="text-sm text-slate-500">
-                      {log.user?.employeeCode && `${log.user.employeeCode} • `}{log.user?.email}
-                    </div>
-                  </div>
-                </div>
-              </TableCell>
-              <TableCell>
-                <div className="text-sm">
-                  {new Date(log.timestamp).toLocaleDateString()}
-                </div>
-                <div className="text-xs text-slate-500">
-                  {new Date(log.timestamp).toLocaleTimeString()}
-                </div>
-              </TableCell>
-              <TableCell>
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  onClick={() => {
-                    toast({
-                      title: "Audit Log Details",
-                      description: `${log.action} action on ${log.entityType} (ID: ${log.entityId}) by ${log.user?.name || 'Unknown'} at ${new Date(log.timestamp).toLocaleString()}`,
-                    });
-                  }}
-                  data-testid={`button-view-details-${log.id}`}
-                >
-                  View Details
-                </Button>
+          {filteredLogs.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={5} className="text-center py-8 text-slate-500">
+                {searchTerm ? "No audit logs found matching your search." : "No audit logs found"}
               </TableCell>
             </TableRow>
-          ))}
+          ) : (
+            filteredLogs.map((log: AuditLog) => (
+              <TableRow key={log.id} className="cursor-pointer hover:bg-slate-50" data-testid={`audit-log-${log.id}`}>
+                <TableCell>
+                  <div className="flex items-center gap-2">
+                    {getActionIcon(log.action)}
+                    <Badge className={getActionColor(log.action)}>
+                      {log.action}
+                    </Badge>
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <div className="font-medium">{log.entityType}</div>
+                  <div className="text-sm text-slate-500">ID: {log.entityId}</div>
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-2">
+                    <User className="h-4 w-4" />
+                    <div>
+                      <div className="font-medium">{log.user?.name || 'Unknown'}</div>
+                      <div className="text-sm text-slate-500">
+                        {log.user?.employeeCode && `${log.user.employeeCode} • `}{log.user?.email}
+                      </div>
+                    </div>
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <div className="text-sm">
+                    {new Date(log.timestamp).toLocaleDateString()}
+                  </div>
+                  <div className="text-xs text-slate-500">
+                    {new Date(log.timestamp).toLocaleTimeString()}
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      toast({
+                        title: "Audit Log Details",
+                        description: `${log.action} action on ${log.entityType} (ID: ${log.entityId}) by ${log.user?.name || 'Unknown'} at ${new Date(log.timestamp).toLocaleString()}`,
+                      });
+                    }}
+                    data-testid={`button-view-details-${log.id}`}
+                  >
+                    View Details
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))
+          )}
         </TableBody>
       </Table>
-      {logs.length === 0 && (
-        <div className="text-center py-8 text-slate-500">
-          No audit logs found
-        </div>
-      )}
     </div>
   );
 }
@@ -281,7 +309,7 @@ export default function Settings() {
     fromEmail: "",
     applicationUrl: ""
   });
-  
+
   const [testEmail, setTestEmail] = useState("");
 
   // Fetch SMTP settings
@@ -379,7 +407,7 @@ export default function Settings() {
               <TabsTrigger value="fields" data-testid="tab-fields">Fields</TabsTrigger>
               <TabsTrigger value="audit" data-testid="tab-audit-logs">Audit Logs</TabsTrigger>
             </TabsList>
-            
+
             <TabsContent value="smtp" className="mt-6">
               <Card>
                 <CardHeader>
@@ -485,15 +513,15 @@ export default function Settings() {
                       />
                     </div>
                     <div className="flex gap-2">
-                      <Button 
+                      <Button
                         onClick={() => saveSmtpMutation.mutate(smtpData)}
                         disabled={saveSmtpMutation.isPending}
                         data-testid="button-save-smtp"
                       >
                         {saveSmtpMutation.isPending ? "Saving..." : "Save Configuration"}
                       </Button>
-                      <Button 
-                        variant="outline" 
+                      <Button
+                        variant="outline"
                         onClick={() => {
                           if (!testEmail) {
                             toast({ title: "Error", description: "Please enter a test email address", variant: "destructive" });
@@ -511,7 +539,7 @@ export default function Settings() {
                 </CardContent>
               </Card>
             </TabsContent>
-            
+
             <TabsContent value="fields" className="mt-6">
               <Card>
                 <CardHeader>
@@ -537,7 +565,7 @@ export default function Settings() {
                         <SelectItem value="dropdown">Dropdown</SelectItem>
                       </SelectContent>
                     </Select>
-                    <Button 
+                    <Button
                       onClick={() => {
                         if (newFieldName.trim()) {
                           createFieldMutation.mutate({ name: newFieldName, type: newFieldType });
@@ -552,7 +580,7 @@ export default function Settings() {
                       Add Field
                     </Button>
                   </div>
-                  
+
                   <div className="border rounded-lg">
                     <Table>
                       <TableHeader>
@@ -597,8 +625,8 @@ export default function Settings() {
                               <TableCell>
                                 <div className="flex gap-1">
                                   {field.type === 'dropdown' && (
-                                    <Button 
-                                      variant="ghost" 
+                                    <Button
+                                      variant="ghost"
                                       size="sm"
                                       onClick={() => {
                                         setSelectedField(field);
@@ -610,8 +638,8 @@ export default function Settings() {
                                       <SettingsIcon className="h-4 w-4" />
                                     </Button>
                                   )}
-                                  <Button 
-                                    variant="ghost" 
+                                  <Button
+                                    variant="ghost"
                                     size="sm"
                                     onClick={() => {
                                       // TODO: Open edit field dialog
@@ -622,8 +650,8 @@ export default function Settings() {
                                   >
                                     <Pencil className="h-4 w-4" />
                                   </Button>
-                                  <Button 
-                                    variant="ghost" 
+                                  <Button
+                                    variant="ghost"
                                     size="sm"
                                     onClick={() => {
                                       if (confirm(`Are you sure you want to delete the field "${field.name}"?`)) {
@@ -647,7 +675,7 @@ export default function Settings() {
                 </CardContent>
               </Card>
             </TabsContent>
-            
+
             <TabsContent value="audit" className="mt-6">
               <Card>
                 <CardHeader>
@@ -670,7 +698,7 @@ export default function Settings() {
                 <DialogHeader>
                   <DialogTitle>Manage Dropdown Options for "{selectedField.name}"</DialogTitle>
                 </DialogHeader>
-                
+
                 <div className="space-y-4">
                   {/* Add new option form */}
                   <div className="border rounded-lg p-4">
@@ -695,7 +723,7 @@ export default function Settings() {
                         />
                       </div>
                       <div className="flex items-end">
-                        <Button 
+                        <Button
                           onClick={() => {
                             if (newOptionValue.trim() && newOptionLabel.trim()) {
                               // Use the first department if available, or default to 1
@@ -769,8 +797,8 @@ export default function Settings() {
                 </div>
 
                 <DialogFooter>
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     onClick={() => {
                       setShowDropdownDialog(false);
                       setSelectedField(null);
