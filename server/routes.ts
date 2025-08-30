@@ -2004,7 +2004,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Email confirmation endpoint for regular couriers
+  // Email confirmation endpoint for regular couriers (no auth required)
   app.get('/api/couriers/confirm-received', async (req: any, res) => {
     try {
       const token = req.query.token;
@@ -2266,7 +2266,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Email confirmation endpoint for received couriers
+  // Email confirmation endpoint for received couriers (no auth required)
   app.get('/api/received-couriers/confirm-received', async (req: any, res) => {
     try {
       const token = req.query.token;
