@@ -457,6 +457,45 @@ export default function CourierForm({ courier, onClose, onSuccess }: CourierForm
                   </FormItem>
                 )}
               />
+
+            {/* Custom Department Fields */}
+            {departmentFields.length > 0 && (
+              <div className="space-y-4">
+                <div className="border-t border-slate-200 pt-4">
+                  <h3 className="text-lg font-medium">Department Specific Fields</h3>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {departmentFields.map((field: any) => (
+                    <div key={field.id}>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        {field.name}
+                      </label>
+                      {field.type === 'dropdown' ? (
+                        <Select 
+                          onValueChange={(value) => handleCustomFieldChange(field.name, value)}
+                          value={customFieldValues[field.name] || ''}
+                        >
+                          <SelectTrigger data-testid={`select-${field.name.toLowerCase().replace(/\s+/g, '-')}`}>
+                            <SelectValue placeholder={`Select ${field.name.toLowerCase()}`} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {/* TODO: Add dropdown options when available */}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <Input
+                          type={field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text'}
+                          placeholder={`Enter ${field.name.toLowerCase()}`}
+                          value={customFieldValues[field.name] || ''}
+                          onChange={(e) => handleCustomFieldChange(field.name, e.target.value)}
+                          data-testid={`input-${field.name.toLowerCase().replace(/\s+/g, '-')}`}
+                        />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
             </div>
 
             {/* Courier Details */}
@@ -585,45 +624,6 @@ export default function CourierForm({ courier, onClose, onSuccess }: CourierForm
                 )}
               />
             </div>
-
-            {/* Custom Department Fields */}
-            {departmentFields.length > 0 && (
-              <div className="space-y-4">
-                <div className="border-t border-slate-200 pt-4">
-                  <h3 className="text-lg font-medium">Department Specific Fields</h3>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {departmentFields.map((field: any) => (
-                    <div key={field.id}>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        {field.name}
-                      </label>
-                      {field.type === 'dropdown' ? (
-                        <Select 
-                          onValueChange={(value) => handleCustomFieldChange(field.name, value)}
-                          value={customFieldValues[field.name] || ''}
-                        >
-                          <SelectTrigger data-testid={`select-${field.name.toLowerCase().replace(/\s+/g, '-')}`}>
-                            <SelectValue placeholder={`Select ${field.name.toLowerCase()}`} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {/* TODO: Add dropdown options when available */}
-                          </SelectContent>
-                        </Select>
-                      ) : (
-                        <Input
-                          type={field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text'}
-                          placeholder={`Enter ${field.name.toLowerCase()}`}
-                          value={customFieldValues[field.name] || ''}
-                          onChange={(e) => handleCustomFieldChange(field.name, e.target.value)}
-                          data-testid={`input-${field.name.toLowerCase().replace(/\s+/g, '-')}`}
-                        />
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
 
             {/* Form Actions */}
             <div className="flex justify-end space-x-3 pt-6 border-t border-slate-200">
