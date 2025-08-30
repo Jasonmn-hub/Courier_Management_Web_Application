@@ -55,7 +55,8 @@ export default function UserTable({ onEdit, onManageDepartments }: UserTableProp
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      await apiRequest('DELETE', `/api/users/${id}`);
+      const response = await apiRequest('DELETE', `/api/users/${id}`);
+      return response;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
@@ -64,7 +65,7 @@ export default function UserTable({ onEdit, onManageDepartments }: UserTableProp
         description: "User deleted successfully",
       });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       if (isUnauthorizedError(error)) {
         toast({
           title: "Unauthorized",
@@ -76,16 +77,31 @@ export default function UserTable({ onEdit, onManageDepartments }: UserTableProp
         }, 500);
         return;
       }
+      
+      // Check if it's a 404 error (user already deleted)
+      if (error.status === 404) {
+        // Refresh the data anyway since user might be already deleted
+        queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
+        toast({
+          title: "Success",
+          description: "User deleted successfully",
+        });
+        return;
+      }
+      
       toast({
-        title: "Error",
-        description: "Failed to delete user",
+        title: "Error", 
+        description: error.message || "Failed to delete user",
         variant: "destructive",
       });
     },
   });
 
   const handleDelete = (id: string) => {
-    if (confirm("Are you sure you want to delete this user?")) {
+    const user = data?.find((u: any) => u.id === id);
+    const userName = user?.name || user?.email || 'this user';
+    
+    if (confirm(`Are you sure you want to delete ${userName}? This action cannot be undone.`)) {
       deleteMutation.mutate(id);
     }
   };

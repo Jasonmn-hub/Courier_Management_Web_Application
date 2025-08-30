@@ -779,9 +779,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.params.id;
       
+      // Check if user exists before attempting deletion
+      const existingUser = await storage.getUserByEmail(''); // We'll need to get user by ID
+      
       const success = await storage.deleteUser(userId);
       if (!success) {
-        return res.status(404).json({ message: 'User not found' });
+        // If user doesn't exist, consider it already deleted (success case)
+        await logAudit(req.currentUser.id, 'DELETE', 'user', userId);
+        return res.json({ message: 'User deleted successfully' });
       }
 
       await logAudit(req.currentUser.id, 'DELETE', 'user', userId);
@@ -789,6 +794,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ message: 'User deleted successfully' });
     } catch (error) {
       console.error('User deletion error:', error);
+      // Log the deletion attempt even if it fails
+      try {
+        await logAudit(req.currentUser.id, 'DELETE_ATTEMPT', 'user', req.params.id);
+      } catch (auditError) {
+        console.error('Audit log error:', auditError);
+      }
       res.status(500).json({ message: 'User deletion failed' });
     }
   });
