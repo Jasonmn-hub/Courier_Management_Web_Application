@@ -116,7 +116,7 @@ export default function Branches() {
 
   // Fetch branches with pagination
   const { data: branchesData, isLoading: branchesLoading, refetch: refetchBranches } = useQuery({
-    queryKey: ['/api/branches', { status: activeTab, search: searchTerm, page: currentPage, pageSize }],
+    queryKey: ['/api/branches', { status: activeTab, search: searchTerm, page: currentPage, limit: pageSize }],
     queryFn: async () => {
       const params = new URLSearchParams();
       params.set('status', activeTab);
