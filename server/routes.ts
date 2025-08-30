@@ -799,7 +799,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: 'No file uploaded' });
       }
 
-      const fileContent = req.file.buffer.toString('utf-8');
+      const fileContent = fs.readFileSync(req.file.path, 'utf-8');
       const lines = fileContent.split('\n').filter(line => line.trim());
       
       if (lines.length < 2) {
@@ -876,6 +876,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      // Clean up uploaded file
+      if (req.file && req.file.path) {
+        fs.unlinkSync(req.file.path);
+      }
+
       res.json({ 
         message: `Bulk upload completed. Processed: ${processed}, Errors: ${errors}`,
         processed,
@@ -884,6 +889,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     } catch (error) {
       console.error('Bulk upload error:', error);
+      
+      // Clean up uploaded file on error
+      if (req.file && req.file.path) {
+        try {
+          fs.unlinkSync(req.file.path);
+        } catch (cleanupError) {
+          console.error('File cleanup error:', cleanupError);
+        }
+      }
+      
       res.status(500).json({ message: 'Bulk upload failed' });
     }
   });
