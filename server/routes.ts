@@ -2919,6 +2919,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get current user's accessible tabs based on their department policies
+  app.get('/api/user-permissions', authenticateToken, async (req: any, res) => {
+    try {
+      const user = req.user;
+      
+      // Admin users have access to all tabs
+      if (user.role === 'admin') {
+        res.json({
+          accessibleTabs: ['branches', 'couriers', 'authority_letters', 'received_couriers', 'view_all_couriers']
+        });
+        return;
+      }
+
+      // For non-admin users, check their department policies
+      const accessibleTabs = [];
+      const tabsToCheck = ['branches', 'couriers', 'authority_letters', 'received_couriers', 'view_all_couriers'];
+      
+      if (user.departmentId) {
+        for (const tabName of tabsToCheck) {
+          try {
+            const policy = await storage.getUserPolicy(user.departmentId, tabName);
+            if (policy?.isEnabled) {
+              accessibleTabs.push(tabName);
+            }
+          } catch (error) {
+            console.error(`Error checking policy for ${tabName}:`, error);
+          }
+        }
+      }
+
+      res.json({ accessibleTabs });
+    } catch (error) {
+      console.error("Error fetching user permissions:", error);
+      res.status(500).json({ message: "Failed to fetch user permissions" });
+    }
+  });
+
   app.post('/api/user-policies', authenticateToken, requireRole(['admin']), setCurrentUser(), async (req: any, res) => {
     try {
       const validatedData = insertUserPolicySchema.parse(req.body);

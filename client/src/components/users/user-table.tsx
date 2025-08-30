@@ -196,9 +196,9 @@ export default function UserTable({ onEdit, onManageDepartments }: UserTableProp
                     {formatEntityId(user.id, 'user')}
                   </TableCell>
                   <TableCell className="font-medium" data-testid={`text-name-${user.id}`}>
-                    {user.firstName && user.lastName ? 
-                      `${user.firstName} ${user.lastName}` : 
-                      user.email
+                    {user.name || 
+                     (user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : 
+                      user.firstName || user.lastName || user.email)
                     }
                   </TableCell>
                   <TableCell data-testid={`text-email-${user.id}`}>

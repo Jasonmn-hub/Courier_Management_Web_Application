@@ -1,6 +1,7 @@
 import { useAuth } from "@/hooks/useAuth";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
+import { useQuery } from "@tanstack/react-query";
 import { ExportDialog } from "@/components/export-dialog";
 import lightLogo from "@/assets/light-logo.png";
 import { 
@@ -30,16 +31,24 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const { user } = useAuth();
   const [location] = useLocation();
 
+  // Fetch user's accessible tabs based on their department policies
+  const { data: userPermissions } = useQuery({
+    queryKey: ["/api/user-permissions"],
+    enabled: !!user,
+    retry: false,
+  });
+
+  // Check if user has access to branches
+  const shouldShowBranches = (user as any)?.role === 'admin' || 
+    userPermissions?.accessibleTabs?.includes('branches');
+
   const navigation = [
     { name: "Dashboard", href: "/", icon: BarChart3, current: location === "/" },
     { name: "Sent Couriers", href: "/couriers", icon: Package, current: location === "/couriers" },
     { name: "Received Couriers", href: "/received-couriers", icon: Truck, current: location === "/received-couriers" },
     { name: "Authority Letter", href: "/authority-letter", icon: FileDown, current: location === "/authority-letter" },
+    ...(shouldShowBranches && user?.role !== 'admin' ? [{ name: "Branch List", href: "/branches", icon: MapPin, current: location === "/branches" }] : []),
   ];
-
-  // Check if branches tab should be shown based on user policy
-  const shouldShowBranches = (user as any)?.role === 'admin' || 
-    (user as any)?.departmentPolicies?.includes('branches');
 
   // Admin and Manager navigation items with proper grouping
   const adminNavigation = (user as any)?.role === 'admin' ? [
