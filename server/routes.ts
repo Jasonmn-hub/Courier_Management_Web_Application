@@ -1123,23 +1123,105 @@ export async function registerRoutes(app: Express): Promise<Server> {
               to: req.body.email,
               subject: 'Courier Dispatch Notification - Courier Management System',
               html: `
-                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-                  <p>Dear team,</p>
-                  
-                  <p>We have dispatched courier and we have mentioned Name <strong>${courier.receiverName || 'N/A'}</strong> and Mobile Number - <strong>${courier.contactDetails || 'N/A'}</strong> please find the below courier POD details.</p>
-                  
-                  <div style="margin: 20px 0;">
-                    <p><strong>Sent To</strong> - "${courier.toBranch || 'N/A'}"</p>
-                    <p><strong>Date</strong> - "${courier.courierDate || 'N/A'}"</p>
-                    <p><strong>Courier Vendor</strong> - "${courier.vendor || courier.customVendor || 'N/A'}"</p>
-                    <p><strong>POD No.</strong> - "${courier.podNo || 'N/A'}"</p>
-                    <p><strong>Remarks</strong> - "${courier.remarks || 'N/A'}"</p>
-                  </div>
-                  
-                  <p>Thanks And Regards,<br>
-                  ${user.name || user.email || 'User'}<br>
-                  ${departmentName}</p>
-                </div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width" />
+  <title>Courier Sent</title>
+</head>
+<body style="margin:0;padding:0;background:#f4f6f8;">
+  <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background:#f4f6f8;">
+    <tr>
+      <td align="center" style="padding:24px 12px;">
+        <table role="presentation" cellpadding="0" cellspacing="0" width="600" style="max-width:600px;background:#ffffff;border-radius:12px;overflow:hidden;font-family:Segoe UI,Arial,Helvetica,sans-serif;">
+          
+          <!-- Header -->
+          <tr>
+            <td style="background:#0b5fff;color:#fff;padding:18px 24px;font-size:18px;font-weight:600;">
+              ${departmentName} • Courier Sent
+            </td>
+          </tr>
+          
+          <!-- Intro -->
+          <tr>
+            <td style="padding:20px 24px;color:#111827;font-size:14px;line-height:1.5;">
+              Dear ${courier.receiverName || 'Team'},<br><br>
+              This is to notify you that a courier has been 
+              <strong>sent to you from ${courier.vendor || courier.customVendor || 'N/A'} courier services</strong>.
+            </td>
+          </tr>
+          
+          <!-- Details Table -->
+          <tr>
+            <td style="padding:0 24px 12px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e5e7eb;border-radius:10px;">
+                <tr>
+                  <td style="padding:12px 16px;background:#f9fafb;font-weight:600;font-size:13px;">
+                    Courier Details
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:12px 16px;">
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:13px;color:#374151;">
+                      <tr>
+                        <td style="padding:6px 0;width:180px;">Courier ID</td>
+                        <td style="padding:6px 0;"><strong>${courier.podNo || 'N/A'}</strong></td>
+                      </tr>
+                      <tr>
+                        <td style="padding:6px 0;">From</td>
+                        <td style="padding:6px 0;"><strong>${user.name || user.email || 'User'}</strong></td>
+                      </tr>
+                      <tr>
+                        <td style="padding:6px 0;">To</td>
+                        <td style="padding:6px 0;"><strong>${courier.toBranch || 'N/A'}</strong></td>
+                      </tr>
+                      <tr>
+                        <td style="padding:6px 0;">Contact Details</td>
+                        <td style="padding:6px 0;"><strong>${courier.contactDetails || 'N/A'}</strong></td>
+                      </tr>
+                      <tr>
+                        <td style="padding:6px 0;">Related Department</td>
+                        <td style="padding:6px 0;"><strong>${departmentName}</strong></td>
+                      </tr>
+                      <tr>
+                        <td style="padding:6px 0;">Sent Date</td>
+                        <td style="padding:6px 0;"><strong>${courier.courierDate || 'N/A'}</strong></td>
+                      </tr>
+                      <tr>
+                        <td style="padding:6px 0;">Remarks</td>
+                        <td style="padding:6px 0;"><strong>${courier.remarks || 'N/A'}</strong></td>
+                      </tr>
+                      <tr>
+                        <td style="padding:6px 0;">Status</td>
+                        <td style="padding:6px 0;">
+                          <span style="display:inline-block;padding:2px 8px;border-radius:999px;background:#eef2ff;color:#1f3bb3;font-weight:600;">Sent</span>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          
+          <!-- Footer -->
+          <tr>
+            <td style="padding:14px 24px;color:#6b7280;font-size:12px;border-top:1px solid #e5e7eb;">
+              For discrepancies, please update the record or contact the Courier Desk. <br><br>
+              Thanks And Regards,<br>
+              ${user.name || user.email || 'User'}<br>
+              ${departmentName}<br><br>
+              © ${new Date().getFullYear()} Courier Management System
+            </td>
+          </tr>
+          
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
               `
             };
 
@@ -1780,20 +1862,105 @@ export async function registerRoutes(app: Express): Promise<Server> {
               to: req.body.emailId,
               subject: 'Courier Received Notification - Courier Management System',
               html: `
-                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                  <h2 style="color: #333;">Courier Received Notification</h2>
-                  <p>A courier has been received with the following details:</p>
-                  <table style="border-collapse: collapse; width: 100%; margin: 20px 0;">
-                    <tr><td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">POD Number:</td><td style="padding: 8px; border: 1px solid #ddd;">${courier.podNumber || 'N/A'}</td></tr>
-                    <tr><td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">From Location:</td><td style="padding: 8px; border: 1px solid #ddd;">${courier.fromLocation || 'N/A'}</td></tr>
-                    <tr><td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Received Date:</td><td style="padding: 8px; border: 1px solid #ddd;">${courier.receivedDate || 'N/A'}</td></tr>
-                    <tr><td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Courier Vendor:</td><td style="padding: 8px; border: 1px solid #ddd;">${courier.courierVendor || courier.customVendor || 'N/A'}</td></tr>
-                    <tr><td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Receiver:</td><td style="padding: 8px; border: 1px solid #ddd;">${courier.receiverName || 'N/A'}</td></tr>
-                    <tr><td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Remarks:</td><td style="padding: 8px; border: 1px solid #ddd;">${courier.remarks || 'N/A'}</td></tr>
-                  </table>
-                  <p>Please collect the courier from your designated department.</p>
-                  <p>Thank you!</p>
-                </div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width" />
+  <title>Courier Received</title>
+</head>
+<body style="margin:0;padding:0;background:#f4f6f8;">
+  <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background:#f4f6f8;">
+    <tr>
+      <td align="center" style="padding:24px 12px;">
+        <table role="presentation" cellpadding="0" cellspacing="0" width="600" style="max-width:600px;background:#ffffff;border-radius:12px;overflow:hidden;font-family:Segoe UI,Arial,Helvetica,sans-serif;">
+          
+          <!-- Header -->
+          <tr>
+            <td style="background:#16a34a;color:#fff;padding:18px 24px;font-size:18px;font-weight:600;">
+              Courier Management System • Courier Received
+            </td>
+          </tr>
+          
+          <!-- Intro -->
+          <tr>
+            <td style="padding:20px 24px;color:#111827;font-size:14px;line-height:1.5;">
+              Dear ${courier.receiverName || 'Team'},<br><br>
+              This is to notify you that a courier has been 
+              <strong>received from ${courier.fromLocation || 'N/A'} via ${courier.courierVendor || courier.customVendor || 'N/A'} courier services</strong>.
+            </td>
+          </tr>
+          
+          <!-- Details Table -->
+          <tr>
+            <td style="padding:0 24px 12px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e5e7eb;border-radius:10px;">
+                <tr>
+                  <td style="padding:12px 16px;background:#f9fafb;font-weight:600;font-size:13px;">
+                    Courier Details
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:12px 16px;">
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:13px;color:#374151;">
+                      <tr>
+                        <td style="padding:6px 0;width:180px;">POD Number</td>
+                        <td style="padding:6px 0;"><strong>${courier.podNumber || 'N/A'}</strong></td>
+                      </tr>
+                      <tr>
+                        <td style="padding:6px 0;">From Location</td>
+                        <td style="padding:6px 0;"><strong>${courier.fromLocation || 'N/A'}</strong></td>
+                      </tr>
+                      <tr>
+                        <td style="padding:6px 0;">Courier Vendor</td>
+                        <td style="padding:6px 0;"><strong>${courier.courierVendor || courier.customVendor || 'N/A'}</strong></td>
+                      </tr>
+                      <tr>
+                        <td style="padding:6px 0;">Receiver Name</td>
+                        <td style="padding:6px 0;"><strong>${courier.receiverName || 'N/A'}</strong></td>
+                      </tr>
+                      <tr>
+                        <td style="padding:6px 0;">Received Date</td>
+                        <td style="padding:6px 0;"><strong>${courier.receivedDate || 'N/A'}</strong></td>
+                      </tr>
+                      <tr>
+                        <td style="padding:6px 0;">Remarks</td>
+                        <td style="padding:6px 0;"><strong>${courier.remarks || 'N/A'}</strong></td>
+                      </tr>
+                      <tr>
+                        <td style="padding:6px 0;">Status</td>
+                        <td style="padding:6px 0;">
+                          <span style="display:inline-block;padding:2px 8px;border-radius:999px;background:#dcfce7;color:#166534;font-weight:600;">Received</span>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          
+          <!-- Action Note -->
+          <tr>
+            <td style="padding:20px 24px;color:#111827;font-size:14px;line-height:1.5;">
+              <em>Please collect the courier from your designated department at your earliest convenience.</em>
+            </td>
+          </tr>
+          
+          <!-- Footer -->
+          <tr>
+            <td style="padding:14px 24px;color:#6b7280;font-size:12px;border-top:1px solid #e5e7eb;">
+              For any discrepancies or questions, please contact the Courier Desk immediately. <br><br>
+              © ${new Date().getFullYear()} Courier Management System
+            </td>
+          </tr>
+          
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
               `
             };
 
