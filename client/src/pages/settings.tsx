@@ -15,6 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Download, Plus, FileText, Trash2, Mail, User, Calendar, Search, Pencil, Settings as SettingsIcon } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { ExportDialog } from "@/components/export-dialog";
+import { formatEntityId } from "@/lib/idUtils";
 
 interface User {
   id: string;
@@ -161,12 +162,24 @@ function AuditLogsTable() {
                 </TableCell>
                 <TableCell>
                   <div className="font-medium">{log.entityType}</div>
-                  <div className="text-sm text-slate-500">ID: {log.entityId}</div>
+                  <div className="text-sm text-slate-500 font-mono">
+                    ID: {log.entityId ? formatEntityId(log.entityId, log.entityType.toLowerCase() === 'courier' ? 'courier' : 
+                        log.entityType.toLowerCase() === 'user' ? 'user' : 
+                        log.entityType.toLowerCase() === 'department' ? 'department' : 
+                        log.entityType.toLowerCase() === 'branch' ? 'branch' : 
+                        log.entityType.toLowerCase() === 'vendor' ? 'vendor' :
+                        log.entityType.toLowerCase() === 'received_courier' ? 'received_courier' : 'audit_log') : 'N/A'}
+                  </div>
                 </TableCell>
                 <TableCell>
                   {log.action === 'EMAIL_CONFIRM_RECEIVED' ?
                     (log.emailId ? `Email Confirmed: ${log.emailId}` : 'Email Confirmation') :
-                    (log.entityId ? `Entity ID: ${log.entityId}` : 'N/A')
+                    (log.entityId ? `Entity ID: ${formatEntityId(log.entityId, log.entityType.toLowerCase() === 'courier' ? 'courier' : 
+                        log.entityType.toLowerCase() === 'user' ? 'user' : 
+                        log.entityType.toLowerCase() === 'department' ? 'department' : 
+                        log.entityType.toLowerCase() === 'branch' ? 'branch' : 
+                        log.entityType.toLowerCase() === 'vendor' ? 'vendor' :
+                        log.entityType.toLowerCase() === 'received_courier' ? 'received_courier' : 'audit_log')}` : 'N/A')
                   }
                 </TableCell>
                 <TableCell>

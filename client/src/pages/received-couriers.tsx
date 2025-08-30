@@ -42,6 +42,7 @@ import {
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import type { ReceivedCourier, InsertReceivedCourier } from "@shared/schema";
+import { formatEntityId } from "@/lib/idUtils";
 
 interface User {
   id: string;
@@ -275,6 +276,7 @@ export default function ReceivedCouriers() {
                     <Table>
                     <TableHeader>
                       <TableRow>
+                        <TableHead>ID</TableHead>
                         <TableHead>POD Number</TableHead>
                         <TableHead>Received Date</TableHead>
                         <TableHead>From</TableHead>
@@ -290,6 +292,9 @@ export default function ReceivedCouriers() {
                     <TableBody>
                       {receivedCouriers.map((courier) => (
                         <TableRow key={courier.id}>
+                          <TableCell className="font-mono text-sm" data-testid={`text-id-${courier.id}`}>
+                            {formatEntityId(courier.id, 'received_courier')}
+                          </TableCell>
                           <TableCell className="font-medium" data-testid={`text-pod-${courier.id}`}>
                             {courier.podNumber}
                           </TableCell>

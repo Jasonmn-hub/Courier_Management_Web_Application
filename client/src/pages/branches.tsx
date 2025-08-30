@@ -42,6 +42,7 @@ import {
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
+import { formatEntityId } from "@/lib/idUtils";
 
 interface Branch {
   id: number;
@@ -825,6 +826,7 @@ function BranchesTable({
           <Table>
             <TableHeader className="sticky top-0 bg-white z-10">
               <TableRow>
+                <TableHead>ID</TableHead>
                 <TableHead>Sr. No</TableHead>
                 <TableHead>Branch Name</TableHead>
                 <TableHead>Branch Code</TableHead>
@@ -839,6 +841,9 @@ function BranchesTable({
             <TableBody>
               {branches.map((branch) => (
                 <TableRow key={branch.id} data-testid={`row-branch-${branch.id}`}>
+                  <TableCell className="font-mono text-sm" data-testid={`text-id-${branch.id}`}>
+                    {formatEntityId(branch.id, 'branch')}
+                  </TableCell>
                   <TableCell>{branch.srNo || '-'}</TableCell>
                   <TableCell className="font-medium">{branch.branchName}</TableCell>
                   <TableCell>

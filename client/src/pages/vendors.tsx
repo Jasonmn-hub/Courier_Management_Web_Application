@@ -13,6 +13,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Plus, Search, Edit, Trash2 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
+import { formatEntityId } from "@/lib/idUtils";
 
 const vendorSchema = z.object({
   vendorName: z.string().min(1, "Vendor name is required"),
@@ -353,7 +354,10 @@ export default function Vendors() {
             <Card key={vendor.id} data-testid={`card-vendor-${vendor.id}`}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-lg font-medium">
-                  {vendor.vendorName}
+                  <div>{vendor.vendorName}</div>
+                  <div className="text-sm font-mono text-slate-500 mt-1">
+                    ID: {formatEntityId(vendor.id, 'vendor')}
+                  </div>
                 </CardTitle>
                 <Badge variant={vendor.isActive ? "default" : "secondary"}>
                   {vendor.isActive ? "Active" : "Inactive"}

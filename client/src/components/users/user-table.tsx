@@ -21,6 +21,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Edit, Trash2, Settings, Search } from "lucide-react";
+import { formatEntityId } from "@/lib/idUtils";
 
 interface UserTableProps {
   onEdit?: (user: any) => void;
@@ -171,6 +172,7 @@ export default function UserTable({ onEdit, onManageDepartments }: UserTableProp
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead>ID</TableHead>
               <TableHead>Name</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Mobile</TableHead>
@@ -183,13 +185,16 @@ export default function UserTable({ onEdit, onManageDepartments }: UserTableProp
           <TableBody>
             {!Array.isArray(users) || users.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-slate-500">
+                <TableCell colSpan={8} className="text-center py-8 text-slate-500">
                   No users found. Add your first user to get started.
                 </TableCell>
               </TableRow>
             ) : (
               users.map((user: any) => (
                 <TableRow key={user.id} className="hover:bg-slate-50">
+                  <TableCell className="font-mono text-sm" data-testid={`text-id-${user.id}`}>
+                    {formatEntityId(user.id, 'user')}
+                  </TableCell>
                   <TableCell className="font-medium" data-testid={`text-name-${user.id}`}>
                     {user.firstName && user.lastName ? 
                       `${user.firstName} ${user.lastName}` : 

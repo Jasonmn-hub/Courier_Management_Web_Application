@@ -18,6 +18,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { apiRequest } from "@/lib/queryClient";
+import { formatEntityId } from "@/lib/idUtils";
 
 interface User {
   id: string;
@@ -315,6 +316,7 @@ export default function Departments() {
                   <Table>
                     <TableHeader>
                       <TableRow>
+                        <TableHead>ID</TableHead>
                         <TableHead>Name</TableHead>
                         <TableHead>Created</TableHead>
                         <TableHead className="text-center">Authority Letter</TableHead>
@@ -324,6 +326,9 @@ export default function Departments() {
                     <TableBody>
                       {departments.map((dept) => (
                         <TableRow key={dept.id}>
+                          <TableCell className="font-mono text-sm" data-testid={`text-id-${dept.id}`}>
+                            {formatEntityId(dept.id, 'department')}
+                          </TableCell>
                           <TableCell className="font-medium">{dept.name}</TableCell>
                           <TableCell>
                             {new Date(dept.createdAt).toLocaleDateString()}
