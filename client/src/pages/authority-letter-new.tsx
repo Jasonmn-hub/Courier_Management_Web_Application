@@ -1019,7 +1019,7 @@ export default function AuthorityLetterNew() {
                   </div>
                   
                   <div>
-                    <Label htmlFor="template-content">HTML Template Content</Label>
+                    <Label htmlFor="template-content">Template Content (HTML)</Label>
                     <Textarea
                       id="template-content"
                       value={newTemplate.templateContent}
