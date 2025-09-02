@@ -656,6 +656,7 @@ export default function ManageAuthorityLetter() {
                     value={newTemplate.templateName}
                     onChange={(e) => setNewTemplate({...newTemplate, templateName: e.target.value})}
                     placeholder="e.g., Standard Authority Letter"
+                    className="border-input"
                     data-testid="input-template-name"
                   />
                 </div>
@@ -680,6 +681,7 @@ export default function ManageAuthorityLetter() {
                   value={newTemplate.templateDescription}
                   onChange={(e) => setNewTemplate({...newTemplate, templateDescription: e.target.value})}
                   placeholder="Brief description of this template"
+                  className="border-input"
                   data-testid="input-template-description"
                 />
               </div>

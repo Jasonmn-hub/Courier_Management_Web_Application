@@ -260,8 +260,17 @@ export default function AuthorityLetter() {
 
   // Auto-generate preview when template changes
   useEffect(() => {
-    if (selectedTemplate && Object.keys(fieldValues).length > 0) {
+    if (selectedTemplate) {
+      // Generate preview immediately when template is selected, even with empty field values
       previewMutation.mutate({ templateId: selectedTemplate, fieldValues });
+    }
+  }, [selectedTemplate]);
+
+  // Reset field values when template changes
+  useEffect(() => {
+    if (selectedTemplate) {
+      setFieldValues({});
+      setGeneratedContent("");
     }
   }, [selectedTemplate]);
 
@@ -572,10 +581,15 @@ export default function AuthorityLetter() {
                     dangerouslySetInnerHTML={{ __html: generatedContent }}
                   />
                 </div>
+              ) : selectedTemplate ? (
+                <div className="text-center py-12 text-slate-500">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+                  <p className="text-lg">Generating preview...</p>
+                </div>
               ) : (
                 <div className="text-center py-12 text-slate-500">
                   <FileText className="mx-auto h-12 w-12 text-slate-300 mb-4" />
-                  <p className="text-lg">Select a template and fill the fields to see the authority letter preview</p>
+                  <p className="text-lg">Select a template to see the authority letter preview</p>
                 </div>
               )}
             </CardContent>
