@@ -3158,17 +3158,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const user = req.currentUser;
       let departmentId: number | undefined = undefined;
+      let templateId: number | undefined = undefined;
       
-      // Handle department filtering from query parameter
-      const queryDepartmentId = req.query.departmentId;
-      if (queryDepartmentId) {
-        departmentId = parseInt(queryDepartmentId);
-      } else if (user.role !== 'admin') {
-        // Non-admin users can only see their department's fields
-        departmentId = user.departmentId;
+      // Handle template filtering from query parameter
+      const queryTemplateId = req.query.templateId;
+      if (queryTemplateId) {
+        templateId = parseInt(queryTemplateId);
+      } else {
+        // Handle department filtering from query parameter for backward compatibility
+        const queryDepartmentId = req.query.departmentId;
+        if (queryDepartmentId) {
+          departmentId = parseInt(queryDepartmentId);
+        } else if (user.role !== 'admin') {
+          // Non-admin users can only see their department's fields
+          departmentId = user.departmentId;
+        }
       }
       
-      const fields = await storage.getAllAuthorityLetterFields(departmentId);
+      const fields = await storage.getAllAuthorityLetterFields(departmentId, templateId);
       res.json(fields);
     } catch (error) {
       console.error("Error fetching authority letter fields:", error);

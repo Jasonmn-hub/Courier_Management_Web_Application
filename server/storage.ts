@@ -1170,8 +1170,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Authority Letter Field methods
-  async getAllAuthorityLetterFields(departmentId?: number): Promise<AuthorityLetterField[]> {
+  async getAllAuthorityLetterFields(departmentId?: number, templateId?: number): Promise<AuthorityLetterField[]> {
     const query = db.select().from(authorityLetterFields);
+    
+    if (templateId) {
+      return await query.where(eq(authorityLetterFields.templateId, templateId));
+    }
     
     if (departmentId) {
       return await query.where(eq(authorityLetterFields.departmentId, departmentId));

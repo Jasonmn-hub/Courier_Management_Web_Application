@@ -212,7 +212,8 @@ export const authorityLetterTemplates = pgTable('authority_letter_templates', {
 // Authority letter fields table (for ##field## placeholders)
 export const authorityLetterFields = pgTable('authority_letter_fields', {
   id: serial('id').primaryKey(),
-  departmentId: integer('department_id').references(() => departments.id),
+  templateId: integer('template_id').references(() => authorityLetterTemplates.id, { onDelete: 'cascade' }),
+  departmentId: integer('department_id').references(() => departments.id), // Keep for backward compatibility
   fieldName: varchar('field_name', { length: 255 }).notNull(),
   fieldLabel: varchar('field_label', { length: 255 }).notNull(),
   fieldType: varchar('field_type', { length: 50 }).default('text').notNull(), // text, number, date

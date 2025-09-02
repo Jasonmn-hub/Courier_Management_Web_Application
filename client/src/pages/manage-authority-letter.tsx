@@ -73,7 +73,7 @@ export default function ManageAuthorityLetter() {
   
   // Template Fields Management State
   const [activeTab, setActiveTab] = useState('templates');
-  const [selectedDepartmentForFields, setSelectedDepartmentForFields] = useState<Department | null>(null);
+  const [selectedTemplateForFields, setSelectedTemplateForFields] = useState<AuthorityTemplate | null>(null);
   const [showFieldsManager, setShowFieldsManager] = useState(false);
   const [editingField, setEditingField] = useState<any>(null);
   const [newField, setNewField] = useState({ 
@@ -130,15 +130,15 @@ export default function ManageAuthorityLetter() {
     );
   });
 
-  // Fetch authority letter fields for selected department
-  const { data: departmentFields = [], isLoading: fieldsLoading, refetch: refetchFields } = useQuery<any[]>({
-    queryKey: ['/api/authority-letter-fields'],
+  // Fetch authority letter fields for selected template
+  const { data: templateFields = [], isLoading: fieldsLoading, refetch: refetchFields } = useQuery<any[]>({
+    queryKey: ['/api/authority-letter-fields', selectedTemplateForFields?.id],
     queryFn: async () => {
-      if (!selectedDepartmentForFields) return [];
-      const response = await apiRequest('GET', `/api/authority-letter-fields?departmentId=${selectedDepartmentForFields.id}`);
+      if (!selectedTemplateForFields) return [];
+      const response = await apiRequest('GET', `/api/authority-letter-fields?templateId=${selectedTemplateForFields.id}`);
       return response.json();
     },
-    enabled: !!selectedDepartmentForFields,
+    enabled: !!selectedTemplateForFields,
   });
 
   // Create template mutation
@@ -257,7 +257,7 @@ export default function ManageAuthorityLetter() {
     mutationFn: async (fieldData: any) => {
       const response = await apiRequest('POST', '/api/authority-letter-fields', {
         ...fieldData,
-        departmentId: selectedDepartmentForFields?.id
+        templateId: selectedTemplateForFields?.id
       });
       return response.json();
     },
@@ -283,7 +283,7 @@ export default function ManageAuthorityLetter() {
     mutationFn: async ({ id, data }: { id: number; data: any }) => {
       const response = await apiRequest('PUT', `/api/authority-letter-fields/${id}`, {
         ...data,
-        departmentId: selectedDepartmentForFields?.id
+        templateId: selectedTemplateForFields?.id
       });
       return response.json();
     },
@@ -405,6 +405,11 @@ export default function ManageAuthorityLetter() {
     setWordFile(null);
   };
 
+  const openFieldsManager = (template: AuthorityTemplate) => {
+    setSelectedTemplateForFields(template);
+    setShowFieldsManager(true);
+  };
+
   const getDepartmentName = (departmentId: number) => {
     return departments.find(d => d.id === departmentId)?.name || `Department ${departmentId}`;
   };
@@ -467,16 +472,8 @@ export default function ManageAuthorityLetter() {
             </div>
           </div>
 
-          {/* Tabbed Interface */}
+          {/* Template Management */}
           <div className="mt-8">
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="templates" data-testid="tab-templates">Templates</TabsTrigger>
-                <TabsTrigger value="fields" data-testid="tab-fields">Template Fields</TabsTrigger>
-              </TabsList>
-              
-              {/* Templates Tab */}
-              <TabsContent value="templates" className="mt-6">
                 <div className="flex justify-end mb-6">
                   <Button 
                     onClick={() => setShowUploadForm(true)}
@@ -597,6 +594,23 @@ export default function ManageAuthorityLetter() {
                                     <Button
                                       variant="ghost"
                                       size="sm"
+                                      onClick={() => openFieldsManager(template)}
+                                      className="h-8 w-8 p-0 text-green-600 hover:text-green-800"
+                                      data-testid={`button-manage-fields-${template.id}`}
+                                    >
+                                      <Settings className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Manage Template Fields</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                                
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
                                       onClick={() => deleteTemplateMutation.mutate(template.id)}
                                       className="h-8 w-8 p-0 text-red-600 hover:text-red-800"
                                       data-testid={`button-delete-${template.id}`}
@@ -618,239 +632,6 @@ export default function ManageAuthorityLetter() {
                 )}
                 </CardContent>
               </Card>
-              </TabsContent>
-              
-              {/* Template Fields Tab */}
-              <TabsContent value="fields" className="mt-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Template Fields Management</CardTitle>
-                    <p className="text-sm text-slate-500">
-                      Manage custom fields that can be used in authority letter templates using ##field_name## syntax.
-                    </p>
-                    
-                    {/* Department Selection */}
-                    <div className="mt-4">
-                      <Label htmlFor="department-select">Select Department</Label>
-                      <Select
-                        value={selectedDepartmentForFields?.id.toString() || ""}
-                        onValueChange={(value) => {
-                          const dept = departments.find(d => d.id === parseInt(value));
-                          setSelectedDepartmentForFields(dept || null);
-                        }}
-                      >
-                        <SelectTrigger className="w-full" data-testid="select-department-fields">
-                          <SelectValue placeholder="Choose a department to manage fields" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {departments.map((dept) => (
-                            <SelectItem key={dept.id} value={dept.id.toString()}>
-                              {dept.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </CardHeader>
-                  
-                  <CardContent>
-                    {!selectedDepartmentForFields ? (
-                      <div className="text-center py-8 text-slate-500">
-                        Please select a department to view and manage its template fields.
-                      </div>
-                    ) : (
-                      <>
-                        {/* Add New Field Form */}
-                        <div className="mb-8 p-4 bg-slate-50 rounded-lg">
-                          <h3 className="text-lg font-medium text-slate-900 mb-4">Add New Field</h3>
-                          <div className="grid grid-cols-2 gap-4 mb-4">
-                            <div>
-                              <Label htmlFor="field-name">Field Name</Label>
-                              <Input
-                                id="field-name"
-                                value={newField.fieldName}
-                                onChange={(e) => setNewField({...newField, fieldName: e.target.value})}
-                                placeholder="e.g., employee_name"
-                                data-testid="input-field-name"
-                              />
-                              <p className="text-xs text-slate-500 mt-1">
-                                Use lowercase with underscores (will be ##field_name##)
-                              </p>
-                            </div>
-                            <div>
-                              <Label htmlFor="field-label">Field Label</Label>
-                              <Input
-                                id="field-label"
-                                value={newField.fieldLabel}
-                                onChange={(e) => setNewField({...newField, fieldLabel: e.target.value})}
-                                placeholder="e.g., Employee Name"
-                                data-testid="input-field-label"
-                              />
-                              <p className="text-xs text-slate-500 mt-1">
-                                Display name shown to users
-                              </p>
-                            </div>
-                          </div>
-                          
-                          <div className="grid grid-cols-3 gap-4 mb-4">
-                            <div>
-                              <Label htmlFor="field-type">Field Type</Label>
-                              <Select
-                                value={newField.fieldType}
-                                onValueChange={(value) => setNewField({...newField, fieldType: value})}
-                              >
-                                <SelectTrigger data-testid="select-field-type">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="text">Text</SelectItem>
-                                  <SelectItem value="number">Number</SelectItem>
-                                  <SelectItem value="date">Date</SelectItem>
-                                  <SelectItem value="textarea">Textarea</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <div>
-                              <Label htmlFor="text-transform">Text Transform</Label>
-                              <Select
-                                value={newField.textTransform}
-                                onValueChange={(value) => setNewField({...newField, textTransform: value})}
-                              >
-                                <SelectTrigger data-testid="select-text-transform">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="none">None</SelectItem>
-                                  <SelectItem value="uppercase">UPPERCASE</SelectItem>
-                                  <SelectItem value="capitalize">Capitalize</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <div className="flex items-center space-x-2 mt-6">
-                              <Checkbox
-                                id="is-required"
-                                checked={newField.isRequired}
-                                onCheckedChange={(checked) => setNewField({...newField, isRequired: !!checked})}
-                                data-testid="checkbox-field-required"
-                              />
-                              <Label htmlFor="is-required">Required</Label>
-                            </div>
-                          </div>
-                          
-                          <Button
-                            onClick={handleCreateField}
-                            disabled={createFieldMutation.isPending}
-                            data-testid="button-add-field"
-                          >
-                            {createFieldMutation.isPending ? (
-                              <>
-                                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white mr-2"></div>
-                                Adding...
-                              </>
-                            ) : (
-                              <>
-                                <Plus className="h-4 w-4 mr-2" />
-                                Add Field
-                              </>
-                            )}
-                          </Button>
-                        </div>
-                        
-                        {/* Existing Fields List */}
-                        <div>
-                          <h3 className="text-lg font-medium text-slate-900 mb-4">
-                            Existing Fields for {selectedDepartmentForFields.name}
-                          </h3>
-                          
-                          {fieldsLoading ? (
-                            <div className="flex justify-center py-4">
-                              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                            </div>
-                          ) : departmentFields.length === 0 ? (
-                            <div className="text-center py-8 text-slate-500">
-                              No custom fields created for this department yet. Add your first field above.
-                            </div>
-                          ) : (
-                            <Table>
-                              <TableHeader>
-                                <TableRow>
-                                  <TableHead>Field Name</TableHead>
-                                  <TableHead>Display Label</TableHead>
-                                  <TableHead>Type</TableHead>
-                                  <TableHead>Transform</TableHead>
-                                  <TableHead>Required</TableHead>
-                                  <TableHead className="text-center">Actions</TableHead>
-                                </TableRow>
-                              </TableHeader>
-                              <TableBody>
-                                {departmentFields.map((field) => (
-                                  <TableRow key={field.id}>
-                                    <TableCell className="font-mono">
-                                      ##{field.fieldName}##
-                                    </TableCell>
-                                    <TableCell>{field.fieldLabel}</TableCell>
-                                    <TableCell className="capitalize">{field.fieldType}</TableCell>
-                                    <TableCell className="capitalize">
-                                      {field.textTransform === 'none' ? '-' : field.textTransform}
-                                    </TableCell>
-                                    <TableCell>
-                                      {field.isRequired ? (
-                                        <span className="text-red-600 font-medium">Yes</span>
-                                      ) : (
-                                        <span className="text-gray-500">No</span>
-                                      )}
-                                    </TableCell>
-                                    <TableCell className="text-center">
-                                      <TooltipProvider>
-                                        <div className="flex justify-center space-x-2">
-                                          <Tooltip>
-                                            <TooltipTrigger asChild>
-                                              <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={() => handleEditField(field)}
-                                                className="h-8 w-8 p-0 text-gray-600 hover:text-gray-800"
-                                                data-testid={`button-edit-field-${field.id}`}
-                                              >
-                                                <Edit className="h-4 w-4" />
-                                              </Button>
-                                            </TooltipTrigger>
-                                            <TooltipContent>
-                                              <p>Edit Field</p>
-                                            </TooltipContent>
-                                          </Tooltip>
-                                          
-                                          <Tooltip>
-                                            <TooltipTrigger asChild>
-                                              <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={() => deleteFieldMutation.mutate(field.id)}
-                                                className="h-8 w-8 p-0 text-red-600 hover:text-red-800"
-                                                data-testid={`button-delete-field-${field.id}`}
-                                              >
-                                                <Trash2 className="h-4 w-4" />
-                                              </Button>
-                                            </TooltipTrigger>
-                                            <TooltipContent>
-                                              <p>Delete Field</p>
-                                            </TooltipContent>
-                                          </Tooltip>
-                                        </div>
-                                      </TooltipProvider>
-                                    </TableCell>
-                                  </TableRow>
-                                ))}
-                              </TableBody>
-                            </Table>
-                          )}
-                        </div>
-                      </>
-                    )}
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            </Tabs>
           </div>
         </div>
       </div>
@@ -1184,6 +965,223 @@ export default function ManageAuthorityLetter() {
         </Dialog>
       )}
 
+      {/* Template Fields Manager Modal */}
+      {showFieldsManager && selectedTemplateForFields && (
+        <Dialog open={showFieldsManager} onOpenChange={setShowFieldsManager}>
+          <DialogContent className="sm:max-w-[800px] max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Manage Template Fields</DialogTitle>
+              <DialogDescription>
+                Manage custom fields for template "{selectedTemplateForFields.templateName}".
+                Use these fields in your template with ##field_name## syntax.
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="py-4">
+              {/* Add New Field Form */}
+              <div className="mb-8 p-4 bg-slate-50 rounded-lg">
+                <h3 className="text-lg font-medium text-slate-900 mb-4">Add New Field</h3>
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <Label htmlFor="field-name">Field Name</Label>
+                    <Input
+                      id="field-name"
+                      value={newField.fieldName}
+                      onChange={(e) => setNewField({...newField, fieldName: e.target.value})}
+                      placeholder="e.g., employee_name"
+                      data-testid="input-field-name"
+                    />
+                    <p className="text-xs text-slate-500 mt-1">
+                      Use lowercase with underscores (will be ##field_name##)
+                    </p>
+                  </div>
+                  <div>
+                    <Label htmlFor="field-label">Field Label</Label>
+                    <Input
+                      id="field-label"
+                      value={newField.fieldLabel}
+                      onChange={(e) => setNewField({...newField, fieldLabel: e.target.value})}
+                      placeholder="e.g., Employee Name"
+                      data-testid="input-field-label"
+                    />
+                    <p className="text-xs text-slate-500 mt-1">
+                      Display name shown to users
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-3 gap-4 mb-4">
+                  <div>
+                    <Label htmlFor="field-type">Field Type</Label>
+                    <Select
+                      value={newField.fieldType}
+                      onValueChange={(value) => setNewField({...newField, fieldType: value})}
+                    >
+                      <SelectTrigger data-testid="select-field-type">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="text">Text</SelectItem>
+                        <SelectItem value="number">Number</SelectItem>
+                        <SelectItem value="date">Date</SelectItem>
+                        <SelectItem value="textarea">Textarea</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="text-transform">Text Transform</Label>
+                    <Select
+                      value={newField.textTransform}
+                      onValueChange={(value) => setNewField({...newField, textTransform: value})}
+                    >
+                      <SelectTrigger data-testid="select-text-transform">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">None</SelectItem>
+                        <SelectItem value="uppercase">UPPERCASE</SelectItem>
+                        <SelectItem value="capitalize">Capitalize</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex items-center space-x-2 mt-6">
+                    <Checkbox
+                      id="is-required"
+                      checked={newField.isRequired}
+                      onCheckedChange={(checked) => setNewField({...newField, isRequired: !!checked})}
+                      data-testid="checkbox-field-required"
+                    />
+                    <Label htmlFor="is-required">Required</Label>
+                  </div>
+                </div>
+                
+                <Button
+                  onClick={handleCreateField}
+                  disabled={createFieldMutation.isPending}
+                  data-testid="button-add-field"
+                >
+                  {createFieldMutation.isPending ? (
+                    <>
+                      <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white mr-2"></div>
+                      Adding...
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Field
+                    </>
+                  )}
+                </Button>
+              </div>
+              
+              {/* Existing Fields List */}
+              <div>
+                <h3 className="text-lg font-medium text-slate-900 mb-4">
+                  Existing Fields for "{selectedTemplateForFields.templateName}"
+                </h3>
+                
+                {fieldsLoading ? (
+                  <div className="flex justify-center py-4">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                  </div>
+                ) : templateFields.length === 0 ? (
+                  <div className="text-center py-8 text-slate-500">
+                    No custom fields created for this template yet. Add your first field above.
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Field Name</TableHead>
+                        <TableHead>Display Label</TableHead>
+                        <TableHead>Type</TableHead>
+                        <TableHead>Transform</TableHead>
+                        <TableHead>Required</TableHead>
+                        <TableHead className="text-center">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {templateFields.map((field) => (
+                        <TableRow key={field.id}>
+                          <TableCell className="font-mono">
+                            ##{field.fieldName}##
+                          </TableCell>
+                          <TableCell>{field.fieldLabel}</TableCell>
+                          <TableCell className="capitalize">{field.fieldType}</TableCell>
+                          <TableCell className="capitalize">
+                            {field.textTransform === 'none' ? '-' : field.textTransform}
+                          </TableCell>
+                          <TableCell>
+                            {field.isRequired ? (
+                              <span className="text-red-600 font-medium">Yes</span>
+                            ) : (
+                              <span className="text-gray-500">No</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <TooltipProvider>
+                              <div className="flex justify-center space-x-2">
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleEditField(field)}
+                                      className="h-8 w-8 p-0 text-gray-600 hover:text-gray-800"
+                                      data-testid={`button-edit-field-${field.id}`}
+                                    >
+                                      <Edit className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Edit Field</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                                
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => deleteFieldMutation.mutate(field.id)}
+                                      className="h-8 w-8 p-0 text-red-600 hover:text-red-800"
+                                      data-testid={`button-delete-field-${field.id}`}
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Delete Field</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </div>
+                            </TooltipProvider>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </div>
+            </div>
+            
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowFieldsManager(false);
+                  setSelectedTemplateForFields(null);
+                  setNewField({ fieldName: '', fieldLabel: '', fieldType: 'text', textTransform: 'none', isRequired: false });
+                }}
+                data-testid="button-close-fields-manager"
+              >
+                Close
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
       {/* Edit Field Modal */}
       {editingField && (
         <Dialog open={!!editingField} onOpenChange={() => setEditingField(null)}>
@@ -1191,7 +1189,7 @@ export default function ManageAuthorityLetter() {
             <DialogHeader>
               <DialogTitle>Edit Template Field</DialogTitle>
               <DialogDescription>
-                Update field details for {selectedDepartmentForFields?.name}.
+                Update field details for "{selectedTemplateForFields?.templateName}".
               </DialogDescription>
             </DialogHeader>
             
