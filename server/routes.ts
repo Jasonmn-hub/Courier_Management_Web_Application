@@ -3866,6 +3866,10 @@ Jigar Jodhani
         const doc = new Docxtemplater(zip, {
           paragraphLoop: true,
           linebreaks: true,
+          delimiters: {
+            start: '##',
+            end: '##'
+          }
         });
         
         // Prepare data for template replacement
@@ -4303,6 +4307,10 @@ ${result.value}
         const doc = new Docxtemplater(zip, {
           paragraphLoop: true,
           linebreaks: true,
+          delimiters: {
+            start: '##',
+            end: '##'
+          }
         });
         
         // Prepare data for template replacement
