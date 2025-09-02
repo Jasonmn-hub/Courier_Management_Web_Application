@@ -4075,13 +4075,17 @@ ${result.value}
   });
 
   // Extract content from Word document for new templates
-  app.post('/api/authority-templates/extract-word-content', authenticateToken, requireRole(['admin']), documentUpload.single('wordDocument'), setCurrentUser(), async (req: any, res) => {
+  app.post('/api/authority-templates/extract-word-content', authenticateToken, documentUpload.single('wordDocument'), setCurrentUser(), async (req: any, res) => {
     try {
+      console.log('Word extraction request received');
       const file = req.file;
       
       if (!file) {
+        console.log('No file uploaded in request');
         return res.status(400).json({ message: "No file uploaded" });
       }
+      
+      console.log('File received:', file.originalname, 'Size:', file.size);
       
       // Convert Word document to HTML
       let htmlContent = '<p>Word document uploaded but conversion failed</p>';

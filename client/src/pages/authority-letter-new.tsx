@@ -192,16 +192,18 @@ export default function AuthorityLetterNew() {
       return response.json();
     },
     onSuccess: (data) => {
+      console.log('Word extraction successful:', data);
       setNewTemplate(prev => ({ ...prev, templateContent: data.htmlContent }));
       toast({ title: "Success", description: "Word document content extracted successfully" });
       setExtractingContent(false);
     },
     onError: (error: any) => {
+      console.error('Word extraction error:', error);
       if (error.message.includes('401')) {
         window.location.href = "/api/login";
         return;
       }
-      toast({ title: "Error", description: "Failed to extract Word document content", variant: "destructive" });
+      toast({ title: "Error", description: `Failed to extract Word document content: ${error.message}`, variant: "destructive" });
       setExtractingContent(false);
     },
   });
@@ -1066,6 +1068,7 @@ export default function AuthorityLetterNew() {
                         onChange={(e) => {
                           const file = e.target.files?.[0];
                           if (file) {
+                            console.log('File selected for extraction:', file.name, file.type, file.size);
                             setNewTemplateWordFile(file);
                             setExtractingContent(true);
                             extractWordContentMutation.mutate(file);
