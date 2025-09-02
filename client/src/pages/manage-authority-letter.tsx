@@ -660,12 +660,13 @@ export default function ManageAuthorityLetter() {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="is-default">
+                  <Label htmlFor="is-default" className="flex items-center">
                     <Checkbox
                       id="is-default"
                       checked={newTemplate.isDefault}
                       onCheckedChange={(checked) => setNewTemplate({...newTemplate, isDefault: !!checked})}
                       data-testid="checkbox-is-default"
+                      className="border-input"
                     />
                     <span className="ml-2">Set as default template</span>
                   </Label>
@@ -690,7 +691,7 @@ export default function ManageAuthorityLetter() {
                   value={newTemplate.templateContent}
                   onChange={(e) => setNewTemplate({...newTemplate, templateContent: e.target.value})}
                   rows={6}
-                  className="font-mono text-sm"
+                  className="font-mono text-sm border-input"
                   data-testid="textarea-template-content"
                 />
               </div>
@@ -729,6 +730,7 @@ export default function ManageAuthorityLetter() {
                       setWordFile(file);
                     }
                   }}
+                  className="border-input cursor-pointer file:cursor-pointer"
                   data-testid="input-word-file"
                 />
                 {wordFile && (
@@ -736,6 +738,9 @@ export default function ManageAuthorityLetter() {
                     Selected: {wordFile.name}
                   </p>
                 )}
+                <p className="text-xs text-slate-500 mt-1">
+                  Choose a Word document (.doc or .docx) to upload as template
+                </p>
               </div>
             </div>
             
