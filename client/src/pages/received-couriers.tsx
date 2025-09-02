@@ -120,10 +120,11 @@ export default function ReceivedCouriers() {
 
   // Fetch branches for autocomplete
   const { data: branchesData } = useQuery({
-    queryKey: ['/api/branches', { status: 'active' }],
+    queryKey: ['/api/branches', { status: 'active', limit: 1000 }],
     queryFn: async () => {
       const params = new URLSearchParams();
       params.set('status', 'active');
+      params.set('limit', '1000'); // Get all branches for autocomplete
       const response = await apiRequest('GET', `/api/branches?${params.toString()}`);
       return response.json();
     },

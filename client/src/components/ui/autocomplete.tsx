@@ -37,16 +37,16 @@ export function Autocomplete({
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    // Show suggestions after 2 characters are typed
-    if (isOpen && value && value.length >= 2) {
+    // Show suggestions after 1 character is typed
+    if (isOpen && value && value.length >= 1) {
       const filtered = options.filter(option =>
         option.label.toLowerCase().includes(value.toLowerCase()) ||
         option.value.toLowerCase().includes(value.toLowerCase())
       );
       setFilteredOptions(filtered);
       setHighlightedIndex(-1);
-    } else if (isOpen && value && value.length < 2) {
-      // Show empty state when less than 2 characters and dropdown is open
+    } else if (isOpen && value && value.length < 1) {
+      // Show empty state when no characters and dropdown is open
       setFilteredOptions([]);
       setHighlightedIndex(-1);
     } else if (!isOpen) {
