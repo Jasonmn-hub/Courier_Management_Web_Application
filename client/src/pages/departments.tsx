@@ -33,6 +33,7 @@ interface Department {
   authorityDocumentPath?: string;
   createdAt: string;
   updatedAt: string;
+  templateCount?: number;
 }
 
 export default function Departments() {
@@ -42,9 +43,6 @@ export default function Departments() {
   const [showDepartmentForm, setShowDepartmentForm] = useState(false);
   const [editingDepartment, setEditingDepartment] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [showDocumentUpload, setShowDocumentUpload] = useState(false);
-  const [selectedDepartmentForUpload, setSelectedDepartmentForUpload] = useState<Department | null>(null);
-  const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [showFieldsManager, setShowFieldsManager] = useState(false);
   const [selectedDepartmentForFields, setSelectedDepartmentForFields] = useState<Department | null>(null);
   const [deleteConfirmation, setDeleteConfirmation] = useState<{ show: boolean; department: Department | null }>({
@@ -92,46 +90,19 @@ export default function Departments() {
 
   const [newField, setNewField] = useState({ fieldName: '', fieldLabel: '', fieldType: 'text', textTransform: 'none', isRequired: false });
 
-  // Upload document mutation
-  const uploadDocumentMutation = useMutation({
-    mutationFn: async ({ departmentId, file }: { departmentId: number; file: File }) => {
-      const formData = new FormData();
-      formData.append('document', file);
-      formData.append('departmentId', departmentId.toString());
-
-      const token = localStorage.getItem('auth_token');
-      const response = await fetch('/api/departments/upload-document', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
-        body: formData,
+  // Fetch template counts for each department
+  const { data: templateCounts = {} } = useQuery<Record<number, number>>({
+    queryKey: ['/api/authority-letter-templates/counts'],
+    queryFn: async () => {
+      const response = await apiRequest('GET', '/api/authority-letter-templates');
+      const templates = await response.json();
+      const counts: Record<number, number> = {};
+      templates.forEach((template: any) => {
+        counts[template.departmentId] = (counts[template.departmentId] || 0) + 1;
       });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || 'Failed to upload document');
-      }
-
-      return response.json();
+      return counts;
     },
-    onSuccess: () => {
-      toast({
-        title: "Success",
-        description: "Authority document uploaded successfully.",
-      });
-      queryClient.invalidateQueries({ queryKey: ['/api/departments'] });
-      setShowDocumentUpload(false);
-      setSelectedDepartmentForUpload(null);
-      setUploadFile(null);
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to upload document.",
-        variant: "destructive",
-      });
-    },
+    enabled: isAuthenticated && (user as User)?.role === 'admin',
   });
 
   // Create field mutation
@@ -231,24 +202,6 @@ export default function Departments() {
     }
   };
 
-  const handleFileUpload = () => {
-    if (!uploadFile || !selectedDepartmentForUpload) return;
-    
-    // Validate file type
-    if (!uploadFile.name.toLowerCase().endsWith('.docx') && !uploadFile.name.toLowerCase().endsWith('.doc')) {
-      toast({
-        title: "Invalid File Type",
-        description: "Please upload a Word document (.doc or .docx file).",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    uploadDocumentMutation.mutate({
-      departmentId: selectedDepartmentForUpload.id,
-      file: uploadFile,
-    });
-  };
 
   if (isLoading || !isAuthenticated || (user as User)?.role !== 'admin') {
     return (
@@ -316,89 +269,64 @@ export default function Departments() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>ID</TableHead>
                         <TableHead>Name</TableHead>
                         <TableHead>Created</TableHead>
-                        <TableHead className="text-center">Authority Letter</TableHead>
+                        <TableHead className="text-center">Templates</TableHead>
                         <TableHead className="text-center">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {departments.map((dept) => (
                         <TableRow key={dept.id}>
-                          <TableCell className="font-mono text-sm" data-testid={`text-id-${dept.id}`}>
-                            {formatEntityId(dept.id, 'department')}
-                          </TableCell>
                           <TableCell className="font-medium">{dept.name}</TableCell>
                           <TableCell>
                             {new Date(dept.createdAt).toLocaleDateString()}
                           </TableCell>
                           <TableCell className="text-center">
                             <TooltipProvider>
-                              <div className="flex justify-center space-x-2">
-                                {dept.authorityDocumentPath ? (
-                                  <>
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <Button
-                                          variant="ghost"
-                                          size="sm"
-                                          onClick={() => {
-                                            setSelectedDepartmentForUpload(dept);
-                                            setShowDocumentUpload(true);
-                                          }}
-                                          className="h-8 w-8 p-0 text-green-600 hover:text-green-800"
-                                          data-testid={`button-update-document-${dept.id}`}
-                                        >
-                                          <FileText className="h-4 w-4" />
-                                        </Button>
-                                      </TooltipTrigger>
-                                      <TooltipContent>
-                                        <p>Update Authority Document</p>
-                                      </TooltipContent>
-                                    </Tooltip>
-                                    
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <Button
-                                          variant="ghost"
-                                          size="sm"
-                                          onClick={() => {
-                                            setSelectedDepartmentForFields(dept);
-                                            setShowFieldsManager(true);
-                                          }}
-                                          className="h-8 w-8 p-0 text-blue-600 hover:text-blue-800"
-                                          data-testid={`button-manage-fields-${dept.id}`}
-                                        >
-                                          <Settings className="h-4 w-4" />
-                                        </Button>
-                                      </TooltipTrigger>
-                                      <TooltipContent>
-                                        <p>Manage Document Fields</p>
-                                      </TooltipContent>
-                                    </Tooltip>
-                                  </>
-                                ) : (
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => {
-                                          setSelectedDepartmentForUpload(dept);
-                                          setShowDocumentUpload(true);
-                                        }}
-                                        className="h-8 w-8 p-0 text-gray-600 hover:text-gray-800"
-                                        data-testid={`button-upload-document-${dept.id}`}
-                                      >
-                                        <Upload className="h-4 w-4" />
-                                      </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                      <p>Upload Authority Document</p>
-                                    </TooltipContent>
-                                  </Tooltip>
-                                )}
+                              <div className="flex justify-center space-x-2 items-center">
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => {
+                                        window.location.href = `/authority-letter?dept=${dept.id}`;
+                                      }}
+                                      className="h-8 w-8 p-0 text-blue-600 hover:text-blue-800"
+                                      data-testid={`button-manage-templates-${dept.id}`}
+                                    >
+                                      <FileText className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>{templateCounts[dept.id] || 0} template(s) - Click to manage</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                                
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => {
+                                        setSelectedDepartmentForFields(dept);
+                                        setShowFieldsManager(true);
+                                      }}
+                                      className="h-8 w-8 p-0 text-gray-600 hover:text-gray-800"
+                                      data-testid={`button-manage-fields-${dept.id}`}
+                                    >
+                                      <Settings className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Manage Document Fields</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                                
+                                <span className="text-sm font-medium text-slate-600">
+                                  {templateCounts[dept.id] || 0}
+                                </span>
                               </div>
                             </TooltipProvider>
                           </TableCell>
@@ -470,83 +398,6 @@ export default function Departments() {
         />
       )}
 
-      {/* Document Upload Modal */}
-      {showDocumentUpload && selectedDepartmentForUpload && (
-        <Dialog open={showDocumentUpload} onOpenChange={setShowDocumentUpload}>
-          <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle>Upload Authority Document</DialogTitle>
-              <DialogDescription>
-                Upload a Word document template for {selectedDepartmentForUpload.name} department.
-                This document will be used for generating authority letters.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <label htmlFor="document-upload" className="text-right">
-                  Document
-                </label>
-                <div className="col-span-3">
-                  <Input
-                    id="document-upload"
-                    type="file"
-                    accept=".doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        setUploadFile(file);
-                      }
-                    }}
-                    data-testid="input-document-upload"
-                  />
-                  <p className="text-xs text-slate-500 mt-1">
-                    Only Word documents (.doc, .docx) are allowed
-                  </p>
-                </div>
-              </div>
-              {uploadFile && (
-                <div className="flex items-center space-x-2 p-2 bg-slate-50 rounded">
-                  <FileText className="h-4 w-4 text-blue-600" />
-                  <span className="text-sm">{uploadFile.name}</span>
-                  <span className="text-xs text-slate-500">
-                    ({(uploadFile.size / 1024 / 1024).toFixed(2)} MB)
-                  </span>
-                </div>
-              )}
-            </div>
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setShowDocumentUpload(false);
-                  setSelectedDepartmentForUpload(null);
-                  setUploadFile(null);
-                }}
-                data-testid="button-cancel-upload"
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleFileUpload}
-                disabled={!uploadFile || uploadDocumentMutation.isPending}
-                data-testid="button-confirm-upload"
-              >
-                {uploadDocumentMutation.isPending ? (
-                  <>
-                    <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white mr-2"></div>
-                    Uploading...
-                  </>
-                ) : (
-                  <>
-                    <Upload className="h-3 w-3 mr-2" />
-                    Upload Document
-                  </>
-                )}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      )}
 
       {/* Fields Manager Modal */}
       {showFieldsManager && selectedDepartmentForFields && (

@@ -117,7 +117,7 @@ function SidebarContent({ navigation, adminNavigation, user, onLogout }: any) {
             <img 
               src={lightLogo} 
               alt="Light Microfinance" 
-              className="h-8 w-8 object-contain" 
+              className="h-12 w-12 object-contain" 
             />
           </div>
           <div className="ml-3">
