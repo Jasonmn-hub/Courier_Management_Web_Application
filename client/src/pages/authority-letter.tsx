@@ -19,6 +19,18 @@ interface Department {
   createdAt: string;
 }
 
+interface AuthorityTemplate {
+  id: number;
+  departmentId: number;
+  templateName: string;
+  templateContent: string;
+  templateDescription?: string;
+  isDefault: boolean;
+  isActive: boolean;
+  wordTemplateUrl?: string | null;
+  createdAt: string;
+}
+
 interface AuthorityLetterField {
   id: number;
   departmentId: number;
@@ -34,6 +46,7 @@ export default function AuthorityLetter() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [selectedDepartment, setSelectedDepartment] = useState<number | null>(null);
+  const [selectedTemplate, setSelectedTemplate] = useState<number | null>(null);
   const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
   const [generatedContent, setGeneratedContent] = useState<string>("");
   const [showFilenameDialog, setShowFilenameDialog] = useState(false);
@@ -58,14 +71,27 @@ export default function AuthorityLetter() {
     }
   }, [isAuthenticated, isLoading, toast]);
 
-  // Fetch departments with uploaded documents
+  // Fetch departments
   const { data: departments = [], isLoading: departmentsLoading } = useQuery<Department[]>({
     queryKey: ['/api/departments'],
     enabled: isAuthenticated,
   });
 
-  // Filter departments that have uploaded Word documents
-  const departmentsWithDocuments = departments.filter(dept => dept.authorityDocumentPath);
+  // Fetch all templates
+  const { data: allTemplates = [], isLoading: templatesLoading } = useQuery<AuthorityTemplate[]>({
+    queryKey: ['/api/authority-letter-templates'],
+    enabled: isAuthenticated,
+  });
+
+  // Get departments that have active templates
+  const departmentsWithTemplates = departments.filter(dept => 
+    allTemplates.some(template => template.departmentId === dept.id && template.isActive)
+  );
+
+  // Get templates for selected department
+  const availableTemplates = selectedDepartment 
+    ? allTemplates.filter(template => template.departmentId === selectedDepartment && template.isActive)
+    : [];
 
   // Fetch fields for selected department
   const { data: fields = [], isLoading: fieldsLoading } = useQuery<AuthorityLetterField[]>({
@@ -80,8 +106,8 @@ export default function AuthorityLetter() {
 
   // Preview letter mutation
   const previewMutation = useMutation({
-    mutationFn: async (data: { departmentId: number; fieldValues: Record<string, string> }) => {
-      const res = await apiRequest('POST', '/api/authority-letter/preview-from-department', data);
+    mutationFn: async (data: { templateId: number; fieldValues: Record<string, string> }) => {
+      const res = await apiRequest('POST', '/api/authority-letter/preview', data);
       return res.json();
     },
     onSuccess: (data) => {
@@ -106,11 +132,11 @@ export default function AuthorityLetter() {
 
   // Download PDF letter mutation
   const downloadPDFMutation = useMutation({
-    mutationFn: async (data: { departmentId: number; fieldValues: Record<string, string>; fileName?: string }) => {
+    mutationFn: async (data: { templateId: number; fieldValues: Record<string, string>; fileName?: string }) => {
       const token = localStorage.getItem('auth_token');
       if (!token) throw new Error('No auth token');
       
-      const response = await fetch('/api/authority-letter/generate-pdf-from-department', {
+      const response = await fetch('/api/authority-letter/generate-pdf', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -150,11 +176,11 @@ export default function AuthorityLetter() {
 
   // Download Word letter mutation
   const downloadWordMutation = useMutation({
-    mutationFn: async (data: { departmentId: number; fieldValues: Record<string, string>; fileName?: string }) => {
+    mutationFn: async (data: { templateId: number; fieldValues: Record<string, string>; fileName?: string }) => {
       const token = localStorage.getItem('auth_token');
       if (!token) throw new Error('No auth token');
       
-      const response = await fetch('/api/authority-letter/generate-from-department', {
+      const response = await fetch('/api/authority-letter/generate', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -194,13 +220,13 @@ export default function AuthorityLetter() {
 
   // Bulk upload mutation
   const bulkUploadMutation = useMutation({
-    mutationFn: async (data: { departmentId: number; csvFile: File }) => {
+    mutationFn: async (data: { templateId: number; csvFile: File }) => {
       const formData = new FormData();
-      formData.append('departmentId', data.departmentId.toString());
+      formData.append('templateId', data.templateId.toString());
       formData.append('csvFile', data.csvFile);
 
       const token = localStorage.getItem('auth_token');
-      const response = await fetch('/api/authority-letter/bulk-generate-from-department', {
+      const response = await fetch('/api/authority-letter/bulk-generate', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -233,16 +259,16 @@ export default function AuthorityLetter() {
   });
 
   const handleGeneratePreview = () => {
-    if (!selectedDepartment || !fieldValues) {
-      toast({ title: "Error", description: "Please select a department and fill required fields", variant: "destructive" });
+    if (!selectedTemplate || !fieldValues) {
+      toast({ title: "Error", description: "Please select a template and fill required fields", variant: "destructive" });
       return;
     }
-    previewMutation.mutate({ departmentId: selectedDepartment, fieldValues });
+    previewMutation.mutate({ templateId: selectedTemplate, fieldValues });
   };
 
   const handleDownloadPDF = () => {
-    if (!selectedDepartment || !fieldValues) {
-      toast({ title: "Error", description: "Please select a department and fill required fields", variant: "destructive" });
+    if (!selectedTemplate || !fieldValues) {
+      toast({ title: "Error", description: "Please select a template and fill required fields", variant: "destructive" });
       return;
     }
     setShowFilenameDialog(true);
@@ -250,8 +276,8 @@ export default function AuthorityLetter() {
   };
 
   const handleDownloadWord = () => {
-    if (!selectedDepartment || !fieldValues) {
-      toast({ title: "Error", description: "Please select a department and fill required fields", variant: "destructive" });
+    if (!selectedTemplate || !fieldValues) {
+      toast({ title: "Error", description: "Please select a template and fill required fields", variant: "destructive" });
       return;
     }
     setShowFilenameDialog(true);
@@ -262,13 +288,13 @@ export default function AuthorityLetter() {
     const fileName = generateFilename();
     if (downloadFormat === 'word') {
       downloadWordMutation.mutate({ 
-        departmentId: selectedDepartment!, 
+        templateId: selectedTemplate!, 
         fieldValues, 
         fileName 
       });
     } else {
       downloadPDFMutation.mutate({ 
-        departmentId: selectedDepartment!, 
+        templateId: selectedTemplate!, 
         fieldValues, 
         fileName 
       });
@@ -276,11 +302,11 @@ export default function AuthorityLetter() {
   };
 
   const handleBulkUpload = () => {
-    if (!selectedDepartment || !csvFile) {
-      toast({ title: "Error", description: "Please select a department and upload a CSV file", variant: "destructive" });
+    if (!selectedTemplate || !csvFile) {
+      toast({ title: "Error", description: "Please select a template and upload a CSV file", variant: "destructive" });
       return;
     }
-    bulkUploadMutation.mutate({ departmentId: selectedDepartment, csvFile });
+    bulkUploadMutation.mutate({ templateId: selectedTemplate, csvFile });
   };
 
   // Generate sample CSV file
@@ -365,16 +391,16 @@ export default function AuthorityLetter() {
         </div>
       </div>
 
-      {departmentsWithDocuments.length === 0 ? (
+      {departmentsWithTemplates.length === 0 ? (
         <Card>
           <CardContent className="p-8 text-center">
             <FileText className="mx-auto h-12 w-12 text-slate-300 mb-3" />
             <h3 className="text-lg font-medium text-slate-900 mb-2">No Templates Available</h3>
             <p className="text-slate-600 mb-4">
-              No departments have uploaded Word document templates yet.
+              No departments have active authority letter templates yet.
             </p>
             <p className="text-sm text-slate-500">
-              Ask your administrator to upload authority letter templates in the Departments section.
+              Ask your administrator to upload authority letter templates in the "Manage Authority Letter" section.
             </p>
           </CardContent>
         </Card>
@@ -396,6 +422,7 @@ export default function AuthorityLetter() {
                   value={selectedDepartment?.toString() || ""} 
                   onValueChange={(value) => {
                     setSelectedDepartment(parseInt(value));
+                    setSelectedTemplate(null);
                     setFieldValues({});
                     setGeneratedContent("");
                   }}
@@ -404,7 +431,7 @@ export default function AuthorityLetter() {
                     <SelectValue placeholder="Choose a department..." />
                   </SelectTrigger>
                   <SelectContent>
-                    {departmentsWithDocuments.map((department) => (
+                    {departmentsWithTemplates.map((department) => (
                       <SelectItem key={department.id} value={department.id.toString()}>
                         {department.name}
                       </SelectItem>
@@ -413,8 +440,35 @@ export default function AuthorityLetter() {
                 </Select>
               </div>
 
+              {/* Template Selection */}
+              {selectedDepartment && availableTemplates.length > 0 && (
+                <div>
+                  <Label htmlFor="template">Select Template</Label>
+                  <Select 
+                    value={selectedTemplate?.toString() || ""} 
+                    onValueChange={(value) => {
+                      setSelectedTemplate(parseInt(value));
+                      setFieldValues({});
+                      setGeneratedContent("");
+                    }}
+                  >
+                    <SelectTrigger data-testid="select-template">
+                      <SelectValue placeholder="Choose a template..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableTemplates.map((template) => (
+                        <SelectItem key={template.id} value={template.id.toString()}>
+                          {template.templateName}
+                          {template.isDefault && " (Default)"}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
               {/* Dynamic Fields */}
-              {selectedDepartment && fields.length > 0 && (
+              {selectedTemplate && fields.length > 0 && (
                 <div className="space-y-4">
                   <h3 className="font-medium text-slate-900">Fill Template Fields</h3>
                   {fields.map((field) => (
@@ -455,7 +509,7 @@ export default function AuthorityLetter() {
               )}
 
               {/* Action Buttons */}
-              {selectedDepartment && (
+              {selectedTemplate && (
                 <div className="flex gap-2 pt-4">
                   <Button 
                     onClick={handleGeneratePreview}
@@ -585,7 +639,7 @@ export default function AuthorityLetter() {
                   <SelectValue placeholder="Choose a department..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {departmentsWithDocuments.map((department) => (
+                  {departmentsWithTemplates.map((department) => (
                     <SelectItem key={department.id} value={department.id.toString()}>
                       {department.name}
                     </SelectItem>

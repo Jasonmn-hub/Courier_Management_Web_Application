@@ -63,7 +63,9 @@ export default function ManageAuthorityLetter() {
   
   const [showUploadForm, setShowUploadForm] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
+  const [showWordUploadForm, setShowWordUploadForm] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<AuthorityTemplate | null>(null);
+  const [uploadingWordTemplate, setUploadingWordTemplate] = useState<AuthorityTemplate | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedDepartments, setSelectedDepartments] = useState<number[]>([]);
   const [wordFile, setWordFile] = useState<File | null>(null);
@@ -212,6 +214,9 @@ export default function ManageAuthorityLetter() {
         description: "Word template uploaded successfully.",
       });
       refetchTemplates();
+      setShowWordUploadForm(false);
+      setUploadingWordTemplate(null);
+      setWordFile(null);
     },
     onError: (error: any) => {
       toast({
@@ -282,8 +287,8 @@ export default function ManageAuthorityLetter() {
     });
   };
 
-  const handleWordFileUpload = (templateId: number) => {
-    if (!wordFile) {
+  const handleWordFileUpload = () => {
+    if (!uploadingWordTemplate || !wordFile) {
       toast({
         title: "No File Selected",
         description: "Please select a Word document to upload.",
@@ -292,7 +297,13 @@ export default function ManageAuthorityLetter() {
       return;
     }
 
-    uploadWordTemplateMutation.mutate({ templateId, file: wordFile });
+    uploadWordTemplateMutation.mutate({ templateId: uploadingWordTemplate.id, file: wordFile });
+  };
+
+  const openWordUploadDialog = (template: AuthorityTemplate) => {
+    setUploadingWordTemplate(template);
+    setShowWordUploadForm(true);
+    setWordFile(null);
   };
 
   const getDepartmentName = (departmentId: number) => {
@@ -419,6 +430,23 @@ export default function ManageAuthorityLetter() {
                                   </TooltipTrigger>
                                   <TooltipContent>
                                     <p>Edit Template</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                                
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => openWordUploadDialog(template)}
+                                      className="h-8 w-8 p-0 text-blue-600 hover:text-blue-800"
+                                      data-testid={`button-upload-word-${template.id}`}
+                                    >
+                                      <Upload className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Upload Word Template</p>
                                   </TooltipContent>
                                 </Tooltip>
                                 
@@ -683,6 +711,96 @@ export default function ManageAuthorityLetter() {
                   <>
                     <Edit className="h-3 w-3 mr-2" />
                     Update Template
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Word Upload Modal */}
+      {showWordUploadForm && uploadingWordTemplate && (
+        <Dialog open={showWordUploadForm} onOpenChange={setShowWordUploadForm}>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle>Upload Word Template</DialogTitle>
+              <DialogDescription>
+                Upload a Word document template for "{uploadingWordTemplate.templateName}" - {getDepartmentName(uploadingWordTemplate.departmentId)}
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="grid gap-4 py-4">
+              <div>
+                <Label htmlFor="word-upload">Select Word Document</Label>
+                <Input
+                  id="word-upload"
+                  type="file"
+                  accept=".doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      setWordFile(file);
+                    }
+                  }}
+                  data-testid="input-word-upload"
+                />
+                <p className="text-xs text-slate-500 mt-1">
+                  Only Word documents (.doc, .docx) are allowed
+                </p>
+              </div>
+              
+              {wordFile && (
+                <div className="flex items-center space-x-2 p-3 bg-slate-50 rounded-lg">
+                  <FileText className="h-5 w-5 text-blue-600" />
+                  <div className="flex-1">
+                    <div className="font-medium text-sm">{wordFile.name}</div>
+                    <div className="text-xs text-slate-500">
+                      {(wordFile.size / 1024 / 1024).toFixed(2)} MB
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {uploadingWordTemplate.wordTemplateUrl && (
+                <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                  <div className="flex items-center text-amber-800">
+                    <FileText className="h-4 w-4 mr-2" />
+                    <span className="text-sm font-medium">Current Word Template</span>
+                  </div>
+                  <p className="text-xs text-amber-700 mt-1">
+                    This template already has a Word document. Uploading a new one will replace the existing file.
+                  </p>
+                </div>
+              )}
+            </div>
+            
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowWordUploadForm(false);
+                  setUploadingWordTemplate(null);
+                  setWordFile(null);
+                }}
+                data-testid="button-cancel-word-upload"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleWordFileUpload}
+                disabled={!wordFile || uploadWordTemplateMutation.isPending}
+                data-testid="button-confirm-word-upload"
+              >
+                {uploadWordTemplateMutation.isPending ? (
+                  <>
+                    <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white mr-2"></div>
+                    Uploading...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="h-3 w-3 mr-2" />
+                    Upload Word Template
                   </>
                 )}
               </Button>
