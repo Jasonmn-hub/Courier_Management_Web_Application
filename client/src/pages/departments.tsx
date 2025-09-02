@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Plus, FileText, Upload, Edit, Trash2, Settings, Search } from "lucide-react";
+import { Plus, Upload, Edit, Trash2, Settings, Search } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import DepartmentForm from "@/components/departments/department-form";
@@ -90,20 +90,6 @@ export default function Departments() {
 
   const [newField, setNewField] = useState({ fieldName: '', fieldLabel: '', fieldType: 'text', textTransform: 'none', isRequired: false });
 
-  // Fetch template counts for each department
-  const { data: templateCounts = {} } = useQuery<Record<number, number>>({
-    queryKey: ['/api/authority-letter-templates/counts'],
-    queryFn: async () => {
-      const response = await apiRequest('GET', '/api/authority-letter-templates');
-      const templates = await response.json();
-      const counts: Record<number, number> = {};
-      templates.forEach((template: any) => {
-        counts[template.departmentId] = (counts[template.departmentId] || 0) + 1;
-      });
-      return counts;
-    },
-    enabled: isAuthenticated && (user as User)?.role === 'admin',
-  });
 
   // Create field mutation
   const createFieldMutation = useMutation({
@@ -271,7 +257,6 @@ export default function Departments() {
                       <TableRow>
                         <TableHead>Name</TableHead>
                         <TableHead>Created</TableHead>
-                        <TableHead className="text-center">Templates</TableHead>
                         <TableHead className="text-center">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -281,54 +266,6 @@ export default function Departments() {
                           <TableCell className="font-medium">{dept.name}</TableCell>
                           <TableCell>
                             {new Date(dept.createdAt).toLocaleDateString()}
-                          </TableCell>
-                          <TableCell className="text-center">
-                            <TooltipProvider>
-                              <div className="flex justify-center space-x-2 items-center">
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() => {
-                                        window.location.href = `/authority-letter?dept=${dept.id}`;
-                                      }}
-                                      className="h-8 w-8 p-0 text-blue-600 hover:text-blue-800"
-                                      data-testid={`button-manage-templates-${dept.id}`}
-                                    >
-                                      <FileText className="h-4 w-4" />
-                                    </Button>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p>{templateCounts[dept.id] || 0} template(s) - Click to manage</p>
-                                  </TooltipContent>
-                                </Tooltip>
-                                
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() => {
-                                        setSelectedDepartmentForFields(dept);
-                                        setShowFieldsManager(true);
-                                      }}
-                                      className="h-8 w-8 p-0 text-gray-600 hover:text-gray-800"
-                                      data-testid={`button-manage-fields-${dept.id}`}
-                                    >
-                                      <Settings className="h-4 w-4" />
-                                    </Button>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p>Manage Document Fields</p>
-                                  </TooltipContent>
-                                </Tooltip>
-                                
-                                <span className="text-sm font-medium text-slate-600">
-                                  {templateCounts[dept.id] || 0}
-                                </span>
-                              </div>
-                            </TooltipProvider>
                           </TableCell>
                           <TableCell className="text-center">
                             <TooltipProvider>
