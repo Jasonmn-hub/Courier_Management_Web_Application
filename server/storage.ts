@@ -1204,7 +1204,7 @@ export class DatabaseStorage implements IStorage {
 
   async deleteAuthorityLetterField(id: number): Promise<boolean> {
     const result = await db.delete(authorityLetterFields).where(eq(authorityLetterFields.id, id));
-    return result.length > 0;
+    return result.rowCount > 0;
   }
 
   // Field Dropdown Options methods

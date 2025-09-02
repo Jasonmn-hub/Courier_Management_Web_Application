@@ -93,15 +93,15 @@ export default function AuthorityLetter() {
     ? allTemplates.filter(template => template.departmentId === selectedDepartment && template.isActive)
     : [];
 
-  // Fetch fields for selected department
+  // Fetch fields for selected template
   const { data: fields = [], isLoading: fieldsLoading } = useQuery<AuthorityLetterField[]>({
-    queryKey: ['/api/authority-letter-fields', selectedDepartment],
+    queryKey: ['/api/authority-letter-fields', selectedTemplate],
     queryFn: async () => {
-      if (!selectedDepartment) return [];
-      const response = await apiRequest('GET', `/api/authority-letter-fields?departmentId=${selectedDepartment}`);
+      if (!selectedTemplate) return [];
+      const response = await apiRequest('GET', `/api/authority-letter-fields?templateId=${selectedTemplate}`);
       return response.json();
     },
-    enabled: !!selectedDepartment,
+    enabled: !!selectedTemplate,
   });
 
   // Preview letter mutation
@@ -258,13 +258,12 @@ export default function AuthorityLetter() {
     },
   });
 
-  const handleGeneratePreview = () => {
-    if (!selectedTemplate || !fieldValues) {
-      toast({ title: "Error", description: "Please select a template and fill required fields", variant: "destructive" });
-      return;
+  // Auto-generate preview when template changes
+  useEffect(() => {
+    if (selectedTemplate && Object.keys(fieldValues).length > 0) {
+      previewMutation.mutate({ templateId: selectedTemplate, fieldValues });
     }
-    previewMutation.mutate({ templateId: selectedTemplate, fieldValues });
-  };
+  }, [selectedTemplate]);
 
   const handleDownloadPDF = () => {
     if (!selectedTemplate || !fieldValues) {
@@ -354,6 +353,12 @@ export default function AuthorityLetter() {
       ...prev,
       [fieldName]: value
     }));
+    
+    // Auto-generate preview for real-time updates
+    if (selectedTemplate) {
+      const newFieldValues = { ...fieldValues, [fieldName]: value };
+      previewMutation.mutate({ templateId: selectedTemplate, fieldValues: newFieldValues });
+    }
   };
 
   if (isLoading || !isAuthenticated) {
@@ -511,14 +516,7 @@ export default function AuthorityLetter() {
               {/* Action Buttons */}
               {selectedTemplate && (
                 <div className="flex gap-2 pt-4">
-                  <Button 
-                    onClick={handleGeneratePreview}
-                    variant="outline"
-                    disabled={previewMutation.isPending}
-                    data-testid="button-preview"
-                  >
-                    {previewMutation.isPending ? "Generating..." : "Preview"}
-                  </Button>
+                  {/* Real-time preview - no button needed */}
                   <div className="flex gap-2">
                     <Button 
                       onClick={handleDownloadPDF}
