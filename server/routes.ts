@@ -3855,28 +3855,137 @@ Jigar Jodhani
         return res.status(403).json({ message: "Access denied to this template" });
       }
       
-      // Replace placeholders in template content
-      let content = template.templateContent;
-      
-      // Replace ##field## placeholders with actual values
-      for (const [fieldName, value] of Object.entries(fieldValues || {})) {
-        const placeholder = `##${fieldName}##`;
-        content = content.replace(new RegExp(placeholder, 'g'), value as string);
+      // Check if template has Word document
+      if (template.wordTemplateUrl && fs.existsSync(template.wordTemplateUrl)) {
+        // Use Word template generation
+        console.log(`Generating Word document from template: ${template.wordTemplateUrl}`);
+        
+        // Read the Word document
+        const content = fs.readFileSync(template.wordTemplateUrl, 'binary');
+        const zip = new PizZip(content);
+        const doc = new Docxtemplater(zip, {
+          paragraphLoop: true,
+          linebreaks: true,
+        });
+        
+        // Prepare data for template replacement
+        const templateData: any = {
+          currentDate: new Date().toLocaleDateString('en-GB'),
+          departmentName: template.templateName,
+          generatedAt: new Date().toISOString()
+        };
+        
+        // Add field values
+        for (const [fieldName, value] of Object.entries(fieldValues || {})) {
+          templateData[fieldName] = value;
+        }
+        
+        // Render the document
+        doc.setData(templateData);
+        doc.render();
+        
+        // Generate Word document buffer
+        const wordBuffer = doc.getZip().generate({
+          type: 'nodebuffer',
+          compression: 'DEFLATE',
+        });
+        
+        await logAudit(user.id, 'CREATE', 'authority_letter_word', template.id.toString());
+        
+        // Set headers for Word document download
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+        res.setHeader('Content-Disposition', `attachment; filename="authority_letter_${template.templateName}_${Date.now()}.docx"`);
+        res.setHeader('Content-Length', wordBuffer.length);
+        
+        return res.send(wordBuffer);
+      } else {
+        // Fallback: Convert HTML template to Word document
+        console.log('Converting HTML template to Word document');
+        
+        // Replace placeholders in template content
+        let content = template.templateContent;
+        
+        // Replace ##field## placeholders with actual values
+        for (const [fieldName, value] of Object.entries(fieldValues || {})) {
+          const placeholder = `##${fieldName}##`;
+          content = content.replace(new RegExp(placeholder, 'g'), value as string);
+        }
+        
+        // Add current date
+        content = content.replace(/##Current Date##/g, new Date().toLocaleDateString());
+        
+        // Convert HTML to Word document using mammoth (reverse conversion)
+        // Since mammoth only converts Word to HTML, we'll create a simple Word-like document
+        const wordContent = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Authority Letter</title>
+    <style>
+        body { font-family: 'Times New Roman', serif; font-size: 12pt; line-height: 1.5; margin: 1in; }
+        h1, h2, h3 { font-weight: bold; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border: 1px solid #000; padding: 8px; text-align: left; }
+    </style>
+</head>
+<body>
+${content}
+</body>
+</html>`;
+        
+        // Create a simple Word document structure using JSZip
+        const zip = new JSZip();
+        
+        // Add the main document content
+        const documentXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:body>
+    <w:p>
+      <w:r>
+        <w:t>${content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()}</w:t>
+      </w:r>
+    </w:p>
+  </w:body>
+</w:document>`;
+        
+        zip.file("word/document.xml", documentXml);
+        
+        // Add required Word document structure files
+        zip.file("[Content_Types].xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+</Types>`);
+        
+        zip.file("_rels/.rels", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+</Relationships>`);
+        
+        zip.folder("word")?.file("_rels/document.xml.rels", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+</Relationships>`);
+        
+        // Generate the Word document
+        const wordBuffer = await zip.generateAsync({
+          type: 'nodebuffer',
+          compression: 'DEFLATE'
+        });
+        
+        await logAudit(user.id, 'CREATE', 'authority_letter_word', template.id.toString());
+        
+        // Set headers for Word document download
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+        res.setHeader('Content-Disposition', `attachment; filename="authority_letter_${template.templateName}_${Date.now()}.docx"`);
+        res.setHeader('Content-Length', wordBuffer.length);
+        
+        return res.send(wordBuffer);
       }
-      
-      // Add current date
-      content = content.replace(/##Current Date##/g, new Date().toLocaleDateString());
-      
-      await logAudit(user.id, 'CREATE', 'authority_letter_generated', templateId);
-      
-      res.json({
-        content,
-        templateName: template.templateName,
-        generatedAt: new Date().toISOString()
-      });
     } catch (error) {
-      console.error("Error generating authority letter:", error);
-      res.status(500).json({ message: "Failed to generate authority letter" });
+      console.error("Error generating Word document:", error);
+      res.status(500).json({ message: "Failed to generate Word document" });
     }
   });
 
