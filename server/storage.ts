@@ -640,7 +640,8 @@ export class DatabaseStorage implements IStorage {
     const result = await db
       .update(users)
       .set({ password: hashedPassword, updatedAt: new Date() })
-      .where(eq(users.email, email));
+      .where(eq(users.email, email))
+      .returning({ id: users.id });
     
     return result.length > 0;
   }
