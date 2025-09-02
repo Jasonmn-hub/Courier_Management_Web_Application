@@ -355,9 +355,6 @@ export default function Vendors() {
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-lg font-medium">
                   <div>{vendor.vendorName}</div>
-                  <div className="text-sm font-mono text-slate-500 mt-1">
-                    ID: {formatEntityId(vendor.id, 'vendor')}
-                  </div>
                 </CardTitle>
                 <Badge variant={vendor.isActive ? "default" : "secondary"}>
                   {vendor.isActive ? "Active" : "Inactive"}

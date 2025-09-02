@@ -433,6 +433,7 @@ export class DatabaseStorage implements IStorage {
     if (filters.search) {
       conditions.push(
         or(
+          sql`CAST(${couriers.id} AS TEXT) ILIKE ${'%' + filters.search + '%'}`,
           ilike(couriers.podNo, `%${filters.search}%`),
           ilike(couriers.vendor, `%${filters.search}%`),
           ilike(couriers.toBranch, `%${filters.search}%`),
@@ -1071,6 +1072,7 @@ export class DatabaseStorage implements IStorage {
     if (filters?.search) {
       conditions.push(
         or(
+          sql`CAST(${receivedCouriers.id} AS TEXT) ILIKE ${'%' + filters.search + '%'}`,
           ilike(receivedCouriers.podNumber, `%${filters.search}%`),
           ilike(receivedCouriers.fromLocation, `%${filters.search}%`),
           ilike(receivedCouriers.courierVendor, `%${filters.search}%`)
@@ -1247,6 +1249,7 @@ export class DatabaseStorage implements IStorage {
     if (filters?.search) {
       conditions.push(
         or(
+          sql`CAST(${branches.id} AS TEXT) ILIKE ${'%' + filters.search + '%'}`,
           ilike(branches.branchName, `%${filters.search}%`),
           ilike(branches.branchCode, `%${filters.search}%`),
           ilike(branches.branchAddress, `%${filters.search}%`),
@@ -1362,6 +1365,7 @@ export class DatabaseStorage implements IStorage {
     if (filters?.search) {
       conditions.push(
         or(
+          sql`CAST(${vendors.id} AS TEXT) ILIKE ${'%' + filters.search + '%'}`,
           ilike(vendors.vendorName, `%${filters.search}%`),
           ilike(vendors.mobileNumber, `%${filters.search}%`),
           ilike(vendors.email, `%${filters.search}%`)

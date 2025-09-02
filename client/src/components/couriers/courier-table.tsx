@@ -276,7 +276,6 @@ export default function CourierTable({
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>ID</TableHead>
                     <TableHead>POD No.</TableHead>
                     <TableHead>To</TableHead>
                     <TableHead>Vendor</TableHead>
@@ -289,16 +288,13 @@ export default function CourierTable({
                 <TableBody>
                   {((couriersResult as any)?.couriers?.length === 0) ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center py-8 text-slate-500">
+                      <TableCell colSpan={7} className="text-center py-8 text-slate-500">
                         No couriers found. {!status && "Create your first courier to get started."}
                       </TableCell>
                     </TableRow>
                   ) : (
                     (couriersResult as any)?.couriers?.map((courier: any) => (
                       <TableRow key={courier.id} className="hover:bg-slate-50">
-                        <TableCell className="font-mono text-sm" data-testid={`text-id-${courier.id}`}>
-                          {formatEntityId(courier.id, 'courier')}
-                        </TableCell>
                         <TableCell className="font-medium" data-testid={`text-pod-${courier.id}`}>
                           {courier.podNo}
                         </TableCell>

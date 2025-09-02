@@ -174,6 +174,7 @@ export default function UserTable({ onEdit, onManageDepartments }: UserTableProp
           <TableHeader>
             <TableRow>
               <TableHead>Name</TableHead>
+              <TableHead>Employee Code</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Mobile</TableHead>
               <TableHead>Role</TableHead>
@@ -185,7 +186,7 @@ export default function UserTable({ onEdit, onManageDepartments }: UserTableProp
           <TableBody>
             {!Array.isArray(users) || users.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-slate-500">
+                <TableCell colSpan={8} className="text-center py-8 text-slate-500">
                   No users found. Add your first user to get started.
                 </TableCell>
               </TableRow>
@@ -197,6 +198,9 @@ export default function UserTable({ onEdit, onManageDepartments }: UserTableProp
                      (user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : 
                       user.firstName || user.lastName || user.email)
                     }
+                  </TableCell>
+                  <TableCell data-testid={`text-employee-code-${user.id}`}>
+                    {user.employeeCode || '-'}
                   </TableCell>
                   <TableCell data-testid={`text-email-${user.id}`}>
                     {user.email}
