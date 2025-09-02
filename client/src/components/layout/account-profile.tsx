@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { User, LogOut, Mail, Building, Calendar, Phone, Hash, Camera, Upload } from "lucide-react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -18,8 +18,27 @@ export default function AccountProfile() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // Fetch departments to get department name
+  const { data: departments = [] } = useQuery({
+    queryKey: ['/api/departments'],
+    enabled: !!user?.departmentId,
+  });
+
   // Type guard for user properties
   const userData = user as any;
+  
+  // Get department name
+  const departmentName = departments.find((dept: any) => dept.id === userData?.departmentId)?.name || 'Not assigned';
+  
+  // Format date as DD/MM/YYYY
+  const formatDate = (dateString: string) => {
+    if (!dateString) return 'Not available';
+    const date = new Date(dateString);
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
+  };
 
   const handleLogout = () => {
     localStorage.removeItem('auth_token');
@@ -201,7 +220,7 @@ export default function AccountProfile() {
                 <div>
                   <p className="text-sm font-medium text-slate-700">Department</p>
                   <p className="text-sm text-slate-500" data-testid="text-user-department">
-                    {userData?.departmentName || 'Not assigned'}
+                    {departmentName}
                   </p>
                 </div>
               </div>
@@ -211,10 +230,7 @@ export default function AccountProfile() {
                 <div>
                   <p className="text-sm font-medium text-slate-700">Account Creation Date</p>
                   <p className="text-sm text-slate-500" data-testid="text-user-created">
-                    {userData?.createdAt 
-                      ? new Date(userData.createdAt).toLocaleDateString()
-                      : 'Not available'
-                    }
+                    {formatDate(userData?.createdAt)}
                   </p>
                 </div>
               </div>
