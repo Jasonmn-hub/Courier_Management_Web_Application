@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { User, LogOut, Settings, Mail, Building, Calendar } from "lucide-react";
+import { User, LogOut, Settings, Mail, Building, Calendar, Phone, Hash, UserCheck } from "lucide-react";
 
 export default function AccountProfile() {
   const { user } = useAuth();
@@ -72,12 +72,46 @@ export default function AccountProfile() {
                 </div>
               </div>
 
+              {userData?.employeeCode && (
+                <div className="flex items-center gap-3">
+                  <Hash className="h-4 w-4 text-slate-400" />
+                  <div>
+                    <p className="text-sm font-medium text-slate-700">Employee Code</p>
+                    <p className="text-sm text-slate-500" data-testid="text-user-employee-code">
+                      {userData.employeeCode}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {userData?.mobileNumber && (
+                <div className="flex items-center gap-3">
+                  <Phone className="h-4 w-4 text-slate-400" />
+                  <div>
+                    <p className="text-sm font-medium text-slate-700">Mobile Number</p>
+                    <p className="text-sm text-slate-500" data-testid="text-user-mobile">
+                      {userData.mobileNumber}
+                    </p>
+                  </div>
+                </div>
+              )}
+
               <div className="flex items-center gap-3">
                 <Building className="h-4 w-4 text-slate-400" />
                 <div>
                   <p className="text-sm font-medium text-slate-700">Department</p>
                   <p className="text-sm text-slate-500" data-testid="text-user-department">
                     {userData?.departmentName || 'Not assigned'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <UserCheck className="h-4 w-4 text-slate-400" />
+                <div>
+                  <p className="text-sm font-medium text-slate-700">User ID</p>
+                  <p className="text-sm text-slate-500 font-mono text-xs" data-testid="text-user-id">
+                    {userData?.id || 'Not available'}
                   </p>
                 </div>
               </div>
@@ -94,6 +128,18 @@ export default function AccountProfile() {
                   </p>
                 </div>
               </div>
+
+              {userData?.updatedAt && userData?.updatedAt !== userData?.createdAt && (
+                <div className="flex items-center gap-3">
+                  <Calendar className="h-4 w-4 text-slate-400" />
+                  <div>
+                    <p className="text-sm font-medium text-slate-700">Last Updated</p>
+                    <p className="text-sm text-slate-500" data-testid="text-user-updated">
+                      {new Date(userData.updatedAt).toLocaleDateString()}
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
 
             <Separator />
