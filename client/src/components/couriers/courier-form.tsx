@@ -308,11 +308,14 @@ export default function CourierForm({ courier, onClose, onSuccess }: CourierForm
                         options={[
                           ...branches.map((branch: any) => ({
                             value: branch.branchName,
-                            label: `${branch.branchName} - ${branch.email || 'No Email'}`
+                            label: `${branch.branchName} - ${branch.email || 'No Email'}`,
+                            type: 'branch'
                           })),
                           ...users.map((user: any) => ({
                             value: user.name || user.email,
-                            label: `${user.name} - ${user.email}`
+                            label: `${user.name} - ${user.email}`,
+                            type: 'user',
+                            profileImageUrl: user.profileImageUrl
                           }))
                         ]}
                         placeholder="Type branch name, user name, or custom destination..."

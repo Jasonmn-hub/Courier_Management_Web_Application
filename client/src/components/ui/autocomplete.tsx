@@ -1,12 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Plus, Check } from "lucide-react";
+import { Plus, Check, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface AutocompleteOption {
   value: string;
   label: string;
+  type?: 'user' | 'branch';
+  profileImageUrl?: string;
 }
 
 interface AutocompleteProps {
@@ -176,7 +178,22 @@ export function Autocomplete({
                 )}
                 onClick={() => handleOptionSelect(option)}
               >
-                <span className="whitespace-nowrap flex-1 mr-2">{option.label}</span>
+                <div className="flex items-center gap-2 flex-1 mr-2">
+                  {option.type === 'user' && (
+                    <div className="h-6 w-6 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden flex-shrink-0">
+                      {option.profileImageUrl ? (
+                        <img 
+                          src={option.profileImageUrl} 
+                          alt="Profile" 
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <User className="h-3 w-3 text-gray-400" />
+                      )}
+                    </div>
+                  )}
+                  <span className="whitespace-nowrap">{option.label}</span>
+                </div>
                 {value === option.value && <Check className="h-4 w-4 text-green-600 flex-shrink-0" />}
               </div>
             ))

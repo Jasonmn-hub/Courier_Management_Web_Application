@@ -776,6 +776,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Profile image upload endpoint
+  app.post('/api/users/profile-image', authenticateToken, upload.single('profileImage'), async (req: any, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: 'No image file provided' });
+      }
+
+      // Get the file extension
+      const originalExtension = path.extname(req.file.originalname);
+      const newFileName = `profile_${req.user.id}_${Date.now()}${originalExtension}`;
+      const newPath = path.join(uploadDir, newFileName);
+
+      // Move file to new location with proper name
+      fs.renameSync(req.file.path, newPath);
+
+      // Create URL for the image
+      const imageUrl = `/uploads/${newFileName}`;
+
+      // Update user's profile image URL in database
+      const updatedUser = await storage.updateUser(req.user.id, {
+        profileImageUrl: imageUrl
+      });
+
+      if (!updatedUser) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      await logAudit(req.user.id, 'UPDATE', 'user_profile_image', req.user.id);
+
+      res.json({ 
+        message: 'Profile image updated successfully',
+        profileImageUrl: imageUrl
+      });
+    } catch (error) {
+      console.error('Profile image upload error:', error);
+      res.status(500).json({ message: 'Profile image upload failed' });
+    }
+  });
+
   app.delete('/api/users/:id', authenticateToken, requireRole(['admin']), setCurrentUser(), async (req: any, res) => {
     try {
       const userId = req.params.id;
