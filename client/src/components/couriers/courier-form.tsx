@@ -80,9 +80,11 @@ export default function CourierForm({ courier, onClose, onSuccess }: CourierForm
   });
 
   const { data: branchesData } = useQuery({
-    queryKey: ['/api/branches'],
+    queryKey: ['/api/branches', { limit: 1000 }],
     queryFn: async () => {
-      const response = await apiRequest('GET', '/api/branches');
+      const params = new URLSearchParams();
+      params.set('limit', '1000'); // Get all branches for autocomplete
+      const response = await apiRequest('GET', `/api/branches?${params.toString()}`);
       return response.json();
     },
     enabled: !!user, // Enable when user is authenticated
