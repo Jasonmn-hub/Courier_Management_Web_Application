@@ -553,15 +553,23 @@ export default function AuthorityLetter() {
             </CardHeader>
             <CardContent>
               {generatedContent ? (
-                <div className="bg-white border rounded-lg p-6 max-h-96 overflow-y-auto">
-                  <pre className="whitespace-pre-wrap text-sm text-slate-800 font-mono">
-                    {generatedContent}
-                  </pre>
+                <div className="bg-white border rounded-lg shadow-sm max-h-[600px] overflow-y-auto">
+                  {/* Document Preview with Print-like styling */}
+                  <div 
+                    className="bg-white p-8 mx-auto max-w-4xl min-h-[500px] shadow-inner"
+                    style={{
+                      fontFamily: '"Times New Roman", Times, serif',
+                      fontSize: '14px',
+                      lineHeight: '1.6',
+                      color: '#000'
+                    }}
+                    dangerouslySetInnerHTML={{ __html: generatedContent }}
+                  />
                 </div>
               ) : (
                 <div className="text-center py-8 text-slate-500">
                   <FileText className="mx-auto h-8 w-8 text-slate-300 mb-2" />
-                  <p>Generate a preview to see the authority letter content</p>
+                  <p>Select a template and fill the fields to see the authority letter preview</p>
                 </div>
               )}
             </CardContent>
