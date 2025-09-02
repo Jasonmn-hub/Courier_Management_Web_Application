@@ -4,10 +4,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
-import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
-import ForgotPassword from "@/pages/forgot-password";
-import ResetPassword from "@/pages/reset-password";
 import Dashboard from "@/pages/dashboard";
 import Couriers from "@/pages/couriers";
 import ReceivedCouriers from "@/pages/received-couriers";
@@ -38,9 +35,6 @@ function Router() {
         <>
           <Route path="/" component={Landing} />
           <Route path="/login" component={Landing} />
-          <Route path="/forgot-password" component={ForgotPassword} />
-          <Route path="/reset-password" component={ResetPassword} />
-          <Route component={NotFound} />
         </>
       ) : (
         <AppLayout>
@@ -57,7 +51,6 @@ function Router() {
             <Route path="/custom-fields" component={Settings} />
             <Route path="/audit-logs" component={Settings} />
             <Route path="/settings" component={Settings} />
-            <Route component={NotFound} />
           </Switch>
         </AppLayout>
       )}

@@ -156,16 +156,10 @@ export default function Landing() {
                     </Button>
                     <Button
                       variant="outline"
-                      onClick={() => {
-                        if (isRegisterMode) {
-                          setIsRegisterMode(false);
-                        } else {
-                          window.location.href = "/forgot-password";
-                        }
-                      }}
+                      onClick={() => setIsRegisterMode(!isRegisterMode)}
                       className="w-full"
                     >
-                      {isRegisterMode ? "Already have an account? Sign In" : "Forgot Password?"}
+                      {isRegisterMode ? "Already have an account? Sign In" : "Need an account? Sign Up"}
                     </Button>
                   </div>
                 </div>
