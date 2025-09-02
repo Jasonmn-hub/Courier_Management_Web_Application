@@ -349,14 +349,14 @@ export default function AuthorityLetter() {
   };
 
   const handleFieldChange = (fieldName: string, value: string) => {
-    setFieldValues(prev => ({
-      ...prev,
+    const newFieldValues = {
+      ...fieldValues,
       [fieldName]: value
-    }));
+    };
+    setFieldValues(newFieldValues);
     
     // Auto-generate preview for real-time updates
     if (selectedTemplate) {
-      const newFieldValues = { ...fieldValues, [fieldName]: value };
       previewMutation.mutate({ templateId: selectedTemplate, fieldValues: newFieldValues });
     }
   };
@@ -410,7 +410,7 @@ export default function AuthorityLetter() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 min-h-[calc(100vh-200px)]">
           {/* Form Section */}
           <Card>
             <CardHeader>
@@ -551,25 +551,31 @@ export default function AuthorityLetter() {
                 Letter Preview
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-2">
               {generatedContent ? (
-                <div className="bg-white border rounded-lg shadow-sm max-h-[600px] overflow-y-auto">
+                <div className="bg-gray-100 rounded-lg max-h-[calc(100vh-300px)] overflow-y-auto">
                   {/* Document Preview with Print-like styling */}
                   <div 
-                    className="bg-white p-8 mx-auto max-w-4xl min-h-[500px] shadow-inner"
+                    className="bg-white mx-2 my-2 p-6 shadow-lg rounded-sm border"
                     style={{
                       fontFamily: '"Times New Roman", Times, serif',
-                      fontSize: '14px',
-                      lineHeight: '1.6',
-                      color: '#000'
+                      fontSize: '13px',
+                      lineHeight: '1.5',
+                      color: '#000',
+                      minHeight: '500px',
+                      width: '210mm',
+                      maxWidth: '100%',
+                      margin: '10px auto',
+                      transform: 'scale(0.8)',
+                      transformOrigin: 'top center'
                     }}
                     dangerouslySetInnerHTML={{ __html: generatedContent }}
                   />
                 </div>
               ) : (
-                <div className="text-center py-8 text-slate-500">
-                  <FileText className="mx-auto h-8 w-8 text-slate-300 mb-2" />
-                  <p>Select a template and fill the fields to see the authority letter preview</p>
+                <div className="text-center py-12 text-slate-500">
+                  <FileText className="mx-auto h-12 w-12 text-slate-300 mb-4" />
+                  <p className="text-lg">Select a template and fill the fields to see the authority letter preview</p>
                 </div>
               )}
             </CardContent>
