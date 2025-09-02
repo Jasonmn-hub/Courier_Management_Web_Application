@@ -69,10 +69,12 @@ export default function Landing() {
                   <div className="flex justify-center mb-4">
                     <img src={lightLogo} alt="Light Microfinance" className="h-12 w-auto object-contain" />
                   </div>
-                  <DialogTitle className="text-xl font-bold text-slate-800">
-                    {isRegisterMode ? "Create Account" : "Welcome Back"}
-                  </DialogTitle>
-                  <p className="text-sm text-slate-600">Light Microfinance Pvt Ltd</p>
+                  <div className="text-center">
+                    <DialogTitle className="text-xl font-bold text-slate-800">
+                      Welcome Back
+                    </DialogTitle>
+                    <p className="text-sm text-slate-600">Light Microfinance Pvt Ltd</p>
+                  </div>
                 </DialogHeader>
                 <div className="space-y-4">
                   {isRegisterMode && (
@@ -128,38 +130,23 @@ export default function Landing() {
                       }}
                     />
                   </div>
-                  {!isRegisterMode && (
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        id="temp-user"
-                        checked={loginData.useTempUser}
-                        onCheckedChange={(checked) =>
-                          setLoginData({ ...loginData, useTempUser: !!checked })
-                        }
-                        data-testid="checkbox-temp-user"
-                      />
-                      <Label htmlFor="temp-user" className="text-sm">
-                        Use temporary test credentials (CSV)
-                      </Label>
-                    </div>
-                  )}
                   <div className="flex flex-col gap-3">
                     <Button
-                      onClick={isRegisterMode ? handleRegister : handleLogin}
-                      disabled={isLoginLoading || isRegisterLoading}
+                      onClick={handleLogin}
+                      disabled={isLoginLoading}
                       className="w-full bg-gradient-to-r from-blue-600 to-orange-500 hover:from-blue-700 hover:to-orange-600 text-white border-0 shadow-lg"
                     >
-                      {(isLoginLoading || isRegisterLoading) 
-                        ? "Please wait..." 
-                        : (isRegisterMode ? "Create Account" : "Sign In")
-                      }
+                      {isLoginLoading ? "Please wait..." : "Sign In"}
                     </Button>
                     <Button
                       variant="outline"
-                      onClick={() => setIsRegisterMode(!isRegisterMode)}
+                      onClick={() => {
+                        // Placeholder for forgot password functionality
+                        alert('Forgot password functionality not implemented');
+                      }}
                       className="w-full"
                     >
-                      {isRegisterMode ? "Already have an account? Sign In" : "Need an account? Sign Up"}
+                      Forgot Password?
                     </Button>
                   </div>
                 </div>
