@@ -38,6 +38,7 @@ interface AuthorityTemplate {
   templateDescription?: string;
   isDefault: boolean;
   isActive: boolean;
+  wordTemplateUrl?: string | null;
 }
 
 interface AuthorityLetterField {
@@ -62,6 +63,8 @@ export default function AuthorityLetterNew() {
   const [showTemplateManager, setShowTemplateManager] = useState(false);
   const [showBulkUpload, setShowBulkUpload] = useState(false);
   const [csvFile, setCsvFile] = useState<File | null>(null);
+  const [wordTemplateFile, setWordTemplateFile] = useState<File | null>(null);
+  const [uploadingTemplateId, setUploadingTemplateId] = useState<number | null>(null);
   
   // Template management states
   const [newTemplate, setNewTemplate] = useState({
@@ -154,6 +157,42 @@ export default function AuthorityLetterNew() {
     },
   });
 
+  // Upload Word template mutation
+  const uploadWordTemplateMutation = useMutation({
+    mutationFn: async ({ templateId, file }: { templateId: number; file: File }) => {
+      const formData = new FormData();
+      formData.append('wordTemplate', file);
+      
+      const response = await fetch(`/api/authority-templates/${templateId}/upload-word`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+        },
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        throw new Error('Upload failed');
+      }
+      
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Success", description: "Word template uploaded successfully" });
+      refetchTemplates();
+      setWordTemplateFile(null);
+      setUploadingTemplateId(null);
+    },
+    onError: (error: any) => {
+      if (error.message.includes('401')) {
+        window.location.href = "/api/login";
+        return;
+      }
+      toast({ title: "Error", description: "Failed to upload Word template", variant: "destructive" });
+      setUploadingTemplateId(null);
+    },
+  });
+
   // Preview mutation
   const previewMutation = useMutation({
     mutationFn: async (data: { templateId: number; fieldValues: Record<string, string> }) => {
@@ -169,11 +208,11 @@ export default function AuthorityLetterNew() {
     },
   });
 
-  // Generate PDF mutation
+  // Generate PDF mutation (smart routing for HTML/Word templates)
   const generatePDFMutation = useMutation({
     mutationFn: async (data: { templateId: number; fieldValues: Record<string, string> }) => {
       const token = localStorage.getItem('auth_token');
-      const response = await fetch('/api/authority-letter/generate-pdf', {
+      const response = await fetch('/api/authority-letter/generate-template', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -183,24 +222,29 @@ export default function AuthorityLetterNew() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to generate PDF');
+        throw new Error('Failed to generate authority letter');
       }
 
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `authority_letter_${Date.now()}.pdf`;
+      
+      // Check content type to determine file extension
+      const contentType = response.headers.get('content-type');
+      const isWordDoc = contentType?.includes('wordprocessingml');
+      a.download = `authority_letter_${Date.now()}.${isWordDoc ? 'docx' : 'pdf'}`;
+      
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
     },
     onSuccess: () => {
-      toast({ title: "Success", description: "PDF generated and downloaded successfully" });
+      toast({ title: "Success", description: "Authority letter generated and downloaded successfully" });
     },
     onError: (error: any) => {
-      toast({ title: "Error", description: "Failed to generate PDF", variant: "destructive" });
+      toast({ title: "Error", description: "Failed to generate authority letter", variant: "destructive" });
     },
   });
 
@@ -380,11 +424,34 @@ export default function AuthorityLetterNew() {
                           <SelectContent>
                             {templates.filter(t => t.isActive).map((template) => (
                               <SelectItem key={template.id} value={template.id.toString()}>
-                                {template.templateName} {template.isDefault && "(Default)"}
+                                <div className="flex items-center justify-between w-full">
+                                  <span>
+                                    {template.templateName}
+                                    {template.isDefault && " (Default)"}
+                                  </span>
+                                  <div className="flex gap-1 ml-2">
+                                    {template.wordTemplateUrl && (
+                                      <span className="text-xs bg-purple-100 text-purple-800 px-1 py-0.5 rounded">Word</span>
+                                    )}
+                                    <span className="text-xs bg-blue-100 text-blue-800 px-1 py-0.5 rounded">HTML</span>
+                                  </div>
+                                </div>
                               </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
+                        {templatesLoading && (
+                          <p className="text-sm text-slate-500 mt-1">Loading templates...</p>
+                        )}
+                        {selectedTemplate && templates.find(t => t.id === selectedTemplate) && (
+                          <div className="mt-2 p-2 bg-slate-50 rounded text-sm">
+                            <p><strong>Selected:</strong> {templates.find(t => t.id === selectedTemplate)?.templateName}</p>
+                            <p><strong>Type:</strong> {templates.find(t => t.id === selectedTemplate)?.wordTemplateUrl ? 'Word + HTML Template (will generate .docx)' : 'HTML Template only (will generate .pdf)'}</p>
+                            {templates.find(t => t.id === selectedTemplate)?.templateDescription && (
+                              <p><strong>Description:</strong> {templates.find(t => t.id === selectedTemplate)?.templateDescription}</p>
+                            )}
+                          </div>
+                        )}
                       </div>
                     )}
 
@@ -660,9 +727,46 @@ export default function AuthorityLetterNew() {
                                     }`}>
                                       {template.isActive ? 'Active' : 'Inactive'}
                                     </span>
+                                    {template.wordTemplateUrl && (
+                                      <span className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded">Word Template</span>
+                                    )}
                                   </div>
                                 </div>
-                                <div className="flex gap-2">
+                                <div className="flex gap-2 items-center">
+                                  {/* Word Template Upload */}
+                                  <div className="flex items-center gap-2">
+                                    <input
+                                      type="file"
+                                      accept=".doc,.docx"
+                                      onChange={(e) => {
+                                        const file = e.target.files?.[0];
+                                        if (file) {
+                                          setWordTemplateFile(file);
+                                          setUploadingTemplateId(template.id);
+                                          uploadWordTemplateMutation.mutate({ templateId: template.id, file });
+                                        }
+                                      }}
+                                      style={{ display: 'none' }}
+                                      id={`word-upload-${template.id}`}
+                                    />
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => document.getElementById(`word-upload-${template.id}`)?.click()}
+                                      disabled={uploadingTemplateId === template.id && uploadWordTemplateMutation.isPending}
+                                      title="Upload Word Template"
+                                      data-testid={`button-upload-word-${template.id}`}
+                                    >
+                                      {uploadingTemplateId === template.id && uploadWordTemplateMutation.isPending ? (
+                                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                                      ) : (
+                                        <>
+                                          <Upload className="h-4 w-4 mr-1" />
+                                          {template.wordTemplateUrl ? 'Update' : 'Upload'} Word
+                                        </>
+                                      )}
+                                    </Button>
+                                  </div>
                                   <Button
                                     variant="ghost"
                                     size="sm"

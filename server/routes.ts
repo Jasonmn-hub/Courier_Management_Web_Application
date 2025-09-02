@@ -3920,7 +3920,142 @@ Jigar Jodhani
     }
   });
 
-  // Generate PDF authority letter
+  // Upload Word template to authority letter template
+  app.post('/api/authority-templates/:id/upload-word', authenticateToken, requireRole(['admin']), documentUpload.single('wordTemplate'), setCurrentUser(), async (req: any, res) => {
+    try {
+      const templateId = parseInt(req.params.id);
+      const file = req.file;
+      const user = req.currentUser;
+      
+      if (!file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+      
+      // Get the template to verify it exists
+      const template = await storage.getAuthorityLetterTemplate(templateId);
+      if (!template) {
+        return res.status(404).json({ message: "Template not found" });
+      }
+      
+      // Create a proper filename with extension
+      const originalExtension = path.extname(file.originalname);
+      const newFilename = `authority_word_template_${templateId}_${Date.now()}${originalExtension}`;
+      const newFilePath = path.join(uploadDir, newFilename);
+      
+      // Move file to new location with proper name
+      fs.renameSync(file.path, newFilePath);
+      
+      // Update template with Word document path
+      const updatedTemplate = await storage.updateAuthorityLetterTemplate(templateId, {
+        wordTemplateUrl: newFilePath
+      });
+      
+      if (!updatedTemplate) {
+        return res.status(404).json({ message: "Failed to update template" });
+      }
+      
+      await logAudit(user.id, 'UPLOAD', 'authority_word_template', templateId.toString());
+      
+      res.json({ 
+        message: "Word template uploaded successfully",
+        wordTemplatePath: newFilePath,
+        template: updatedTemplate 
+      });
+    } catch (error) {
+      console.error("Error uploading Word template:", error);
+      res.status(500).json({ message: "Failed to upload Word template" });
+    }
+  });
+
+  // Generate PDF authority letter (smart routing based on template type)
+  app.post('/api/authority-letter/generate-template', authenticateToken, setCurrentUser(), async (req: any, res) => {
+    try {
+      const { templateId, fieldValues } = req.body;
+      const user = req.currentUser;
+      
+      // Get template
+      const template = await storage.getAuthorityLetterTemplate(templateId);
+      if (!template) {
+        return res.status(404).json({ message: "Template not found" });
+      }
+      
+      // Check access
+      if (user.role !== 'admin' && template.departmentId !== user.departmentId) {
+        return res.status(403).json({ message: "Access denied to this template" });
+      }
+      
+      let pdfBuffer: Buffer;
+      
+      // Check if template has Word document
+      if (template.wordTemplateUrl && fs.existsSync(template.wordTemplateUrl)) {
+        // Use Word template generation
+        console.log(`Using Word template: ${template.wordTemplateUrl}`);
+        
+        // Read the Word document
+        const content = fs.readFileSync(template.wordTemplateUrl, 'binary');
+        const zip = new PizZip(content);
+        const doc = new Docxtemplater(zip, {
+          paragraphLoop: true,
+          linebreaks: true,
+        });
+        
+        // Prepare data for template replacement
+        const templateData: any = {
+          currentDate: new Date().toLocaleDateString('en-GB'),
+          departmentName: template.templateName,
+          generatedAt: new Date().toISOString()
+        };
+        
+        // Add field values
+        for (const [fieldName, value] of Object.entries(fieldValues || {})) {
+          templateData[fieldName] = value;
+        }
+        
+        // Render the document
+        doc.setData(templateData);
+        doc.render();
+        
+        // Generate Word document buffer
+        const wordBuffer = doc.getZip().generate({
+          type: 'nodebuffer',
+          compression: 'DEFLATE',
+        });
+        
+        // Convert Word to PDF using pandoc or return Word document
+        // For now, we'll return the Word document
+        await logAudit(user.id, 'CREATE', 'authority_letter_word', template.id.toString());
+        
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+        res.setHeader('Content-Disposition', `attachment; filename="authority_letter_${template.templateName}_${Date.now()}.docx"`);
+        res.setHeader('Content-Length', wordBuffer.length);
+        
+        return res.send(wordBuffer);
+      } else {
+        // Use HTML template generation
+        console.log('Using HTML template generation');
+        
+        pdfBuffer = await PDFGenerator.generatePDF({
+          templateContent: template.templateContent,
+          fieldValues,
+          fileName: `authority_letter_${Date.now()}.pdf`
+        });
+        
+        await logAudit(user.id, 'CREATE', 'authority_letter_pdf', template.id.toString());
+        
+        // Set headers for PDF download
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="authority_letter_${template.templateName}_${Date.now()}.pdf"`);
+        res.setHeader('Content-Length', pdfBuffer.length);
+        
+        res.send(pdfBuffer);
+      }
+    } catch (error) {
+      console.error("Error generating authority letter:", error);
+      res.status(500).json({ message: "Failed to generate authority letter" });
+    }
+  });
+
+  // Generate PDF authority letter (legacy HTML only)
   app.post('/api/authority-letter/generate-pdf', authenticateToken, setCurrentUser(), async (req: any, res) => {
     try {
       const { templateId, fieldValues } = req.body;
