@@ -3875,14 +3875,26 @@ Jigar Jodhani
           generatedAt: new Date().toISOString()
         };
         
-        // Add field values
+        // Add field values with detailed logging
+        console.log('Processing field values for Word template:', fieldValues);
         for (const [fieldName, value] of Object.entries(fieldValues || {})) {
           templateData[fieldName] = value;
+          console.log(`Setting template data: ${fieldName} = ${value}`);
         }
+        console.log('Final template data for Word generation:', templateData);
         
         // Render the document
         doc.setData(templateData);
-        doc.render();
+        
+        try {
+          doc.render();
+          console.log('Word document rendered successfully');
+        } catch (renderError) {
+          console.error('Error rendering Word template:', renderError);
+          console.error('Template data used:', templateData);
+          console.error('Available placeholders in template might be different from field names');
+          throw renderError;
+        }
         
         // Generate Word document buffer
         const wordBuffer = doc.getZip().generate({
