@@ -74,6 +74,17 @@ export default function AuthorityLetterNew() {
     isDefault: false
   });
 
+  // Field management states
+  const [showFieldManager, setShowFieldManager] = useState(false);
+  const [editingField, setEditingField] = useState<AuthorityLetterField | null>(null);
+  const [newField, setNewField] = useState({
+    fieldName: '',
+    fieldLabel: '',
+    fieldType: 'text',
+    textTransform: 'none',
+    isRequired: false
+  });
+
   // Redirect if not authenticated
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -288,6 +299,56 @@ export default function AuthorityLetterNew() {
     },
   });
 
+  // Field management mutations
+  const createFieldMutation = useMutation({
+    mutationFn: async (fieldData: any) => {
+      const response = await apiRequest('POST', '/api/authority-letter-fields', {
+        ...fieldData,
+        departmentId: selectedDepartment
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Success", description: "Field created successfully" });
+      queryClient.invalidateQueries({ queryKey: ['/api/authority-letter-fields', selectedDepartment] });
+      setNewField({ fieldName: '', fieldLabel: '', fieldType: 'text', textTransform: 'none', isRequired: false });
+      setShowFieldManager(false);
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Failed to create field", variant: "destructive" });
+    },
+  });
+
+  const updateFieldMutation = useMutation({
+    mutationFn: async ({ fieldId, fieldData }: { fieldId: number; fieldData: any }) => {
+      const response = await apiRequest('PUT', `/api/authority-letter-fields/${fieldId}`, fieldData);
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Success", description: "Field updated successfully" });
+      queryClient.invalidateQueries({ queryKey: ['/api/authority-letter-fields', selectedDepartment] });
+      setEditingField(null);
+      setShowFieldManager(false);
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Failed to update field", variant: "destructive" });
+    },
+  });
+
+  const deleteFieldMutation = useMutation({
+    mutationFn: async (fieldId: number) => {
+      const response = await apiRequest('DELETE', `/api/authority-letter-fields/${fieldId}`);
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Success", description: "Field deleted successfully" });
+      queryClient.invalidateQueries({ queryKey: ['/api/authority-letter-fields', selectedDepartment] });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Failed to delete field", variant: "destructive" });
+    },
+  });
+
   const handleFieldChange = (fieldName: string, value: string) => {
     setFieldValues(prev => ({ ...prev, [fieldName]: value }));
   };
@@ -332,6 +393,52 @@ export default function AuthorityLetterNew() {
       toast({ title: "Success", description: "Sample CSV downloaded" });
     } catch (error) {
       toast({ title: "Error", description: "Failed to download sample CSV", variant: "destructive" });
+    }
+  };
+
+  // Field management handlers
+  const handleCreateField = () => {
+    if (!newField.fieldName.trim() || !newField.fieldLabel.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Field name and label are required.",
+        variant: "destructive",
+      });
+      return;
+    }
+    createFieldMutation.mutate(newField);
+  };
+
+  const handleEditField = (field: AuthorityLetterField) => {
+    setEditingField(field);
+    setNewField({
+      fieldName: field.fieldName,
+      fieldLabel: field.fieldLabel,
+      fieldType: field.fieldType,
+      textTransform: field.textTransform || 'none',
+      isRequired: field.isRequired
+    });
+    setShowFieldManager(true);
+  };
+
+  const handleUpdateField = () => {
+    if (!editingField || !newField.fieldName.trim() || !newField.fieldLabel.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Field name and label are required.",
+        variant: "destructive",
+      });
+      return;
+    }
+    updateFieldMutation.mutate({
+      fieldId: editingField.id,
+      fieldData: newField
+    });
+  };
+
+  const handleDeleteField = (fieldId: number) => {
+    if (confirm("Are you sure you want to delete this field? This action cannot be undone.")) {
+      deleteFieldMutation.mutate(fieldId);
     }
   };
 
@@ -784,6 +891,97 @@ export default function AuthorityLetterNew() {
                         )}
                       </div>
                     )}
+
+                    {/* Template Fields Management */}
+                    {selectedDepartment && (
+                      <div className="mt-8 pt-6 border-t">
+                        <div className="flex items-center justify-between mb-4">
+                          <div>
+                            <Label className="text-lg font-semibold">Template Fields</Label>
+                            <p className="text-sm text-slate-500 mt-1">
+                              Manage custom fields for this department's templates
+                            </p>
+                          </div>
+                          <Button 
+                            onClick={() => {
+                              setEditingField(null);
+                              setNewField({ fieldName: '', fieldLabel: '', fieldType: 'text', textTransform: 'none', isRequired: false });
+                              setShowFieldManager(true);
+                            }}
+                            size="sm"
+                            data-testid="button-add-field"
+                          >
+                            <Plus className="h-4 w-4 mr-1" />
+                            Add Field
+                          </Button>
+                        </div>
+                        
+                        {fieldsLoading ? (
+                          <div className="text-center py-4">
+                            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto"></div>
+                          </div>
+                        ) : fields.length === 0 ? (
+                          <p className="text-center py-4 text-slate-500">
+                            No template fields found. Add fields to use as placeholders in your templates.
+                          </p>
+                        ) : (
+                          <div className="space-y-2">
+                            {fields.map((field) => (
+                              <div key={field.id} className="flex items-center justify-between p-3 border rounded bg-slate-50">
+                                <div className="flex-1">
+                                  <h4 className="font-medium">{field.fieldLabel}</h4>
+                                  <p className="text-sm text-slate-500">
+                                    Field Name: <code className="bg-slate-200 px-1 rounded">##${field.fieldName}##</code>
+                                  </p>
+                                  <div className="flex gap-2 mt-1">
+                                    <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                                      {field.fieldType}
+                                    </span>
+                                    {field.isRequired && (
+                                      <span className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded">Required</span>
+                                    )}
+                                    {field.textTransform && field.textTransform !== 'none' && (
+                                      <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
+                                        {field.textTransform}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="flex gap-2 items-center">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleEditField(field)}
+                                    data-testid={`button-edit-field-${field.id}`}
+                                  >
+                                    <Edit className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleDeleteField(field.id)}
+                                    disabled={deleteFieldMutation.isPending}
+                                    className="text-red-600 hover:text-red-800"
+                                    data-testid={`button-delete-field-${field.id}`}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        
+                        <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                          <h4 className="font-medium text-blue-900 mb-2">How to use template fields:</h4>
+                          <ul className="text-sm text-blue-800 space-y-1">
+                            <li>• Use field names as placeholders in your templates like <code>##field_name##</code></li>
+                            <li>• Fields will be replaced with actual values when generating letters</li>
+                            <li>• Required fields must be filled before generating letters</li>
+                          </ul>
+                        </div>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </TabsContent>
@@ -866,6 +1064,118 @@ export default function AuthorityLetterNew() {
                       data-testid="button-save-template"
                     >
                       {createTemplateMutation.isPending ? 'Creating...' : 'Create Template'}
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+          )}
+
+          {/* Field Management Modal */}
+          {showFieldManager && selectedDepartment && (
+            <Dialog open={showFieldManager} onOpenChange={setShowFieldManager}>
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>
+                    {editingField ? 'Edit Template Field' : 'Add Template Field'}
+                  </DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="field-name">Field Name</Label>
+                      <Input
+                        id="field-name"
+                        value={newField.fieldName}
+                        onChange={(e) => setNewField({...newField, fieldName: e.target.value})}
+                        placeholder="e.g., employee_name"
+                        data-testid="input-field-name"
+                      />
+                      <p className="text-xs text-slate-500 mt-1">
+                        Used as ##field_name## in templates
+                      </p>
+                    </div>
+                    <div>
+                      <Label htmlFor="field-label">Field Label</Label>
+                      <Input
+                        id="field-label"
+                        value={newField.fieldLabel}
+                        onChange={(e) => setNewField({...newField, fieldLabel: e.target.value})}
+                        placeholder="e.g., Employee Name"
+                        data-testid="input-field-label"
+                      />
+                      <p className="text-xs text-slate-500 mt-1">
+                        Displayed to users when filling forms
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="field-type">Field Type</Label>
+                      <Select 
+                        value={newField.fieldType} 
+                        onValueChange={(value) => setNewField({...newField, fieldType: value})}
+                      >
+                        <SelectTrigger data-testid="select-field-type">
+                          <SelectValue placeholder="Select field type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="text">Text</SelectItem>
+                          <SelectItem value="number">Number</SelectItem>
+                          <SelectItem value="date">Date</SelectItem>
+                          <SelectItem value="textarea">Long Text</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="text-transform">Text Transform</Label>
+                      <Select 
+                        value={newField.textTransform} 
+                        onValueChange={(value) => setNewField({...newField, textTransform: value})}
+                      >
+                        <SelectTrigger data-testid="select-text-transform">
+                          <SelectValue placeholder="Select transform" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">None</SelectItem>
+                          <SelectItem value="uppercase">UPPERCASE</SelectItem>
+                          <SelectItem value="lowercase">lowercase</SelectItem>
+                          <SelectItem value="capitalize">Capitalize</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="is-required"
+                      checked={newField.isRequired}
+                      onChange={(e) => setNewField({...newField, isRequired: e.target.checked})}
+                      data-testid="checkbox-is-required"
+                    />
+                    <Label htmlFor="is-required">This field is required</Label>
+                  </div>
+
+                  <div className="flex justify-end gap-3 pt-4">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setShowFieldManager(false);
+                        setEditingField(null);
+                        setNewField({ fieldName: '', fieldLabel: '', fieldType: 'text', textTransform: 'none', isRequired: false });
+                      }}
+                      data-testid="button-cancel-field"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={editingField ? handleUpdateField : handleCreateField}
+                      disabled={createFieldMutation.isPending || updateFieldMutation.isPending || !newField.fieldName || !newField.fieldLabel}
+                      data-testid="button-save-field"
+                    >
+                      {(createFieldMutation.isPending || updateFieldMutation.isPending) ? 'Saving...' : (editingField ? 'Update Field' : 'Create Field')}
                     </Button>
                   </div>
                 </div>
