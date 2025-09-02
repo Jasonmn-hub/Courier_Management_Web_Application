@@ -563,24 +563,20 @@ export default function AuthorityLetter() {
             <CardContent className="p-2">
               {generatedContent ? (
                 <div className="bg-gray-100 rounded-lg max-h-[calc(100vh-300px)] overflow-y-auto">
-                  {/* Document Preview with exact PDF styling */}
-                  <div 
-                    className="bg-white mx-2 my-2 shadow-lg"
+                  {/* Document Preview with exact PDF styling - isolated to prevent global CSS leakage */}
+                  <iframe
+                    srcDoc={generatedContent}
+                    className="bg-white mx-2 my-2 shadow-lg border-0"
                     style={{
-                      fontFamily: '"Times New Roman", Times, serif',
-                      fontSize: '12px',
-                      lineHeight: '1.4',
-                      color: '#000',
-                      padding: '20px',
                       width: '210mm',
                       minHeight: '297mm',
                       maxWidth: '100%',
                       margin: '10px auto',
                       transform: 'scale(0.75)',
                       transformOrigin: 'top center',
-                      boxSizing: 'border-box'
+                      display: 'block'
                     }}
-                    dangerouslySetInnerHTML={{ __html: generatedContent }}
+                    sandbox="allow-same-origin"
                   />
                 </div>
               ) : selectedTemplate ? (
