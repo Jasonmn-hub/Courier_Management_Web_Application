@@ -9,6 +9,7 @@ import path from "path";
 import fs from "fs";
 import PizZip from "pizzip";
 import Docxtemplater from "docxtemplater";
+import mammoth from "mammoth";
 import { PDFGenerator } from "./pdf-generator";
 import { WordGenerator } from "./word-generator";
 import Papa from "papaparse";
@@ -4003,9 +4004,57 @@ Jigar Jodhani
       // Move file to new location with proper name
       fs.renameSync(file.path, newFilePath);
       
-      // Update template with Word document path
+      // Convert Word document to HTML for preview
+      let htmlContent = '<p>Word document uploaded but conversion failed</p>';
+      try {
+        const result = await mammoth.convertToHtml({path: newFilePath});
+        htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Authority Letter Template</title>
+    <style>
+        body {
+            font-family: 'Times New Roman', serif;
+            font-size: 12px;
+            line-height: 1.4;
+            margin: 0;
+            padding: 20px;
+            color: #000;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+        }
+        th, td {
+            border: 1px solid #000;
+            padding: 6px;
+            text-align: left;
+        }
+        th {
+            background-color: #f0f0f0;
+            font-weight: bold;
+        }
+        @media print {
+            body { margin: 0; padding: 15px; }
+        }
+    </style>
+</head>
+<body>
+${result.value}
+</body>
+</html>`;
+        console.log('Word document converted to HTML successfully');
+      } catch (conversionError) {
+        console.error('Failed to convert Word document to HTML:', conversionError);
+      }
+      
+      // Update template with Word document path AND converted HTML content
       const updatedTemplate = await storage.updateAuthorityLetterTemplate(templateId, {
-        wordTemplateUrl: newFilePath
+        wordTemplateUrl: newFilePath,
+        templateContent: htmlContent
       });
       
       if (!updatedTemplate) {
