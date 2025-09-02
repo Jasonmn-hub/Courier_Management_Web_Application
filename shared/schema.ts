@@ -173,11 +173,11 @@ export const userPolicies = pgTable("user_policies", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// Password reset tokens table for OTP-based password recovery
+// Password reset tokens table for email link-based password recovery
 export const passwordResetTokens = pgTable("password_reset_tokens", {
   id: serial("id").primaryKey(),
   email: varchar("email", { length: 255 }).notNull(),
-  token: varchar("token", { length: 10 }).notNull(), // 6-digit OTP
+  token: varchar("token", { length: 255 }).notNull(), // Secure hex token for email links
   expiresAt: timestamp("expires_at").notNull(),
   isUsed: boolean("is_used").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow(),

@@ -57,7 +57,7 @@ export default function ChangePasswordDialog({ children }: ChangePasswordDialogP
 
     setIsLoading(true);
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('auth_token');
       const response = await fetch('/api/auth/change-password', {
         method: 'POST',
         headers: {
