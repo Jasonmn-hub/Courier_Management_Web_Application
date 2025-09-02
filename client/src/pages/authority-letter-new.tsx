@@ -70,8 +70,7 @@ export default function AuthorityLetterNew() {
   const [newTemplate, setNewTemplate] = useState({
     templateName: '',
     templateDescription: '',
-    templateContent: '',
-    isDefault: false
+    templateContent: ''
   });
 
   // Field management states
@@ -139,7 +138,7 @@ export default function AuthorityLetterNew() {
     onSuccess: () => {
       toast({ title: "Success", description: "Template created successfully" });
       refetchTemplates();
-      setNewTemplate({ templateName: '', templateDescription: '', templateContent: '', isDefault: false });
+      setNewTemplate({ templateName: '', templateDescription: '', templateContent: '' });
     },
     onError: (error: any) => {
       if (isUnauthorizedError(error)) {
@@ -1036,23 +1035,13 @@ export default function AuthorityLetterNew() {
                     </p>
                   </div>
 
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      id="is-default"
-                      checked={newTemplate.isDefault}
-                      onChange={(e) => setNewTemplate({...newTemplate, isDefault: e.target.checked})}
-                      data-testid="checkbox-is-default"
-                    />
-                    <Label htmlFor="is-default">Set as default template for this department</Label>
-                  </div>
 
                   <div className="flex justify-end gap-3 pt-4">
                     <Button
                       variant="outline"
                       onClick={() => {
                         setShowTemplateManager(false);
-                        setNewTemplate({ templateName: '', templateDescription: '', templateContent: '', isDefault: false });
+                        setNewTemplate({ templateName: '', templateDescription: '', templateContent: '' });
                       }}
                       data-testid="button-cancel-template"
                     >
