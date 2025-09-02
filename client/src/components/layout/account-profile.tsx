@@ -6,10 +6,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
-import { User, LogOut, Mail, Building, Calendar, Phone, Hash, Camera, Upload } from "lucide-react";
+import { User, LogOut, Mail, Building, Calendar, Phone, Hash, Camera, Upload, KeyRound } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import ChangePasswordDialog from "@/components/change-password-dialog";
 
 export default function AccountProfile() {
   const { user } = useAuth();
@@ -239,7 +240,19 @@ export default function AccountProfile() {
             <Separator />
 
             {/* Actions */}
-            <div className="flex justify-center">
+            <div className="flex flex-col gap-3">
+              <ChangePasswordDialog>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center gap-2"
+                  data-testid="button-change-password-profile"
+                >
+                  <KeyRound className="h-4 w-4" />
+                  Change Password
+                </Button>
+              </ChangePasswordDialog>
+              
               <Button
                 variant="destructive"
                 size="sm"

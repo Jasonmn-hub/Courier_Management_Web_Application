@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
 import Landing from "@/pages/landing";
+import ResetPassword from "@/pages/reset-password";
 import Dashboard from "@/pages/dashboard";
 import Couriers from "@/pages/couriers";
 import ReceivedCouriers from "@/pages/received-couriers";
@@ -35,6 +36,7 @@ function Router() {
         <>
           <Route path="/" component={Landing} />
           <Route path="/login" component={Landing} />
+          <Route path="/reset-password" component={ResetPassword} />
         </>
       ) : (
         <AppLayout>

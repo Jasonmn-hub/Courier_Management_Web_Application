@@ -13,6 +13,7 @@ import { PDFGenerator } from "./pdf-generator";
 import { WordGenerator } from "./word-generator";
 import Papa from "papaparse";
 import nodemailer from "nodemailer";
+import crypto from "crypto";
 
 // Configure multer for file uploads
 const uploadDir = path.join(process.cwd(), 'uploads');
@@ -405,14 +406,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json({ message: 'If an account with that email exists, you will receive a password reset code.' });
       }
 
-      // Generate 6-digit OTP
-      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      // Generate secure token for email link
+      const resetToken = crypto.randomBytes(32).toString('hex');
       
-      // Set expiry to 15 minutes from now
-      const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+      // Set expiry to 1 hour from now
+      const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
       
-      // Save OTP to database
-      await storage.createPasswordResetToken(email, otp, expiresAt);
+      // Save reset token to database
+      await storage.createPasswordResetToken(email, resetToken, expiresAt);
 
       // Get SMTP settings for sending email
       const smtpSettings = await storage.getSmtpSettings();
@@ -442,23 +443,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         const transporter = nodemailer.createTransport(transportConfig);
 
+        const resetUrl = `${smtpSettings.applicationUrl || process.env.REPLIT_DOMAINS?.split(',')[0] ? `https://${process.env.REPLIT_DOMAINS?.split(',')[0]}` : 'http://localhost:5000'}/reset-password?token=${resetToken}&email=${encodeURIComponent(email)}`;
+
         const mailOptions = {
           from: smtpSettings.fromEmail || smtpSettings.username || 'noreply@courier-system.com',
           to: email,
-          subject: 'Password Reset Code - Courier Management System',
+          subject: 'Password Reset Link - Courier Management System',
           html: `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
               <h2 style="color: #333;">Password Reset Request</h2>
               <p>You have requested to reset your password for the Courier Management System.</p>
-              <p>Your password reset code is:</p>
-              <div style="background-color: #f8f9fa; padding: 20px; text-align: center; margin: 20px 0; border-radius: 8px;">
-                <h1 style="color: #007bff; font-size: 36px; letter-spacing: 5px; margin: 0;">${otp}</h1>
+              <p>Click the button below to reset your password:</p>
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="${resetUrl}" style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: bold;">Reset Password</a>
               </div>
+              <p>Or copy and paste this link in your browser:</p>
+              <p style="word-break: break-all; background-color: #f8f9fa; padding: 10px; border-radius: 4px;">${resetUrl}</p>
               <p><strong>Important:</strong></p>
               <ul>
-                <li>This code will expire in 15 minutes</li>
+                <li>This link will expire in 1 hour</li>
                 <li>If you didn't request this reset, please ignore this email</li>
-                <li>Do not share this code with anyone</li>
+                <li>Do not share this link with anyone</li>
               </ul>
               <p>Thank you!</p>
             </div>
@@ -478,23 +483,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Reset password endpoint
+  // Reset password endpoint (using token from email link)
   app.post('/api/auth/reset-password', async (req, res) => {
     try {
-      const { email, otp, newPassword } = req.body;
+      const { email, token, newPassword } = req.body;
       
-      if (!email || !otp || !newPassword) {
-        return res.status(400).json({ message: 'Email, OTP, and new password are required' });
+      if (!email || !token || !newPassword) {
+        return res.status(400).json({ message: 'Email, token, and new password are required' });
       }
 
       if (newPassword.length < 6) {
         return res.status(400).json({ message: 'Password must be at least 6 characters long' });
       }
 
-      // Verify OTP
-      const isValidOtp = await storage.verifyPasswordResetToken(email, otp);
-      if (!isValidOtp) {
-        return res.status(400).json({ message: 'Invalid or expired reset code' });
+      // Verify token
+      const isValidToken = await storage.verifyPasswordResetToken(email, token);
+      if (!isValidToken) {
+        return res.status(400).json({ message: 'Invalid or expired reset link' });
       }
 
       // Hash new password
@@ -506,13 +511,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: 'Failed to update password' });
       }
 
-      // Mark OTP as used
-      await storage.markPasswordResetTokenAsUsed(email, otp);
+      // Mark token as used
+      await storage.markPasswordResetTokenAsUsed(email, token);
 
       res.json({ message: 'Password has been reset successfully' });
     } catch (error) {
       console.error('Reset password error:', error);
       res.status(500).json({ message: 'Password reset failed' });
+    }
+  });
+
+  // Change password endpoint (for logged-in users)
+  app.post('/api/auth/change-password', authenticateToken, async (req: any, res) => {
+    try {
+      const { oldPassword, newPassword } = req.body;
+      const userId = req.user.id;
+      
+      if (!oldPassword || !newPassword) {
+        return res.status(400).json({ message: 'Old password and new password are required' });
+      }
+
+      if (newPassword.length < 6) {
+        return res.status(400).json({ message: 'New password must be at least 6 characters long' });
+      }
+
+      if (oldPassword === newPassword) {
+        return res.status(400).json({ message: 'New password must be different from the old password' });
+      }
+
+      // Get user from database
+      const user = await storage.getUser(userId);
+      if (!user || !user.password) {
+        return res.status(404).json({ message: 'User not found or password not set' });
+      }
+
+      // Verify old password
+      const isValidOldPassword = await comparePassword(oldPassword, user.password);
+      if (!isValidOldPassword) {
+        return res.status(400).json({ message: 'Current password is incorrect' });
+      }
+
+      // Hash new password
+      const hashedNewPassword = await hashPassword(newPassword);
+
+      // Update user password
+      const passwordUpdated = await storage.updateUserPassword(user.email!, hashedNewPassword);
+      if (!passwordUpdated) {
+        return res.status(500).json({ message: 'Failed to update password' });
+      }
+
+      res.json({ message: 'Password changed successfully' });
+    } catch (error) {
+      console.error('Change password error:', error);
+      res.status(500).json({ message: 'Password change failed' });
     }
   });
 

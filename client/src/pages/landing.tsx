@@ -140,9 +140,35 @@ export default function Landing() {
                     </Button>
                     <Button
                       variant="outline"
-                      onClick={() => {
-                        // Placeholder for forgot password functionality
-                        alert('Forgot password functionality not implemented');
+                      onClick={async () => {
+                        if (!loginData.email) {
+                          toast({ 
+                            title: "Error", 
+                            description: "Please enter your email address first",
+                            variant: "destructive" 
+                          });
+                          return;
+                        }
+                        
+                        try {
+                          const response = await fetch('/api/auth/forgot-password', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ email: loginData.email })
+                          });
+                          
+                          const data = await response.json();
+                          toast({ 
+                            title: "Success", 
+                            description: "Password reset link sent to your email!"
+                          });
+                        } catch (error) {
+                          toast({ 
+                            title: "Error", 
+                            description: "Failed to send reset email",
+                            variant: "destructive" 
+                          });
+                        }
                       }}
                       className="w-full"
                     >
