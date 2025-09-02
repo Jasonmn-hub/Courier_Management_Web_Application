@@ -4074,6 +4074,80 @@ ${result.value}
     }
   });
 
+  // Extract content from Word document for new templates
+  app.post('/api/authority-templates/extract-word-content', authenticateToken, requireRole(['admin']), documentUpload.single('wordDocument'), setCurrentUser(), async (req: any, res) => {
+    try {
+      const file = req.file;
+      
+      if (!file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+      
+      // Convert Word document to HTML
+      let htmlContent = '<p>Word document uploaded but conversion failed</p>';
+      try {
+        const result = await mammoth.convertToHtml({path: file.path});
+        htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Authority Letter Template</title>
+    <style>
+        body {
+            font-family: 'Times New Roman', serif;
+            font-size: 12px;
+            line-height: 1.4;
+            margin: 0;
+            padding: 20px;
+            color: #000;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+        }
+        th, td {
+            border: 1px solid #000;
+            padding: 6px;
+            text-align: left;
+        }
+        th {
+            background-color: #f0f0f0;
+            font-weight: bold;
+        }
+        @media print {
+            body { margin: 0; padding: 15px; }
+        }
+    </style>
+</head>
+<body>
+${result.value}
+</body>
+</html>`;
+        console.log('Word document converted to HTML successfully for new template');
+      } catch (conversionError) {
+        console.error('Failed to convert Word document to HTML:', conversionError);
+        return res.status(500).json({ message: "Failed to convert Word document to HTML" });
+      }
+      
+      // Clean up the temporary file
+      try {
+        fs.unlinkSync(file.path);
+      } catch (cleanupError) {
+        console.error('Failed to clean up temporary file:', cleanupError);
+      }
+      
+      res.json({ 
+        message: "Word document content extracted successfully",
+        htmlContent: htmlContent
+      });
+    } catch (error) {
+      console.error("Error extracting Word document content:", error);
+      res.status(500).json({ message: "Failed to extract Word document content" });
+    }
+  });
+
   // Generate PDF authority letter (smart routing based on template type)
   app.post('/api/authority-letter/generate-template', authenticateToken, setCurrentUser(), async (req: any, res) => {
     try {

@@ -65,6 +65,8 @@ export default function AuthorityLetterNew() {
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [wordTemplateFile, setWordTemplateFile] = useState<File | null>(null);
   const [uploadingTemplateId, setUploadingTemplateId] = useState<number | null>(null);
+  const [newTemplateWordFile, setNewTemplateWordFile] = useState<File | null>(null);
+  const [extractingContent, setExtractingContent] = useState(false);
   
   // Template management states
   const [newTemplate, setNewTemplate] = useState({
@@ -139,6 +141,8 @@ export default function AuthorityLetterNew() {
       toast({ title: "Success", description: "Template created successfully" });
       refetchTemplates();
       setNewTemplate({ templateName: '', templateDescription: '', templateContent: '' });
+      setNewTemplateWordFile(null);
+      setExtractingContent(false);
     },
     onError: (error: any) => {
       if (isUnauthorizedError(error)) {
@@ -164,6 +168,41 @@ export default function AuthorityLetterNew() {
     },
     onError: (error: any) => {
       toast({ title: "Error", description: "Failed to delete template", variant: "destructive" });
+    },
+  });
+
+  // Extract Word content for new template mutation
+  const extractWordContentMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append('wordDocument', file);
+      
+      const response = await fetch('/api/authority-templates/extract-word-content', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+        },
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        throw new Error('Content extraction failed');
+      }
+      
+      return response.json();
+    },
+    onSuccess: (data) => {
+      setNewTemplate(prev => ({ ...prev, templateContent: data.htmlContent }));
+      toast({ title: "Success", description: "Word document content extracted successfully" });
+      setExtractingContent(false);
+    },
+    onError: (error: any) => {
+      if (error.message.includes('401')) {
+        window.location.href = "/api/login";
+        return;
+      }
+      toast({ title: "Error", description: "Failed to extract Word document content", variant: "destructive" });
+      setExtractingContent(false);
     },
   });
 
@@ -1019,6 +1058,51 @@ export default function AuthorityLetterNew() {
                   </div>
                   
                   <div>
+                    <Label>Upload Word Template (Optional)</Label>
+                    <div className="flex items-center gap-3 mt-2">
+                      <input
+                        type="file"
+                        accept=".docx,.doc"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            setNewTemplateWordFile(file);
+                            setExtractingContent(true);
+                            extractWordContentMutation.mutate(file);
+                          }
+                        }}
+                        style={{ display: 'none' }}
+                        id="new-template-word-upload"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => document.getElementById('new-template-word-upload')?.click()}
+                        disabled={extractingContent}
+                        data-testid="button-upload-word-new-template"
+                      >
+                        {extractingContent ? (
+                          <>
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary mr-2"></div>
+                            Extracting...
+                          </>
+                        ) : (
+                          <>
+                            <Upload className="h-4 w-4 mr-2" />
+                            {newTemplateWordFile ? 'Change Word Document' : 'Upload Word Document'}
+                          </>
+                        )}
+                      </Button>
+                      {newTemplateWordFile && !extractingContent && (
+                        <span className="text-sm text-green-600">✓ {newTemplateWordFile.name}</span>
+                      )}
+                    </div>
+                    <p className="text-sm text-slate-500 mt-1">
+                      Upload a Word document to automatically extract content as HTML template
+                    </p>
+                  </div>
+                  
+                  <div>
                     <Label htmlFor="template-content">Template Content (HTML)</Label>
                     <Textarea
                       id="template-content"
@@ -1042,6 +1126,8 @@ export default function AuthorityLetterNew() {
                       onClick={() => {
                         setShowTemplateManager(false);
                         setNewTemplate({ templateName: '', templateDescription: '', templateContent: '' });
+                        setNewTemplateWordFile(null);
+                        setExtractingContent(false);
                       }}
                       data-testid="button-cancel-template"
                     >
