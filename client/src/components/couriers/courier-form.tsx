@@ -80,12 +80,9 @@ export default function CourierForm({ courier, onClose, onSuccess }: CourierForm
   });
 
   const { data: branchesData } = useQuery({
-    queryKey: ['/api/branches', { status: 'active' }],
+    queryKey: ['/api/branches'],
     queryFn: async () => {
-      const params = new URLSearchParams();
-      params.set('status', 'active');
-      
-      const response = await apiRequest('GET', `/api/branches?${params.toString()}`);
+      const response = await apiRequest('GET', '/api/branches');
       return response.json();
     },
     enabled: !!user, // Enable when user is authenticated

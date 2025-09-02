@@ -1,13 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-
-interface User {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-  departmentId?: number;
-}
+import type { User } from "@shared/schema";
 
 interface LoginData {
   email: string;
