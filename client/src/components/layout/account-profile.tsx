@@ -28,7 +28,7 @@ export default function AccountProfile() {
   const userData = user as any;
   
   // Get department name
-  const departmentName = departments.find((dept: any) => dept.id === userData?.departmentId)?.name || 'Not assigned';
+  const departmentName = (departments as any[])?.find((dept: any) => dept.id === userData?.departmentId)?.name || 'Not assigned';
   
   // Format date as DD/MM/YYYY
   const formatDate = (dateString: string) => {
