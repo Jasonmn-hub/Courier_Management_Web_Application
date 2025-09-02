@@ -563,20 +563,22 @@ export default function AuthorityLetter() {
             <CardContent className="p-2">
               {generatedContent ? (
                 <div className="bg-gray-100 rounded-lg max-h-[calc(100vh-300px)] overflow-y-auto">
-                  {/* Document Preview with Print-like styling */}
+                  {/* Document Preview with exact PDF styling */}
                   <div 
-                    className="bg-white mx-2 my-2 p-6 shadow-lg rounded-sm border"
+                    className="bg-white mx-2 my-2 shadow-lg"
                     style={{
                       fontFamily: '"Times New Roman", Times, serif',
-                      fontSize: '13px',
-                      lineHeight: '1.5',
+                      fontSize: '12px',
+                      lineHeight: '1.4',
                       color: '#000',
-                      minHeight: '500px',
+                      padding: '20px',
                       width: '210mm',
+                      minHeight: '297mm',
                       maxWidth: '100%',
                       margin: '10px auto',
-                      transform: 'scale(0.8)',
-                      transformOrigin: 'top center'
+                      transform: 'scale(0.75)',
+                      transformOrigin: 'top center',
+                      boxSizing: 'border-box'
                     }}
                     dangerouslySetInnerHTML={{ __html: generatedContent }}
                   />
