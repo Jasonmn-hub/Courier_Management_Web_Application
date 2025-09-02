@@ -4152,6 +4152,70 @@ Jigar Jodhani
   });
 
   // Preview authority letter (HTML)
+  app.post('/api/authority-letter/preview', authenticateToken, setCurrentUser(), async (req: any, res) => {
+    try {
+      const { templateId, fieldValues } = req.body;
+      const user = req.currentUser;
+      
+      // Get template
+      const template = await storage.getAuthorityLetterTemplate(templateId);
+      if (!template) {
+        return res.status(404).json({ message: "Template not found" });
+      }
+      
+      // Check access
+      if (user.role !== 'admin' && template.departmentId !== user.departmentId) {
+        return res.status(403).json({ message: "Access denied to this template" });
+      }
+      
+      // Get template fields for proper transformations
+      const fields = await storage.getAllAuthorityLetterFields(undefined, templateId);
+      
+      // Helper function to apply text transformations
+      const applyTextTransform = (text: string, transform: string): string => {
+        switch (transform) {
+          case 'uppercase':
+            return text.toUpperCase();
+          case 'capitalize':
+            return text.charAt(0).toUpperCase() + text.slice(1).toLowerCase();
+          default:
+            return text;
+        }
+      };
+      
+      // Replace placeholders for preview
+      let htmlContent = template.templateContent;
+      
+      // Apply field values with transformations
+      Object.entries(fieldValues || {}).forEach(([key, value]) => {
+        // Find the field to check for transformations
+        const field = fields.find(f => f.fieldName === key);
+        let transformedValue = value as string || '';
+        
+        // Apply text transformation if field is found
+        if (field && field.textTransform && field.textTransform !== 'none') {
+          transformedValue = applyTextTransform(transformedValue, field.textTransform);
+        }
+        
+        const placeholder = `##${key}##`;
+        htmlContent = htmlContent.replace(new RegExp(placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), transformedValue);
+      });
+      
+      // Add current date
+      const currentDate = new Date().toLocaleDateString('en-GB');
+      htmlContent = htmlContent.replace(/##currentDate##/g, currentDate);
+      htmlContent = htmlContent.replace(/##current_date##/g, currentDate);
+      
+      res.json({
+        content: htmlContent,
+        templateName: template.templateName
+      });
+    } catch (error) {
+      console.error("Error generating preview:", error);
+      res.status(500).json({ message: "Failed to generate preview" });
+    }
+  });
+
   app.post('/api/authority-letter/preview-pdf', authenticateToken, setCurrentUser(), async (req: any, res) => {
     try {
       const { templateId, fieldValues } = req.body;
