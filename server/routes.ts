@@ -3241,9 +3241,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Field ID, direction, and template ID are required" });
       }
 
+      // Convert fieldId and templateId to numbers to ensure proper comparison
+      const numericFieldId = parseInt(fieldId);
+      const numericTemplateId = parseInt(templateId);
+      
+      if (isNaN(numericFieldId) || isNaN(numericTemplateId)) {
+        return res.status(400).json({ message: "Invalid field ID or template ID" });
+      }
+
       // Get all fields for this template in current order
-      const fields = await storage.getAllAuthorityLetterFields(undefined, templateId);
-      const currentIndex = fields.findIndex(f => f.id === fieldId);
+      const fields = await storage.getAllAuthorityLetterFields(undefined, numericTemplateId);
+      const currentIndex = fields.findIndex(f => f.id === numericFieldId);
       
       if (currentIndex === -1) {
         return res.status(404).json({ message: "Field not found" });
@@ -3269,7 +3277,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      await logAudit(req.currentUser.id, 'UPDATE', 'authority_letter_field_order', fieldId);
+      await logAudit(req.currentUser.id, 'UPDATE', 'authority_letter_field_order', numericFieldId);
       
       res.json({ message: "Field order updated successfully" });
     } catch (error) {
