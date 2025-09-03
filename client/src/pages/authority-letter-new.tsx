@@ -1252,8 +1252,8 @@ export default function AuthorityLetterNew() {
                             <SelectValue placeholder="Select number format" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="none">Without commas (12345)</SelectItem>
-                            <SelectItem value="with_commas">With commas (12,345)</SelectItem>
+                            <SelectItem value="none">Without comma</SelectItem>
+                            <SelectItem value="with_commas">With comma</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
