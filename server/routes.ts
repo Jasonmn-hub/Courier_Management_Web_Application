@@ -3234,7 +3234,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { fieldId, direction, templateId } = req.body;
       
-      console.log('Reorder request:', { fieldId, direction, templateId, body: req.body });
+      console.log('Reorder request received:', { 
+        fieldId, 
+        direction, 
+        templateId, 
+        types: { 
+          fieldId: typeof fieldId, 
+          templateId: typeof templateId 
+        } 
+      });
       
       if (!fieldId || !direction || !templateId) {
         console.log('Missing params:', { fieldId: !!fieldId, direction: !!direction, templateId: !!templateId });
@@ -3245,13 +3253,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const numericFieldId = parseInt(fieldId);
       const numericTemplateId = parseInt(templateId);
       
+      console.log('Converted IDs:', { numericFieldId, numericTemplateId });
+      
       if (isNaN(numericFieldId) || isNaN(numericTemplateId)) {
+        console.log('ID conversion failed:', { fieldId, templateId, numericFieldId, numericTemplateId });
         return res.status(400).json({ message: "Invalid field ID or template ID" });
       }
 
       // Get all fields for this template in current order
       const fields = await storage.getAllAuthorityLetterFields(undefined, numericTemplateId);
+      console.log('Fields found for template:', { 
+        templateId: numericTemplateId, 
+        fieldsCount: fields.length, 
+        fieldIds: fields.map(f => f.id) 
+      });
+      
       const currentIndex = fields.findIndex(f => f.id === numericFieldId);
+      console.log('Field lookup result:', { numericFieldId, currentIndex, foundField: fields[currentIndex] });
       
       if (currentIndex === -1) {
         return res.status(404).json({ message: "Field not found" });
