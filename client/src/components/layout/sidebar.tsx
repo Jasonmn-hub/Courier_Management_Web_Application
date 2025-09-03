@@ -39,7 +39,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   });
 
   // Check if user has access to branches
-  const shouldShowBranches = (user as any)?.role === 'admin' || 
+  const shouldShowBranches = (user as any)?.role === 'admin' || (user as any)?.role === 'sub_admin' || 
     userPermissions?.accessibleTabs?.includes('branches');
 
   const navigation = [
@@ -47,11 +47,11 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     { name: "Sent Couriers", href: "/couriers", icon: Package, current: location === "/couriers" },
     { name: "Received Couriers", href: "/received-couriers", icon: Truck, current: location === "/received-couriers" },
     { name: "Authority Letter", href: "/authority-letter", icon: FileDown, current: location === "/authority-letter" },
-    ...(shouldShowBranches && user?.role !== 'admin' ? [{ name: "Branch List", href: "/branches", icon: MapPin, current: location === "/branches" }] : []),
+    ...(shouldShowBranches && user?.role !== 'admin' && user?.role !== 'sub_admin' ? [{ name: "Branch List", href: "/branches", icon: MapPin, current: location === "/branches" }] : []),
   ];
 
-  // Admin and Manager navigation items with proper grouping
-  const adminNavigation = (user as any)?.role === 'admin' ? [
+  // Admin and Sub-Admin navigation items with proper grouping
+  const adminNavigation = ((user as any)?.role === 'admin' || (user as any)?.role === 'sub_admin') ? [
     { name: "Users & Roles", href: "/users", icon: Users, current: location === "/users", group: "management" },
     { name: "User Policies", href: "/user-policies", icon: Shield, current: location === "/user-policies", group: "management" },
     { name: "Departments", href: "/departments", icon: Building2, current: location === "/departments", group: "management" },
@@ -69,7 +69,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     { name: "Export Data", href: "/export", icon: FileDown, group: "tools" },
   ] : [];
 
-  // Combine admin and manager navigation
+  // Combine admin and manager navigation (sub_admin is already included in adminNavigation)
   const privilegedNavigation = [...adminNavigation, ...managerNavigation];
 
   const handleLogout = () => {

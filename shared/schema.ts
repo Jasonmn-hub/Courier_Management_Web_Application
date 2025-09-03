@@ -27,7 +27,7 @@ export const sessions = pgTable(
 );
 
 // Enums
-export const roleEnum = pgEnum('role', ['admin', 'manager', 'user']);
+export const roleEnum = pgEnum('role', ['admin', 'sub_admin', 'manager', 'user']);
 export const statusEnum = pgEnum('status', ['on_the_way', 'received', 'completed', 'delivered', 'deleted', 'dispatched']);
 export const fieldTypeEnum = pgEnum('field_type', ['text', 'calendar', 'dropdown']);
 

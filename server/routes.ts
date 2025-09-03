@@ -609,7 +609,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin-only user management route
-  app.get('/api/admin/users', authenticateToken, requireRole(['admin', 'manager']), async (req: any, res) => {
+  app.get('/api/admin/users', authenticateToken, requireRole(['admin', 'sub_admin', 'manager']), async (req: any, res) => {
     try {
       const { search } = req.query;
       const users = await storage.getUsersWithDepartments(search as string);
@@ -620,7 +620,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/users', authenticateToken, requireRole(['admin']), setCurrentUser(), async (req: any, res) => {
+  app.post('/api/users', authenticateToken, requireRole(['admin', 'sub_admin']), setCurrentUser(), async (req: any, res) => {
     try {
       const { name, email, employeeCode, mobileNumber, password, role = 'user', departmentId } = req.body;
       
@@ -791,7 +791,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/users/:id', authenticateToken, requireRole(['admin']), setCurrentUser(), async (req: any, res) => {
+  app.put('/api/users/:id', authenticateToken, requireRole(['admin', 'sub_admin']), setCurrentUser(), async (req: any, res) => {
     try {
       const userId = req.params.id;
       const { name, email, employeeCode, mobileNumber, role, departmentId, password } = req.body;
@@ -868,7 +868,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/users/:id', authenticateToken, requireRole(['admin']), setCurrentUser(), async (req: any, res) => {
+  app.delete('/api/users/:id', authenticateToken, requireRole(['admin', 'sub_admin']), setCurrentUser(), async (req: any, res) => {
     try {
       const userId = req.params.id;
       
@@ -897,7 +897,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/users/bulk-upload', authenticateToken, requireRole(['admin']), setCurrentUser(), csvUpload.single('file'), async (req: any, res) => {
+  app.post('/api/users/bulk-upload', authenticateToken, requireRole(['admin', 'sub_admin']), setCurrentUser(), csvUpload.single('file'), async (req: any, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ message: 'No file uploaded' });
@@ -1167,7 +1167,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/fields', authenticateToken, requireRole(['admin']), setCurrentUser(), async (req: any, res) => {
+  app.post('/api/fields', authenticateToken, requireRole(['admin', 'sub_admin']), setCurrentUser(), async (req: any, res) => {
     try {
       const validatedData = insertFieldSchema.parse(req.body);
       const field = await storage.createField(validatedData);
@@ -1184,7 +1184,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/fields/:id', authenticateToken, requireRole(['admin']), setCurrentUser(), async (req: any, res) => {
+  app.delete('/api/fields/:id', authenticateToken, requireRole(['admin', 'sub_admin']), setCurrentUser(), async (req: any, res) => {
     try {
       const fieldId = parseInt(req.params.id);
       if (isNaN(fieldId)) {
@@ -1221,7 +1221,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/field-dropdown-options', authenticateToken, requireRole(['admin']), setCurrentUser(), async (req: any, res) => {
+  app.post('/api/field-dropdown-options', authenticateToken, requireRole(['admin', 'sub_admin']), setCurrentUser(), async (req: any, res) => {
     try {
       const { fieldId, departmentId, optionValue, optionLabel, sortOrder } = req.body;
       
@@ -1246,7 +1246,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/field-dropdown-options/:id', authenticateToken, requireRole(['admin']), setCurrentUser(), async (req: any, res) => {
+  app.put('/api/field-dropdown-options/:id', authenticateToken, requireRole(['admin', 'sub_admin']), setCurrentUser(), async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -1274,7 +1274,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/field-dropdown-options/:id', authenticateToken, requireRole(['admin']), setCurrentUser(), async (req: any, res) => {
+  app.delete('/api/field-dropdown-options/:id', authenticateToken, requireRole(['admin', 'sub_admin']), setCurrentUser(), async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -1306,7 +1306,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/departments', authenticateToken, requireRole(['admin']), setCurrentUser(), async (req: any, res) => {
+  app.post('/api/departments', authenticateToken, requireRole(['admin', 'sub_admin']), setCurrentUser(), async (req: any, res) => {
     try {
       const validatedData = insertDepartmentSchema.parse(req.body);
       const department = await storage.createDepartment(validatedData);
@@ -1323,7 +1323,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/departments/:id', authenticateToken, requireRole(['admin']), setCurrentUser(), async (req: any, res) => {
+  app.put('/api/departments/:id', authenticateToken, requireRole(['admin', 'sub_admin']), setCurrentUser(), async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
       const validatedData = insertDepartmentSchema.partial().parse(req.body);
@@ -1345,7 +1345,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/departments/:id', authenticateToken, requireRole(['admin']), setCurrentUser(), async (req: any, res) => {
+  app.delete('/api/departments/:id', authenticateToken, requireRole(['admin', 'sub_admin']), setCurrentUser(), async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
       const success = await storage.deleteDepartment(id);
@@ -1364,7 +1364,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Upload authority document for department
-  app.post('/api/departments/upload-document', authenticateToken, requireRole(['admin']), documentUpload.single('document'), setCurrentUser(), async (req: any, res) => {
+  app.post('/api/departments/upload-document', authenticateToken, requireRole(['admin', 'sub_admin']), documentUpload.single('document'), setCurrentUser(), async (req: any, res) => {
     try {
       const { departmentId } = req.body;
       const file = req.file;
@@ -1419,7 +1419,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/departments/:id/fields', authenticateToken, requireRole(['admin']), setCurrentUser(), async (req: any, res) => {
+  app.put('/api/departments/:id/fields', authenticateToken, requireRole(['admin', 'sub_admin']), setCurrentUser(), async (req: any, res) => {
     try {
       const departmentId = parseInt(req.params.id);
       const { fieldIds } = req.body;
@@ -1863,7 +1863,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "You can only edit your own couriers" });
       }
 
-      if (user.role === 'manager' && existingCourier.departmentId !== user.departmentId) {
+      if ((user.role === 'manager' || user.role === 'sub_admin') && existingCourier.departmentId !== user.departmentId) {
         return res.status(403).json({ message: "You can only edit couriers in your department" });
       }
 
@@ -1899,7 +1899,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "You can only edit your own couriers" });
       }
 
-      if (user.role === 'manager' && existingCourier.departmentId !== user.departmentId) {
+      if ((user.role === 'manager' || user.role === 'sub_admin') && existingCourier.departmentId !== user.departmentId) {
         return res.status(403).json({ message: "You can only edit couriers in your department" });
       }
 
@@ -1938,7 +1938,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/couriers/:id', authenticateToken, requireRole(['admin', 'manager']), setCurrentUser(), async (req: any, res) => {
+  app.delete('/api/couriers/:id', authenticateToken, requireRole(['admin', 'sub_admin', 'manager']), setCurrentUser(), async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
       const success = await storage.deleteCourier(id);
@@ -1956,7 +1956,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/couriers/:id/restore', authenticateToken, requireRole(['admin', 'manager']), setCurrentUser(), async (req: any, res) => {
+  app.post('/api/couriers/:id/restore', authenticateToken, requireRole(['admin', 'sub_admin', 'manager']), setCurrentUser(), async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
       const success = await storage.restoreCourier(id);
@@ -2098,7 +2098,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/branches', authenticateToken, requireRole(['admin']), setCurrentUser(), async (req: any, res) => {
+  app.post('/api/branches', authenticateToken, requireRole(['admin', 'sub_admin']), setCurrentUser(), async (req: any, res) => {
     try {
       const validatedData = insertBranchSchema.parse(req.body);
       const branch = await storage.createBranch(validatedData);
@@ -2115,7 +2115,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/branches/:id', authenticateToken, requireRole(['admin']), setCurrentUser(), async (req: any, res) => {
+  app.put('/api/branches/:id', authenticateToken, requireRole(['admin', 'sub_admin']), setCurrentUser(), async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
       const validatedData = insertBranchSchema.partial().parse(req.body);
@@ -2137,7 +2137,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/branches/:id', authenticateToken, requireRole(['admin']), setCurrentUser(), async (req: any, res) => {
+  app.delete('/api/branches/:id', authenticateToken, requireRole(['admin', 'sub_admin']), setCurrentUser(), async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
       const success = await storage.deleteBranch(id);
@@ -2155,7 +2155,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch('/api/branches/:id/status', authenticateToken, requireRole(['admin']), setCurrentUser(), async (req: any, res) => {
+  app.patch('/api/branches/:id/status', authenticateToken, requireRole(['admin', 'sub_admin']), setCurrentUser(), async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
       const { status } = req.body;
@@ -2179,7 +2179,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Bulk upload branches from CSV
-  app.post('/api/branches/bulk-upload', authenticateToken, requireRole(['admin']), setCurrentUser(), csvUpload.single('csvFile'), async (req: any, res) => {
+  app.post('/api/branches/bulk-upload', authenticateToken, requireRole(['admin', 'sub_admin']), setCurrentUser(), csvUpload.single('csvFile'), async (req: any, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ message: "CSV file is required" });
@@ -2403,7 +2403,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/vendors/:id', authenticateToken, requireRole(['admin']), async (req: any, res) => {
+  app.get('/api/vendors/:id', authenticateToken, requireRole(['admin', 'sub_admin']), async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -2423,7 +2423,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/vendors', authenticateToken, requireRole(['admin']), setCurrentUser(), async (req: any, res) => {
+  app.post('/api/vendors', authenticateToken, requireRole(['admin', 'sub_admin']), setCurrentUser(), async (req: any, res) => {
     try {
       const { insertVendorSchema } = await import('@shared/schema');
       const validatedData = insertVendorSchema.parse(req.body);
@@ -2441,7 +2441,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/vendors/:id', authenticateToken, requireRole(['admin']), setCurrentUser(), async (req: any, res) => {
+  app.put('/api/vendors/:id', authenticateToken, requireRole(['admin', 'sub_admin']), setCurrentUser(), async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -2468,7 +2468,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/vendors/:id', authenticateToken, requireRole(['admin']), setCurrentUser(), async (req: any, res) => {
+  app.delete('/api/vendors/:id', authenticateToken, requireRole(['admin', 'sub_admin']), setCurrentUser(), async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -2490,7 +2490,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch('/api/vendors/:id/status', authenticateToken, requireRole(['admin']), setCurrentUser(), async (req: any, res) => {
+  app.patch('/api/vendors/:id/status', authenticateToken, requireRole(['admin', 'sub_admin']), setCurrentUser(), async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
       const { isActive } = req.body;
@@ -2898,7 +2898,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 
   // Fields routes
-  app.get('/api/fields', authenticateToken, requireRole(['admin']), async (req: any, res) => {
+  app.get('/api/fields', authenticateToken, requireRole(['admin', 'sub_admin']), async (req: any, res) => {
     try {
       const fields = await storage.getAllFields();
       res.json(fields);
@@ -2908,7 +2908,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/fields', authenticateToken, requireRole(['admin']), setCurrentUser(), async (req: any, res) => {
+  app.post('/api/fields', authenticateToken, requireRole(['admin', 'sub_admin']), setCurrentUser(), async (req: any, res) => {
     try {
       const validatedData = insertFieldSchema.parse(req.body);
       const field = await storage.createField(validatedData);
@@ -2926,7 +2926,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // SMTP settings routes
-  app.get('/api/smtp-settings', authenticateToken, requireRole(['admin']), async (req: any, res) => {
+  app.get('/api/smtp-settings', authenticateToken, requireRole(['admin', 'sub_admin']), async (req: any, res) => {
     try {
       const settings = await storage.getSmtpSettings();
       res.json(settings || {});
@@ -2936,7 +2936,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/smtp-settings', authenticateToken, requireRole(['admin']), setCurrentUser(), async (req: any, res) => {
+  app.put('/api/smtp-settings', authenticateToken, requireRole(['admin', 'sub_admin']), setCurrentUser(), async (req: any, res) => {
     try {
       const validatedData = insertSmtpSettingsSchema.parse(req.body);
       const settings = await storage.updateSmtpSettings(validatedData);
@@ -2955,7 +2955,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 
   // Audit logs route
-  app.get('/api/audit-logs', authenticateToken, requireRole(['admin']), async (req: any, res) => {
+  app.get('/api/audit-logs', authenticateToken, requireRole(['admin', 'sub_admin']), async (req: any, res) => {
     try {
       const { limit = 50, offset = 0 } = req.query;
       const result = await storage.getAuditLogs(parseInt(limit), parseInt(offset));
@@ -2967,7 +2967,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Audit logs export route
-  app.get('/api/audit-logs/export', authenticateToken, requireRole(['admin']), setCurrentUser(), async (req: any, res) => {
+  app.get('/api/audit-logs/export', authenticateToken, requireRole(['admin', 'sub_admin']), setCurrentUser(), async (req: any, res) => {
     try {
       const { startDate, endDate } = req.query;
       const result = await storage.getAuditLogs(10000, 0, startDate, endDate);
@@ -3003,7 +3003,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // User Policy routes
-  app.get('/api/user-policies', authenticateToken, requireRole(['admin']), async (req: any, res) => {
+  app.get('/api/user-policies', authenticateToken, requireRole(['admin', 'sub_admin']), async (req: any, res) => {
     try {
       const policies = await storage.getAllUserPolicies();
       res.json(policies);
@@ -3050,7 +3050,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/user-policies', authenticateToken, requireRole(['admin']), setCurrentUser(), async (req: any, res) => {
+  app.post('/api/user-policies', authenticateToken, requireRole(['admin', 'sub_admin']), setCurrentUser(), async (req: any, res) => {
     try {
       const validatedData = insertUserPolicySchema.parse(req.body);
       const policy = await storage.createOrUpdateUserPolicy(validatedData);
@@ -3098,7 +3098,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/authority-letter-templates', authenticateToken, requireRole(['admin']), setCurrentUser(), async (req: any, res) => {
+  app.post('/api/authority-letter-templates', authenticateToken, requireRole(['admin', 'sub_admin']), setCurrentUser(), async (req: any, res) => {
     try {
       const validatedData = insertAuthorityLetterTemplateSchema.parse(req.body);
       const template = await storage.createAuthorityLetterTemplate(validatedData);
@@ -3115,7 +3115,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/authority-letter-templates/:id', authenticateToken, requireRole(['admin']), setCurrentUser(), async (req: any, res) => {
+  app.put('/api/authority-letter-templates/:id', authenticateToken, requireRole(['admin', 'sub_admin']), setCurrentUser(), async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
       const validatedData = insertAuthorityLetterTemplateSchema.partial().parse(req.body);
@@ -3137,7 +3137,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/authority-letter-templates/:id', authenticateToken, requireRole(['admin']), setCurrentUser(), async (req: any, res) => {
+  app.delete('/api/authority-letter-templates/:id', authenticateToken, requireRole(['admin', 'sub_admin']), setCurrentUser(), async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
       const success = await storage.deleteAuthorityLetterTemplate(id);
@@ -3185,7 +3185,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/authority-letter-fields', authenticateToken, requireRole(['admin']), setCurrentUser(), async (req: any, res) => {
+  app.post('/api/authority-letter-fields', authenticateToken, requireRole(['admin', 'sub_admin']), setCurrentUser(), async (req: any, res) => {
     try {
       const validatedData = insertAuthorityLetterFieldSchema.parse(req.body);
       const field = await storage.createAuthorityLetterField(validatedData);
@@ -3203,26 +3203,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Reorder authority letter fields (must come before /:id route)
-  app.put('/api/authority-letter-fields/reorder', authenticateToken, requireRole(['admin']), setCurrentUser(), async (req: any, res) => {
-    console.log('=== REORDER ENDPOINT HIT ===');
-    console.log('Request body:', JSON.stringify(req.body, null, 2));
-    console.log('Request method:', req.method);
-    console.log('Request URL:', req.url);
+  app.put('/api/authority-letter-fields/reorder', authenticateToken, requireRole(['admin', 'sub_admin']), setCurrentUser(), async (req: any, res) => {
     try {
       const { fieldId, direction, templateId } = req.body;
       
-      console.log('Reorder request received:', { 
-        fieldId, 
-        direction, 
-        templateId, 
-        types: { 
-          fieldId: typeof fieldId, 
-          templateId: typeof templateId 
-        } 
-      });
-      
       if (!fieldId || !direction || !templateId) {
-        console.log('Missing params:', { fieldId: !!fieldId, direction: !!direction, templateId: !!templateId });
         return res.status(400).json({ message: "Field ID, direction, and template ID are required" });
       }
 
@@ -3230,30 +3215,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const numericFieldId = typeof fieldId === 'number' ? fieldId : parseInt(fieldId);
       const numericTemplateId = typeof templateId === 'number' ? templateId : parseInt(templateId);
       
-      console.log('Converted IDs:', { numericFieldId, numericTemplateId, originalTypes: { fieldId: typeof fieldId, templateId: typeof templateId } });
-      
       if (isNaN(numericFieldId) || isNaN(numericTemplateId)) {
-        console.log('ID conversion failed:', { 
-          fieldId, 
-          templateId, 
-          numericFieldId, 
-          numericTemplateId,
-          fieldIdIsNaN: isNaN(numericFieldId),
-          templateIdIsNaN: isNaN(numericTemplateId)
-        });
-        return res.status(400).json({ message: "Invalid field ID or template ID - conversion failed" });
+        return res.status(400).json({ message: "Invalid field ID or template ID" });
       }
 
       // Get all fields for this template in current order
       const fields = await storage.getAllAuthorityLetterFields(undefined, numericTemplateId);
-      console.log('Fields found for template:', { 
-        templateId: numericTemplateId, 
-        fieldsCount: fields.length, 
-        fieldIds: fields.map(f => f.id) 
-      });
-      
       const currentIndex = fields.findIndex(f => f.id === numericFieldId);
-      console.log('Field lookup result:', { numericFieldId, currentIndex, foundField: fields[currentIndex] });
       
       if (currentIndex === -1) {
         return res.status(404).json({ message: "Field not found" });
@@ -3289,7 +3257,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update authority letter field
-  app.put('/api/authority-letter-fields/:id', authenticateToken, requireRole(['admin']), setCurrentUser(), async (req: any, res) => {
+  app.put('/api/authority-letter-fields/:id', authenticateToken, requireRole(['admin', 'sub_admin']), setCurrentUser(), async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -3316,7 +3284,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Delete authority letter field
-  app.delete('/api/authority-letter-fields/:id', authenticateToken, requireRole(['admin']), setCurrentUser(), async (req: any, res) => {
+  app.delete('/api/authority-letter-fields/:id', authenticateToken, requireRole(['admin', 'sub_admin']), setCurrentUser(), async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
       const success = await storage.deleteAuthorityLetterField(id);
@@ -4083,7 +4051,7 @@ ${content}
   });
 
   // Create new template
-  app.post('/api/authority-templates', authenticateToken, requireRole(['admin']), async (req: any, res) => {
+  app.post('/api/authority-templates', authenticateToken, requireRole(['admin', 'sub_admin']), async (req: any, res) => {
     try {
       const templateData = insertAuthorityLetterTemplateSchema.parse(req.body);
       const user = req.currentUser;
@@ -4109,7 +4077,7 @@ ${content}
   });
 
   // Update template
-  app.put('/api/authority-templates/:id', authenticateToken, requireRole(['admin']), async (req: any, res) => {
+  app.put('/api/authority-templates/:id', authenticateToken, requireRole(['admin', 'sub_admin']), async (req: any, res) => {
     try {
       const templateId = parseInt(req.params.id);
       const updateData = req.body;
@@ -4142,7 +4110,7 @@ ${content}
   });
 
   // Delete template
-  app.delete('/api/authority-templates/:id', authenticateToken, requireRole(['admin']), async (req: any, res) => {
+  app.delete('/api/authority-templates/:id', authenticateToken, requireRole(['admin', 'sub_admin']), async (req: any, res) => {
     try {
       const templateId = parseInt(req.params.id);
       const user = req.currentUser;
@@ -4161,7 +4129,7 @@ ${content}
   });
 
   // Upload Word template to authority letter template
-  app.post('/api/authority-templates/:id/upload-word', authenticateToken, requireRole(['admin']), documentUpload.single('wordTemplate'), setCurrentUser(), async (req: any, res) => {
+  app.post('/api/authority-templates/:id/upload-word', authenticateToken, requireRole(['admin', 'sub_admin']), documentUpload.single('wordTemplate'), setCurrentUser(), async (req: any, res) => {
     try {
       const templateId = parseInt(req.params.id);
       const file = req.file;
@@ -4671,7 +4639,7 @@ ${result.value}
 
   // ============= USER DEPARTMENT MANAGEMENT ROUTES =============
 
-  app.get('/api/users/:id/departments', authenticateToken, requireRole(['admin']), async (req: any, res) => {
+  app.get('/api/users/:id/departments', authenticateToken, requireRole(['admin', 'sub_admin']), async (req: any, res) => {
     try {
       const userId = req.params.id;
       const departments = await storage.getUserDepartments(userId);
@@ -4682,7 +4650,7 @@ ${result.value}
     }
   });
 
-  app.post('/api/users/:id/departments', authenticateToken, requireRole(['admin']), setCurrentUser(), async (req: any, res) => {
+  app.post('/api/users/:id/departments', authenticateToken, requireRole(['admin', 'sub_admin']), setCurrentUser(), async (req: any, res) => {
     try {
       const userId = req.params.id;
       const { departmentIds } = req.body;
@@ -4703,7 +4671,7 @@ ${result.value}
 
   // ============= SMTP SETTINGS ROUTES =============
   
-  app.get('/api/smtp-settings', authenticateToken, requireRole(['admin']), async (req: any, res) => {
+  app.get('/api/smtp-settings', authenticateToken, requireRole(['admin', 'sub_admin']), async (req: any, res) => {
     try {
       const settings = await storage.getSmtpSettings();
       res.json(settings || {});
@@ -4713,7 +4681,7 @@ ${result.value}
     }
   });
 
-  app.post('/api/smtp-settings', authenticateToken, requireRole(['admin']), setCurrentUser(), async (req: any, res) => {
+  app.post('/api/smtp-settings', authenticateToken, requireRole(['admin', 'sub_admin']), setCurrentUser(), async (req: any, res) => {
     try {
       const { host, port, username, password, useTLS, useSSL, fromEmail, applicationUrl } = req.body;
       
@@ -4738,7 +4706,7 @@ ${result.value}
     }
   });
 
-  app.post('/api/smtp-settings/test', authenticateToken, requireRole(['admin']), async (req: any, res) => {
+  app.post('/api/smtp-settings/test', authenticateToken, requireRole(['admin', 'sub_admin']), async (req: any, res) => {
     try {
       const { testEmail } = req.body;
       
@@ -4938,7 +4906,7 @@ ${result.value}
   }
 
   // API endpoint to manually trigger reminder email check
-  app.post('/api/couriers/send-reminders', authenticateToken, requireRole(['admin']), async (req: any, res) => {
+  app.post('/api/couriers/send-reminders', authenticateToken, requireRole(['admin', 'sub_admin']), async (req: any, res) => {
     try {
       await sendReminderEmails();
       res.json({ message: "Reminder emails checked and sent if needed" });

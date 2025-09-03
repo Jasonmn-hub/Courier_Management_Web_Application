@@ -229,6 +229,7 @@ export default function UserForm({ user, onClose, onSuccess }: UserFormProps) {
                     <SelectContent>
                       <SelectItem value="user">User</SelectItem>
                       <SelectItem value="manager">Manager</SelectItem>
+                      <SelectItem value="sub_admin">Sub Admin</SelectItem>
                       <SelectItem value="admin">Admin</SelectItem>
                     </SelectContent>
                   </Select>
