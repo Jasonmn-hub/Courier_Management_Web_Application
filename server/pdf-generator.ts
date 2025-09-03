@@ -1,41 +1,26 @@
 import puppeteer from 'puppeteer';
 import fs from 'fs';
 import path from 'path';
+import { FieldTransformations, FieldTransformOptions } from './field-transformations';
 
 export interface PDFGenerationOptions {
   templateContent: string;
   fieldValues: Record<string, any>;
+  fieldConfigs?: Record<string, FieldTransformOptions>;
   fileName?: string;
 }
 
 export class PDFGenerator {
-  private static replacePlaceholders(template: string, values: Record<string, any>): string {
+  private static replacePlaceholders(template: string, values: Record<string, any>, fieldConfigs: Record<string, FieldTransformOptions> = {}): string {
     let result = template;
     
-    // Replace ##field## placeholders
+    // Replace ##field## placeholders with transformed values
     Object.entries(values).forEach(([key, value]) => {
       const placeholder = `##${key}##`;
-      const stringValue = value?.toString() || '';
+      const config = fieldConfigs[key] || {};
       
-      // Apply text transformations based on field settings
-      let transformedValue = stringValue;
-      if (values[`${key}_transform`]) {
-        switch (values[`${key}_transform`]) {
-          case 'uppercase':
-            transformedValue = stringValue.toUpperCase();
-            break;
-          case 'capitalize':
-            transformedValue = stringValue.replace(/\b\w/g, (l: string) => l.toUpperCase());
-            break;
-          case 'toggle':
-            transformedValue = stringValue.split('').map((c: string) => 
-              c === c.toUpperCase() ? c.toLowerCase() : c.toUpperCase()
-            ).join('');
-            break;
-          default:
-            transformedValue = stringValue;
-        }
-      }
+      // Apply field transformations using the new utility
+      const transformedValue = FieldTransformations.transformFieldValue(value, config);
       
       result = result.replace(new RegExp(placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), transformedValue);
     });
@@ -44,6 +29,8 @@ export class PDFGenerator {
     const currentDate = new Date().toLocaleDateString('en-GB');
     result = result.replace(/##currentDate##/g, currentDate);
     result = result.replace(/##current_date##/g, currentDate);
+    result = result.replace(/##Currunt Date##/g, currentDate); // Handle typo
+    result = result.replace(/##Current Date##/g, currentDate);
     
     return result;
   }
@@ -203,8 +190,8 @@ We hereby authorize M/s. ##courier_company## to provide the services of transpor
       // Use the default template if none provided
       const template = options.templateContent || this.getDefaultHTMLTemplate();
       
-      // Replace placeholders with actual values
-      const htmlContent = this.replacePlaceholders(template, options.fieldValues);
+      // Replace placeholders with actual values using field configurations
+      const htmlContent = this.replacePlaceholders(template, options.fieldValues, options.fieldConfigs || {});
       
       // Launch Puppeteer with system Chromium
       browser = await puppeteer.launch({

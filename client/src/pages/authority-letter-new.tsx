@@ -458,6 +458,8 @@ export default function AuthorityLetterNew() {
       fieldLabel: field.fieldLabel,
       fieldType: field.fieldType,
       textTransform: field.textTransform || 'none',
+      numberFormat: (field as any).numberFormat || 'none',
+      dateFormat: (field as any).dateFormat || 'DD-MM-YYYY',
       isRequired: field.isRequired
     });
     setShowFieldManager(true);

@@ -12,6 +12,7 @@ import Docxtemplater from "docxtemplater";
 import mammoth from "mammoth";
 import { PDFGenerator } from "./pdf-generator";
 import { WordGenerator } from "./word-generator";
+import { FieldTransformations } from "./field-transformations";
 import Papa from "papaparse";
 import nodemailer from "nodemailer";
 import crypto from "crypto";
@@ -177,7 +178,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       // Log audit for email confirmation with email address for tracking
-      await logAudit(null, 'EMAIL_CONFIRM_RECEIVED', 'courier', `${courier.id} (${courier.email})`, courier.email);
+      await logAudit(courier.createdBy || 'system', 'EMAIL_CONFIRM_RECEIVED', 'courier', `${courier.id} (${courier.email})`, courier.email);
 
       // Success response
       res.send(`
@@ -3446,37 +3447,22 @@ Jigar Jodhani
 </body>
 </html>`;
 
-      // Apply field transformations
-      const processedValues: Record<string, any> = {};
-      Object.entries(fieldValues || {}).forEach(([key, value]) => {
-        const field = fields.find(f => f.fieldName === key);
-        let processedValue = value as string;
-        
-        if (field?.textTransform && processedValue) {
-          switch (field.textTransform) {
-            case 'uppercase':
-              processedValue = processedValue.toUpperCase();
-              break;
-            case 'capitalize':
-              processedValue = processedValue.split(' ').map(word => 
-                word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
-              ).join(' ');
-              break;
-            case 'toggle':
-              processedValue = processedValue.split('').map(char => 
-                char === char.toUpperCase() ? char.toLowerCase() : char.toUpperCase()
-              ).join('');
-              break;
-          }
-        }
-        
-        processedValues[key] = processedValue;
+      // Create field configurations for transformations
+      const fieldConfigs: Record<string, any> = {};
+      fields.forEach(field => {
+        fieldConfigs[field.fieldName] = {
+          fieldType: field.fieldType,
+          textTransform: field.textTransform,
+          numberFormat: field.numberFormat,
+          dateFormat: field.dateFormat
+        };
       });
 
-      // Generate PDF using the PDFGenerator
+      // Generate PDF using the PDFGenerator with field configurations
       const pdfBuffer = await PDFGenerator.generatePDF({
         templateContent: htmlTemplate,
-        fieldValues: processedValues,
+        fieldValues: fieldValues || {},
+        fieldConfigs: fieldConfigs,
         fileName: fileName || `authority_letter_${department.name}_${Date.now()}.pdf`
       });
       
@@ -3946,7 +3932,7 @@ ${content}
 </html>`;
         
         // Create a simple Word document structure using JSZip
-        const zip = new JSZip();
+        const zip = new PizZip();
         
         // Add the main document content
         const documentXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
