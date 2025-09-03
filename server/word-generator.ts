@@ -46,14 +46,21 @@ export class WordGenerator {
       // Process field values with transformations
       const processedValues = this.processFieldValues(options.fieldValues, options.fieldConfigs || {});
       
-      // Set the template data
-      doc.setData(processedValues);
-
+      // Set the template data using the new API
+      doc.setOptions({
+        delimiters: {
+          start: '##',
+          end: '##'
+        }
+      });
+      
       try {
-        // Render the document
-        doc.render();
+        // Render the document with processed data
+        doc.render(processedValues);
       } catch (error: any) {
         // Handle template rendering errors
+        console.error('Template rendering error:', error);
+        console.error('Processed values:', processedValues);
         throw new Error(`Template rendering failed: ${error.message}`);
       }
 

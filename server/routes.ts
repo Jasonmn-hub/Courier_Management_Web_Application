@@ -3824,28 +3824,10 @@ Jigar Jodhani
         // Use Word template generation
         console.log(`Generating Word document from template: ${template.wordTemplateUrl}`);
         
-        // Read the Word document
-        const content = fs.readFileSync(template.wordTemplateUrl, 'binary');
-        const zip = new PizZip(content);
-        const doc = new Docxtemplater(zip, {
-          paragraphLoop: true,
-          linebreaks: true,
-          delimiters: {
-            start: '##',
-            end: '##'
-          }
-        });
-        
-        // Prepare data for template replacement
-        const templateData: any = {
-          currentDate: new Date().toLocaleDateString('en-GB'),
-          departmentName: template.templateName,
-          generatedAt: new Date().toISOString()
-        };
-        
         // Get the authority letter fields for this template to understand expected field names
         const templateFields = await storage.getAllAuthorityLetterFields(undefined, templateId);
         console.log('Template fields from database:', templateFields.map(f => ({ fieldName: f.fieldName, fieldLabel: f.fieldLabel })));
+        console.log('Field values received:', fieldValues);
 
         // Create field configurations for transformations
         const fieldConfigs: Record<string, any> = {};
@@ -3857,6 +3839,8 @@ Jigar Jodhani
             dateFormat: field.dateFormat
           };
         });
+        
+        console.log('Field configurations:', fieldConfigs);
 
         // Use the new Word generator with field configurations
         const wordBuffer = await WordGenerator.generateWordDocument({
