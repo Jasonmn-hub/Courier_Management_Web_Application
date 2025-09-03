@@ -1218,7 +1218,7 @@ export default function AuthorityLetterNew() {
                     </div>
 
                     {/* Text Transform Options */}
-                    {(newField.fieldType === 'text' || newField.fieldType === 'textarea') && (
+                    {(newField.fieldType === 'text' || newField.fieldType === 'textarea' || newField.fieldType === 'date') && (
                       <div>
                         <Label htmlFor="text-transform">Text Transform</Label>
                         <Select 
