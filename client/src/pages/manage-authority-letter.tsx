@@ -1285,7 +1285,7 @@ export default function ManageAuthorityLetter() {
                 </div>
               </div>
               
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 gap-4 mb-4">
                 <div>
                   <Label htmlFor="edit-field-type">Field Type</Label>
                   <Select
@@ -1312,22 +1312,75 @@ export default function ManageAuthorityLetter() {
                     <SelectTrigger data-testid="select-edit-text-transform">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="max-h-60 overflow-y-auto">
                       <SelectItem value="none">None</SelectItem>
+                      <SelectItem value="sentence">Sentence case</SelectItem>
+                      <SelectItem value="lowercase">lowercase</SelectItem>
                       <SelectItem value="uppercase">UPPERCASE</SelectItem>
-                      <SelectItem value="capitalize">Capitalize</SelectItem>
+                      <SelectItem value="capitalize_words">Capitalize Each Word</SelectItem>
+                      <SelectItem value="toggle">tOGGLE CASE</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="flex items-center space-x-2 mt-6">
-                  <Checkbox
-                    id="edit-is-required"
-                    checked={editingField.isRequired}
-                    onCheckedChange={(checked) => setEditingField({...editingField, isRequired: !!checked})}
-                    data-testid="checkbox-edit-field-required"
-                  />
-                  <Label htmlFor="edit-is-required">Required</Label>
-                </div>
+                
+                {/* Number Format Options */}
+                {editingField.fieldType === 'number' && (
+                  <div>
+                    <Label htmlFor="edit-number-format">Number Format</Label>
+                    <Select
+                      value={editingField.numberFormat || 'none'}
+                      onValueChange={(value) => setEditingField({...editingField, numberFormat: value})}
+                    >
+                      <SelectTrigger data-testid="select-edit-number-format">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-60 overflow-y-auto">
+                        <SelectItem value="none">Without comma</SelectItem>
+                        <SelectItem value="with_commas">With comma</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {/* Date Format Options */}
+                {editingField.fieldType === 'date' && (
+                  <div>
+                    <Label htmlFor="edit-date-format">Date Format</Label>
+                    <Select
+                      value={editingField.dateFormat || 'DD-MM-YYYY'}
+                      onValueChange={(value) => setEditingField({...editingField, dateFormat: value})}
+                    >
+                      <SelectTrigger data-testid="select-edit-date-format">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-60 overflow-y-auto">
+                        <SelectItem value="DD-MM-YYYY">DD-MM-YYYY (02-09-2025)</SelectItem>
+                        <SelectItem value="MM-DD-YYYY">MM-DD-YYYY (09-02-2025)</SelectItem>
+                        <SelectItem value="YYYY-MM-DD">YYYY-MM-DD (2025-09-02)</SelectItem>
+                        <SelectItem value="DD/MM/YYYY">DD/MM/YYYY (02/09/2025)</SelectItem>
+                        <SelectItem value="MM/DD/YYYY">MM/DD/YYYY (09/02/2025)</SelectItem>
+                        <SelectItem value="YYYY/MM/DD">YYYY/MM/DD (2025/09/02)</SelectItem>
+                        <SelectItem value="DD.MM.YYYY">DD.MM.YYYY (02.09.2025)</SelectItem>
+                        <SelectItem value="MM.DD.YYYY">MM.DD.YYYY (09.02.2025)</SelectItem>
+                        <SelectItem value="YYYY.MM.DD">YYYY.MM.DD (2025.09.02)</SelectItem>
+                        <SelectItem value="DD Mon YYYY">DD Mon YYYY (02 Sep 2025)</SelectItem>
+                        <SelectItem value="DD Month YYYY">DD Month YYYY (02 September 2025)</SelectItem>
+                        <SelectItem value="Month DD, YYYY">Month DD, YYYY (September 02, 2025)</SelectItem>
+                        <SelectItem value="YYYY Month DD">YYYY Month DD (2025 September 02)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex items-center space-x-2 mb-4">
+                <Checkbox
+                  id="edit-is-required"
+                  checked={editingField.isRequired}
+                  onCheckedChange={(checked) => setEditingField({...editingField, isRequired: !!checked})}
+                  data-testid="checkbox-edit-field-required"
+                />
+                <Label htmlFor="edit-is-required">Required</Label>
               </div>
             </div>
             
