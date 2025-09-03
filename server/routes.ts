@@ -3250,14 +3250,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Convert fieldId and templateId to numbers to ensure proper comparison
-      const numericFieldId = parseInt(fieldId);
-      const numericTemplateId = parseInt(templateId);
+      const numericFieldId = typeof fieldId === 'number' ? fieldId : parseInt(fieldId);
+      const numericTemplateId = typeof templateId === 'number' ? templateId : parseInt(templateId);
       
-      console.log('Converted IDs:', { numericFieldId, numericTemplateId });
+      console.log('Converted IDs:', { numericFieldId, numericTemplateId, originalTypes: { fieldId: typeof fieldId, templateId: typeof templateId } });
       
       if (isNaN(numericFieldId) || isNaN(numericTemplateId)) {
-        console.log('ID conversion failed:', { fieldId, templateId, numericFieldId, numericTemplateId });
-        return res.status(400).json({ message: "Invalid field ID or template ID" });
+        console.log('ID conversion failed:', { 
+          fieldId, 
+          templateId, 
+          numericFieldId, 
+          numericTemplateId,
+          fieldIdIsNaN: isNaN(numericFieldId),
+          templateIdIsNaN: isNaN(numericTemplateId)
+        });
+        return res.status(400).json({ message: "Invalid field ID or template ID - conversion failed" });
       }
 
       // Get all fields for this template in current order
