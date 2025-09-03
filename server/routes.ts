@@ -3879,13 +3879,41 @@ Jigar Jodhani
           generatedAt: new Date().toISOString()
         };
         
-        // Add field values with detailed logging
+        // Get the authority letter fields for this template to understand expected field names
+        const templateFields = await storage.getAllAuthorityLetterFields(undefined, templateId);
+        console.log('Template fields from database:', templateFields.map(f => ({ fieldName: f.fieldName, fieldLabel: f.fieldLabel })));
+
+        // Add field values with detailed logging and flexible matching
         console.log('Processing field values for Word template:', fieldValues);
         for (const [fieldName, value] of Object.entries(fieldValues || {})) {
+          // Try exact match first
           templateData[fieldName] = value;
+          
+          // Try common variations to handle different naming conventions
+          templateData[fieldName.toLowerCase()] = value;
+          templateData[fieldName.toUpperCase()] = value;
+          templateData[fieldName.replace(/\s+/g, '')] = value; // Remove spaces
+          templateData[fieldName.replace(/\s+/g, '_')] = value; // Replace spaces with underscores
+          templateData[fieldName.replace(/_/g, ' ')] = value; // Replace underscores with spaces
+          
           console.log(`Setting template data: ${fieldName} = ${value}`);
         }
-        console.log('Final template data for Word generation:', templateData);
+        
+        // Add standard placeholders that are commonly used
+        templateData['Currunt Date'] = new Date().toLocaleDateString('en-GB'); // Handle typo in existing templates
+        templateData['current_date'] = new Date().toLocaleDateString('en-GB');
+        templateData['Current Date'] = new Date().toLocaleDateString('en-GB');
+        templateData['Address'] = templateData['address'] || templateData['Address'] || '';
+        templateData['Asset Name'] = templateData['asset_name'] || templateData['Asset Name'] || templateData['assetName'] || '';
+        templateData['Value'] = templateData['value'] || templateData['Value'] || templateData['asset_value'] || '';
+        
+        console.log('Final template data for Word generation:', Object.keys(templateData));
+        console.log('Sample values:', { 
+          'Current Date': templateData['Currunt Date'],
+          'Address': templateData['Address'],
+          'Asset Name': templateData['Asset Name'],
+          'Value': templateData['Value']
+        });
         
         // Render the document
         doc.setData(templateData);

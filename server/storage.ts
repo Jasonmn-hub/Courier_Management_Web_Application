@@ -1166,7 +1166,7 @@ export class DatabaseStorage implements IStorage {
 
   async deleteAuthorityLetterTemplate(id: number): Promise<boolean> {
     const result = await db.delete(authorityLetterTemplates).where(eq(authorityLetterTemplates.id, id));
-    return result.length > 0;
+    return result.rowCount > 0;
   }
 
   // Authority Letter Field methods
