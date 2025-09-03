@@ -311,6 +311,7 @@ export default function ManageAuthorityLetter() {
   // Reorder field mutation
   const reorderFieldMutation = useMutation({
     mutationFn: async ({ fieldId, direction }: { fieldId: number; direction: 'up' | 'down' }) => {
+      console.log('Reorder mutation called:', { fieldId, direction, templateId: selectedTemplateForFields?.id });
       const response = await apiRequest('PUT', '/api/authority-letter-fields/reorder', {
         fieldId,
         direction,

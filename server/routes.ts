@@ -3234,7 +3234,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { fieldId, direction, templateId } = req.body;
       
+      console.log('Reorder request:', { fieldId, direction, templateId, body: req.body });
+      
       if (!fieldId || !direction || !templateId) {
+        console.log('Missing params:', { fieldId: !!fieldId, direction: !!direction, templateId: !!templateId });
         return res.status(400).json({ message: "Field ID, direction, and template ID are required" });
       }
 
