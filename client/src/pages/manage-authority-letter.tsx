@@ -81,6 +81,8 @@ export default function ManageAuthorityLetter() {
     fieldLabel: '', 
     fieldType: 'text', 
     textTransform: 'none', 
+    numberFormat: 'none',
+    dateFormat: 'DD-MM-YYYY',
     isRequired: false 
   });
   
@@ -267,7 +269,7 @@ export default function ManageAuthorityLetter() {
         description: "Field created successfully.",
       });
       refetchFields();
-      setNewField({ fieldName: '', fieldLabel: '', fieldType: 'text', textTransform: 'none', isRequired: false });
+      setNewField({ fieldName: '', fieldLabel: '', fieldType: 'text', textTransform: 'none', numberFormat: 'none', dateFormat: 'DD-MM-YYYY', isRequired: false });
     },
     onError: (error: any) => {
       toast({
@@ -1017,7 +1019,7 @@ export default function ManageAuthorityLetter() {
                   </div>
                 </div>
                 
-                <div className="grid grid-cols-3 gap-4 mb-4">
+                <div className="grid grid-cols-2 gap-4 mb-4">
                   <div>
                     <Label htmlFor="field-type">Field Type</Label>
                     <Select
@@ -1044,14 +1046,68 @@ export default function ManageAuthorityLetter() {
                       <SelectTrigger data-testid="select-text-transform">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="max-h-60 overflow-y-auto">
                         <SelectItem value="none">None</SelectItem>
+                        <SelectItem value="sentence">Sentence case</SelectItem>
+                        <SelectItem value="lowercase">lowercase</SelectItem>
                         <SelectItem value="uppercase">UPPERCASE</SelectItem>
-                        <SelectItem value="capitalize">Capitalize</SelectItem>
+                        <SelectItem value="capitalize_words">Capitalize Each Word</SelectItem>
+                        <SelectItem value="toggle">tOGGLE CASE</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="flex items-center space-x-2 mt-6">
+                  
+                  {/* Number Format Options */}
+                  {newField.fieldType === 'number' && (
+                    <div>
+                      <Label htmlFor="number-format">Number Format</Label>
+                      <Select
+                        value={newField.numberFormat || 'none'}
+                        onValueChange={(value) => setNewField({...newField, numberFormat: value})}
+                      >
+                        <SelectTrigger data-testid="select-number-format">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-60 overflow-y-auto">
+                          <SelectItem value="none">Without comma</SelectItem>
+                          <SelectItem value="with_commas">With comma</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
+                  {/* Date Format Options */}
+                  {newField.fieldType === 'date' && (
+                    <div>
+                      <Label htmlFor="date-format">Date Format</Label>
+                      <Select
+                        value={newField.dateFormat || 'DD-MM-YYYY'}
+                        onValueChange={(value) => setNewField({...newField, dateFormat: value})}
+                      >
+                        <SelectTrigger data-testid="select-date-format">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-60 overflow-y-auto">
+                          <SelectItem value="DD-MM-YYYY">DD-MM-YYYY (02-09-2025)</SelectItem>
+                          <SelectItem value="MM-DD-YYYY">MM-DD-YYYY (09-02-2025)</SelectItem>
+                          <SelectItem value="YYYY-MM-DD">YYYY-MM-DD (2025-09-02)</SelectItem>
+                          <SelectItem value="DD/MM/YYYY">DD/MM/YYYY (02/09/2025)</SelectItem>
+                          <SelectItem value="MM/DD/YYYY">MM/DD/YYYY (09/02/2025)</SelectItem>
+                          <SelectItem value="YYYY/MM/DD">YYYY/MM/DD (2025/09/02)</SelectItem>
+                          <SelectItem value="DD.MM.YYYY">DD.MM.YYYY (02.09.2025)</SelectItem>
+                          <SelectItem value="MM.DD.YYYY">MM.DD.YYYY (09.02.2025)</SelectItem>
+                          <SelectItem value="YYYY.MM.DD">YYYY.MM.DD (2025.09.02)</SelectItem>
+                          <SelectItem value="DD Mon YYYY">DD Mon YYYY (02 Sep 2025)</SelectItem>
+                          <SelectItem value="DD Month YYYY">DD Month YYYY (02 September 2025)</SelectItem>
+                          <SelectItem value="Month DD, YYYY">Month DD, YYYY (September 02, 2025)</SelectItem>
+                          <SelectItem value="YYYY Month DD">YYYY Month DD (2025 September 02)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex items-center space-x-2 mb-4">
                     <Checkbox
                       id="is-required"
                       checked={newField.isRequired}
@@ -1059,7 +1115,6 @@ export default function ManageAuthorityLetter() {
                       data-testid="checkbox-field-required"
                     />
                     <Label htmlFor="is-required">Required</Label>
-                  </div>
                 </div>
                 
                 <Button
@@ -1178,7 +1233,7 @@ export default function ManageAuthorityLetter() {
                 onClick={() => {
                   setShowFieldsManager(false);
                   setSelectedTemplateForFields(null);
-                  setNewField({ fieldName: '', fieldLabel: '', fieldType: 'text', textTransform: 'none', isRequired: false });
+                  setNewField({ fieldName: '', fieldLabel: '', fieldType: 'text', textTransform: 'none', numberFormat: 'none', dateFormat: 'DD-MM-YYYY', isRequired: false });
                 }}
                 data-testid="button-close-fields-manager"
               >
