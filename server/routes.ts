@@ -3231,6 +3231,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Reorder authority letter fields
   app.put('/api/authority-letter-fields/reorder', authenticateToken, requireRole(['admin']), setCurrentUser(), async (req: any, res) => {
+    console.log('=== REORDER ENDPOINT HIT ===');
+    console.log('Request body:', JSON.stringify(req.body, null, 2));
+    console.log('Request method:', req.method);
+    console.log('Request URL:', req.url);
     try {
       const { fieldId, direction, templateId } = req.body;
       
