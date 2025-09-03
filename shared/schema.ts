@@ -217,7 +217,9 @@ export const authorityLetterFields = pgTable('authority_letter_fields', {
   fieldName: varchar('field_name', { length: 255 }).notNull(),
   fieldLabel: varchar('field_label', { length: 255 }).notNull(),
   fieldType: varchar('field_type', { length: 50 }).default('text').notNull(), // text, number, date
-  textTransform: varchar('text_transform', { length: 20 }).default('none'), // none, uppercase, capitalize, toggle
+  textTransform: varchar('text_transform', { length: 30 }).default('none'), // none, sentence, lowercase, uppercase, capitalize_words, toggle
+  numberFormat: varchar('number_format', { length: 20 }).default('none'), // none, with_commas, without_commas
+  dateFormat: varchar('date_format', { length: 30 }).default('DD-MM-YYYY'), // Various date formats
   isRequired: boolean('is_required').default(false),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });

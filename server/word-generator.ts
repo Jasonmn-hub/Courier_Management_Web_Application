@@ -2,51 +2,31 @@ import Docxtemplater from 'docxtemplater';
 import PizZip from 'pizzip';
 import fs from 'fs';
 import path from 'path';
+import { FieldTransformations, FieldTransformOptions } from './field-transformations';
 
 export interface WordGenerationOptions {
   templatePath: string;
   fieldValues: Record<string, any>;
+  fieldConfigs?: Record<string, FieldTransformOptions>;
   fileName?: string;
 }
 
 export class WordGenerator {
-  private static replacePlaceholders(fieldValues: Record<string, any>): Record<string, any> {
+  private static processFieldValues(fieldValues: Record<string, any>, fieldConfigs: Record<string, FieldTransformOptions> = {}): Record<string, any> {
     const result: Record<string, any> = {};
     
-    // Process field values and apply transformations
+    // Process field values and apply transformations using the new utility
     Object.entries(fieldValues).forEach(([key, value]) => {
-      const stringValue = value?.toString() || '';
-      
-      // Apply text transformations based on field settings
-      let transformedValue = stringValue;
-      if (fieldValues[`${key}_transform`]) {
-        switch (fieldValues[`${key}_transform`]) {
-          case 'uppercase':
-            transformedValue = stringValue.toUpperCase();
-            break;
-          case 'capitalize':
-            transformedValue = stringValue.split(' ').map((word: string) => 
-              word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
-            ).join(' ');
-            break;
-          case 'toggle':
-            transformedValue = stringValue.split('').map((char: string) => 
-              char === char.toUpperCase() ? char.toLowerCase() : char.toUpperCase()
-            ).join('');
-            break;
-          default:
-            transformedValue = stringValue;
-        }
-      }
-      
-      result[key] = transformedValue;
+      const config = fieldConfigs[key] || {};
+      result[key] = FieldTransformations.transformFieldValue(value, config);
     });
     
-    // Add current date
+    // Add current date in multiple formats for backward compatibility
     const currentDate = new Date().toLocaleDateString('en-GB');
     result['currentDate'] = currentDate;
     result['current_date'] = currentDate;
     result['Currunt Date'] = currentDate; // Handle typo in existing templates
+    result['Current Date'] = currentDate;
     
     return result;
   }
@@ -63,8 +43,8 @@ export class WordGenerator {
         linebreaks: true,
       });
 
-      // Process field values
-      const processedValues = this.replacePlaceholders(options.fieldValues);
+      // Process field values with transformations
+      const processedValues = this.processFieldValues(options.fieldValues, options.fieldConfigs || {});
       
       // Set the template data
       doc.setData(processedValues);

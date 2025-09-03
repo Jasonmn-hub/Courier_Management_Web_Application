@@ -83,6 +83,8 @@ export default function AuthorityLetterNew() {
     fieldLabel: '',
     fieldType: 'text',
     textTransform: 'none',
+    numberFormat: 'none',
+    dateFormat: 'DD-MM-YYYY',
     isRequired: false
   });
 
@@ -351,7 +353,7 @@ export default function AuthorityLetterNew() {
     onSuccess: () => {
       toast({ title: "Success", description: "Field created successfully" });
       queryClient.invalidateQueries({ queryKey: ['/api/authority-letter-fields', selectedDepartment] });
-      setNewField({ fieldName: '', fieldLabel: '', fieldType: 'text', textTransform: 'none', isRequired: false });
+      setNewField({ fieldName: '', fieldLabel: '', fieldType: 'text', textTransform: 'none', numberFormat: 'none', dateFormat: 'DD-MM-YYYY', isRequired: false });
       setShowFieldManager(false);
     },
     onError: (error: any) => {
@@ -945,7 +947,7 @@ export default function AuthorityLetterNew() {
                           <Button 
                             onClick={() => {
                               setEditingField(null);
-                              setNewField({ fieldName: '', fieldLabel: '', fieldType: 'text', textTransform: 'none', isRequired: false });
+                              setNewField({ fieldName: '', fieldLabel: '', fieldType: 'text', textTransform: 'none', numberFormat: 'none', dateFormat: 'DD-MM-YYYY', isRequired: false });
                               setShowFieldManager(true);
                             }}
                             size="sm"
@@ -1188,7 +1190,7 @@ export default function AuthorityLetterNew() {
                     </div>
                   </div>
                   
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-4">
                     <div>
                       <Label htmlFor="field-type">Field Type</Label>
                       <Select 
@@ -1206,23 +1208,78 @@ export default function AuthorityLetterNew() {
                         </SelectContent>
                       </Select>
                     </div>
-                    <div>
-                      <Label htmlFor="text-transform">Text Transform</Label>
-                      <Select 
-                        value={newField.textTransform} 
-                        onValueChange={(value) => setNewField({...newField, textTransform: value})}
-                      >
-                        <SelectTrigger data-testid="select-text-transform">
-                          <SelectValue placeholder="Select transform" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">None</SelectItem>
-                          <SelectItem value="uppercase">UPPERCASE</SelectItem>
-                          <SelectItem value="lowercase">lowercase</SelectItem>
-                          <SelectItem value="capitalize">Capitalize</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
+
+                    {/* Text Transform Options */}
+                    {(newField.fieldType === 'text' || newField.fieldType === 'textarea') && (
+                      <div>
+                        <Label htmlFor="text-transform">Text Transform</Label>
+                        <Select 
+                          value={newField.textTransform} 
+                          onValueChange={(value) => setNewField({...newField, textTransform: value})}
+                        >
+                          <SelectTrigger data-testid="select-text-transform">
+                            <SelectValue placeholder="Select transform" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">None</SelectItem>
+                            <SelectItem value="sentence">Sentence case</SelectItem>
+                            <SelectItem value="lowercase">lowercase</SelectItem>
+                            <SelectItem value="uppercase">UPPERCASE</SelectItem>
+                            <SelectItem value="capitalize_words">Capitalize Each Word</SelectItem>
+                            <SelectItem value="toggle">tOGGLE CASE</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+
+                    {/* Number Format Options */}
+                    {newField.fieldType === 'number' && (
+                      <div>
+                        <Label htmlFor="number-format">Number Format</Label>
+                        <Select 
+                          value={newField.numberFormat || 'none'} 
+                          onValueChange={(value) => setNewField({...newField, numberFormat: value})}
+                        >
+                          <SelectTrigger data-testid="select-number-format">
+                            <SelectValue placeholder="Select number format" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">Without commas (12345)</SelectItem>
+                            <SelectItem value="with_commas">With commas (12,345)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+
+                    {/* Date Format Options */}
+                    {newField.fieldType === 'date' && (
+                      <div>
+                        <Label htmlFor="date-format">Date Format</Label>
+                        <Select 
+                          value={newField.dateFormat || 'DD-MM-YYYY'} 
+                          onValueChange={(value) => setNewField({...newField, dateFormat: value})}
+                        >
+                          <SelectTrigger data-testid="select-date-format">
+                            <SelectValue placeholder="Select date format" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="DD-MM-YYYY">DD-MM-YYYY (02-09-2025)</SelectItem>
+                            <SelectItem value="MM-DD-YYYY">MM-DD-YYYY (09-02-2025)</SelectItem>
+                            <SelectItem value="YYYY-MM-DD">YYYY-MM-DD (2025-09-02)</SelectItem>
+                            <SelectItem value="DD/MM/YYYY">DD/MM/YYYY (02/09/2025)</SelectItem>
+                            <SelectItem value="MM/DD/YYYY">MM/DD/YYYY (09/02/2025)</SelectItem>
+                            <SelectItem value="YYYY/MM/DD">YYYY/MM/DD (2025/09/02)</SelectItem>
+                            <SelectItem value="DD.MM.YYYY">DD.MM.YYYY (02.09.2025)</SelectItem>
+                            <SelectItem value="MM.DD.YYYY">MM.DD.YYYY (09.02.2025)</SelectItem>
+                            <SelectItem value="YYYY.MM.DD">YYYY.MM.DD (2025.09.02)</SelectItem>
+                            <SelectItem value="DD Mon YYYY">DD Mon YYYY (02 Sep 2025)</SelectItem>
+                            <SelectItem value="DD Month YYYY">DD Month YYYY (02 September 2025)</SelectItem>
+                            <SelectItem value="Month DD, YYYY">Month DD, YYYY (September 02, 2025)</SelectItem>
+                            <SelectItem value="YYYY Month DD">YYYY Month DD (2025 September 02)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
                   </div>
 
                   <div className="flex items-center space-x-2">
@@ -1242,7 +1299,7 @@ export default function AuthorityLetterNew() {
                       onClick={() => {
                         setShowFieldManager(false);
                         setEditingField(null);
-                        setNewField({ fieldName: '', fieldLabel: '', fieldType: 'text', textTransform: 'none', isRequired: false });
+                        setNewField({ fieldName: '', fieldLabel: '', fieldType: 'text', textTransform: 'none', numberFormat: 'none', dateFormat: 'DD-MM-YYYY', isRequired: false });
                       }}
                       data-testid="button-cancel-field"
                     >

@@ -3883,57 +3883,24 @@ Jigar Jodhani
         const templateFields = await storage.getAllAuthorityLetterFields(undefined, templateId);
         console.log('Template fields from database:', templateFields.map(f => ({ fieldName: f.fieldName, fieldLabel: f.fieldLabel })));
 
-        // Add field values with detailed logging and flexible matching
-        console.log('Processing field values for Word template:', fieldValues);
-        for (const [fieldName, value] of Object.entries(fieldValues || {})) {
-          // Try exact match first
-          templateData[fieldName] = value;
-          
-          // Try common variations to handle different naming conventions
-          templateData[fieldName.toLowerCase()] = value;
-          templateData[fieldName.toUpperCase()] = value;
-          templateData[fieldName.replace(/\s+/g, '')] = value; // Remove spaces
-          templateData[fieldName.replace(/\s+/g, '_')] = value; // Replace spaces with underscores
-          templateData[fieldName.replace(/_/g, ' ')] = value; // Replace underscores with spaces
-          
-          console.log(`Setting template data: ${fieldName} = ${value}`);
-        }
-        
-        // Add standard placeholders that are commonly used
-        templateData['Currunt Date'] = new Date().toLocaleDateString('en-GB'); // Handle typo in existing templates
-        templateData['current_date'] = new Date().toLocaleDateString('en-GB');
-        templateData['Current Date'] = new Date().toLocaleDateString('en-GB');
-        templateData['Address'] = templateData['address'] || templateData['Address'] || '';
-        templateData['Asset Name'] = templateData['asset_name'] || templateData['Asset Name'] || templateData['assetName'] || '';
-        templateData['Value'] = templateData['value'] || templateData['Value'] || templateData['asset_value'] || '';
-        
-        console.log('Final template data for Word generation:', Object.keys(templateData));
-        console.log('Sample values:', { 
-          'Current Date': templateData['Currunt Date'],
-          'Address': templateData['Address'],
-          'Asset Name': templateData['Asset Name'],
-          'Value': templateData['Value']
+        // Create field configurations for transformations
+        const fieldConfigs: Record<string, any> = {};
+        templateFields.forEach(field => {
+          fieldConfigs[field.fieldName] = {
+            fieldType: field.fieldType,
+            textTransform: field.textTransform,
+            numberFormat: field.numberFormat,
+            dateFormat: field.dateFormat
+          };
         });
-        
-        // Render the document
-        doc.setData(templateData);
-        
-        try {
-          doc.render();
-          console.log('Word document rendered successfully');
-        } catch (renderError) {
-          console.error('Error rendering Word template:', renderError);
-          console.error('Template data used:', templateData);
-          console.error('Available placeholders in template might be different from field names');
-          throw renderError;
-        }
-        
-        // Generate Word document buffer
-        const wordBuffer = doc.getZip().generate({
-          type: 'nodebuffer',
-          compression: 'DEFLATE',
+
+        // Use the new Word generator with field configurations
+        const wordBuffer = await WordGenerator.generateWordDocument({
+          templatePath: template.wordTemplateUrl,
+          fieldValues: fieldValues || {},
+          fieldConfigs: fieldConfigs
         });
-        
+
         await logAudit(user.id, 'CREATE', 'authority_letter_word', template.id.toString());
         
         // Set headers for Word document download
