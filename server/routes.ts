@@ -1703,7 +1703,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               }
             }
 
-            const mailOptions = {
+            const mailOptions: any = {
               from: smtpSettings.fromEmail || smtpSettings.username,
               to: req.body.email,
               cc: req.body.ccEmails ? req.body.ccEmails.split(',').map((email: string) => email.trim()).filter((email: string) => email) : undefined,
@@ -1825,6 +1825,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
 </html>
               `
             };
+
+            // Add POD attachment if available
+            if (courier.podCopyPath) {
+              try {
+                const fs = await import('fs');
+                const path = await import('path');
+                const attachmentPath = path.join(process.cwd(), 'uploads', courier.podCopyPath);
+                
+                // Check if file exists before adding as attachment
+                if (fs.existsSync(attachmentPath)) {
+                  mailOptions.attachments = [{
+                    filename: courier.podCopyPath,
+                    path: attachmentPath,
+                    contentType: 'application/pdf'
+                  }];
+                }
+              } catch (error) {
+                console.error('Error adding POD attachment:', error);
+              }
+            }
 
             await transporter.sendMail(mailOptions);
           }
@@ -2764,7 +2784,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           const transporter = nodemailer.createTransport(transportConfig);
 
-          const mailOptions = {
+          const mailOptions: any = {
             from: smtpSettings.fromEmail || smtpSettings.username,
             to: (courier as any).emailId,
             subject: 'Courier Dispatched - Courier Management System',
@@ -2866,6 +2886,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
 </body>
 </html>`
           };
+
+          // Add POD attachment if available for received courier dispatch emails
+          // Note: Received couriers don't typically have POD attachments, but if they do, include them
+          if ((courier as any).podCopyPath) {
+            try {
+              const fs = await import('fs');
+              const path = await import('path');
+              const attachmentPath = path.join(process.cwd(), 'uploads', (courier as any).podCopyPath);
+              
+              // Check if file exists before adding as attachment
+              if (fs.existsSync(attachmentPath)) {
+                mailOptions.attachments = [{
+                  filename: (courier as any).podCopyPath,
+                  path: attachmentPath,
+                  contentType: 'application/pdf'
+                }];
+              }
+            } catch (error) {
+              console.error('Error adding POD attachment to received courier dispatch email:', error);
+            }
+          }
 
           await transporter.sendMail(mailOptions);
           
@@ -4844,7 +4885,7 @@ ${result.value}
         if (!courier.email) continue;
         
         try {
-          const mailOptions = {
+          const mailOptions: any = {
             from: smtpSettings.fromEmail || smtpSettings.username,
             to: courier.email,
             cc: courier.contactDetails,
@@ -4891,6 +4932,26 @@ ${result.value}
               </html>
             `
           };
+
+          // Add POD attachment if available for reminder emails
+          if (courier.podCopyPath) {
+            try {
+              const fs = await import('fs');
+              const path = await import('path');
+              const attachmentPath = path.join(process.cwd(), 'uploads', courier.podCopyPath);
+              
+              // Check if file exists before adding as attachment
+              if (fs.existsSync(attachmentPath)) {
+                mailOptions.attachments = [{
+                  filename: courier.podCopyPath,
+                  path: attachmentPath,
+                  contentType: 'application/pdf'
+                }];
+              }
+            } catch (error) {
+              console.error('Error adding POD attachment to reminder email:', error);
+            }
+          }
 
           await transporter.sendMail(mailOptions);
           await storage.markReminderEmailSent(courier.id);
