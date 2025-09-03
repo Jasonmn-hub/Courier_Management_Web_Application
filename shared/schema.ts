@@ -220,6 +220,7 @@ export const authorityLetterFields = pgTable('authority_letter_fields', {
   textTransform: varchar('text_transform', { length: 30 }).default('none'), // none, sentence, lowercase, uppercase, capitalize_words, toggle
   numberFormat: varchar('number_format', { length: 20 }).default('none'), // none, with_commas, without_commas
   dateFormat: varchar('date_format', { length: 30 }).default('DD-MM-YYYY'), // Various date formats
+  sortOrder: integer('sort_order').default(0), // Field display order
   isRequired: boolean('is_required').default(false),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });

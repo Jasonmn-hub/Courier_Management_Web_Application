@@ -3229,6 +3229,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Reorder authority letter fields
+  app.put('/api/authority-letter-fields/reorder', authenticateToken, requireRole(['admin']), setCurrentUser(), async (req: any, res) => {
+    try {
+      const { fieldId, direction, templateId } = req.body;
+      
+      if (!fieldId || !direction || !templateId) {
+        return res.status(400).json({ message: "Field ID, direction, and template ID are required" });
+      }
+
+      // Get all fields for this template in current order
+      const fields = await storage.getAllAuthorityLetterFields(undefined, templateId);
+      const currentIndex = fields.findIndex(f => f.id === fieldId);
+      
+      if (currentIndex === -1) {
+        return res.status(404).json({ message: "Field not found" });
+      }
+
+      let newIndex = currentIndex;
+      if (direction === 'up' && currentIndex > 0) {
+        newIndex = currentIndex - 1;
+      } else if (direction === 'down' && currentIndex < fields.length - 1) {
+        newIndex = currentIndex + 1;
+      }
+
+      if (newIndex !== currentIndex) {
+        // Swap sort orders
+        const currentField = fields[currentIndex];
+        const targetField = fields[newIndex];
+        
+        await storage.updateAuthorityLetterField(currentField.id, { 
+          sortOrder: targetField.sortOrder || newIndex 
+        });
+        await storage.updateAuthorityLetterField(targetField.id, { 
+          sortOrder: currentField.sortOrder || currentIndex 
+        });
+      }
+      
+      await logAudit(req.currentUser.id, 'UPDATE', 'authority_letter_field_order', fieldId);
+      
+      res.json({ message: "Field order updated successfully" });
+    } catch (error) {
+      console.error("Error reordering fields:", error);
+      res.status(500).json({ message: "Failed to reorder fields" });
+    }
+  });
+
   // Delete authority letter field
   app.delete('/api/authority-letter-fields/:id', authenticateToken, requireRole(['admin']), setCurrentUser(), async (req: any, res) => {
     try {

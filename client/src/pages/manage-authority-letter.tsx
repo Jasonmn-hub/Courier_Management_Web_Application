@@ -27,7 +27,9 @@ import {
   Trash2,
   Download,
   Settings,
-  Search
+  Search,
+  ChevronUp,
+  ChevronDown
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { apiRequest } from "@/lib/queryClient";
@@ -301,6 +303,32 @@ export default function ManageAuthorityLetter() {
       toast({
         title: "Error",
         description: error.message || "Failed to update field.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Reorder field mutation
+  const reorderFieldMutation = useMutation({
+    mutationFn: async ({ fieldId, direction }: { fieldId: number; direction: 'up' | 'down' }) => {
+      const response = await apiRequest('PUT', '/api/authority-letter-fields/reorder', {
+        fieldId,
+        direction,
+        templateId: selectedTemplateForFields?.id
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Field order updated successfully.",
+      });
+      refetchFields();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to reorder field.",
         variant: "destructive",
       });
     },
@@ -1156,6 +1184,7 @@ export default function ManageAuthorityLetter() {
                   <Table>
                     <TableHeader>
                       <TableRow>
+                        <TableHead>Order</TableHead>
                         <TableHead>Field Name</TableHead>
                         <TableHead>Display Label</TableHead>
                         <TableHead>Type</TableHead>
@@ -1165,8 +1194,32 @@ export default function ManageAuthorityLetter() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {templateFields.map((field) => (
+                      {templateFields.map((field, index) => (
                         <TableRow key={field.id}>
+                          <TableCell className="text-center">
+                            <div className="flex items-center justify-center space-x-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => reorderFieldMutation.mutate({ fieldId: field.id, direction: 'up' })}
+                                disabled={index === 0 || reorderFieldMutation.isPending}
+                                className="h-6 w-6 p-0 text-gray-600 hover:text-gray-800"
+                                data-testid={`button-move-up-${field.id}`}
+                              >
+                                <ChevronUp className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => reorderFieldMutation.mutate({ fieldId: field.id, direction: 'down' })}
+                                disabled={index === templateFields.length - 1 || reorderFieldMutation.isPending}
+                                className="h-6 w-6 p-0 text-gray-600 hover:text-gray-800"
+                                data-testid={`button-move-down-${field.id}`}
+                              >
+                                <ChevronDown className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </TableCell>
                           <TableCell className="font-mono">
                             ##{field.fieldName}##
                           </TableCell>

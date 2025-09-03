@@ -1174,14 +1174,14 @@ export class DatabaseStorage implements IStorage {
     const query = db.select().from(authorityLetterFields);
     
     if (templateId) {
-      return await query.where(eq(authorityLetterFields.templateId, templateId));
+      return await query.where(eq(authorityLetterFields.templateId, templateId)).orderBy(authorityLetterFields.sortOrder);
     }
     
     if (departmentId) {
-      return await query.where(eq(authorityLetterFields.departmentId, departmentId));
+      return await query.where(eq(authorityLetterFields.departmentId, departmentId)).orderBy(authorityLetterFields.sortOrder);
     }
     
-    return await query;
+    return await query.orderBy(authorityLetterFields.sortOrder);
   }
 
   async getAuthorityLetterField(id: number): Promise<AuthorityLetterField | undefined> {
