@@ -37,22 +37,18 @@ export class WordGenerator {
       const templateBuffer = fs.readFileSync(options.templatePath);
       const zip = new PizZip(templateBuffer);
       
-      // Create docxtemplater instance
+      // Create docxtemplater instance with all options
       const doc = new Docxtemplater(zip, {
         paragraphLoop: true,
         linebreaks: true,
-      });
-
-      // Process field values with transformations
-      const processedValues = this.processFieldValues(options.fieldValues, options.fieldConfigs || {});
-      
-      // Set the template data using the new API
-      doc.setOptions({
         delimiters: {
           start: '##',
           end: '##'
         }
       });
+
+      // Process field values with transformations
+      const processedValues = this.processFieldValues(options.fieldValues, options.fieldConfigs || {});
       
       try {
         // Render the document with processed data
