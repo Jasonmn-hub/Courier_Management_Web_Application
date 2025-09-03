@@ -381,13 +381,13 @@ export default function ReceivedCouriers() {
 
       {/* Add Received Courier Modal */}
       <Dialog open={showForm} onOpenChange={setShowForm}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-[500px] max-h-[90vh] flex flex-col">
           <DialogHeader>
             <DialogTitle>Add Received Courier</DialogTitle>
           </DialogHeader>
           
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-6 flex flex-col flex-1">
+            <div className="space-y-4 overflow-y-auto flex-1 pr-2">
               {/* Related Department - First Field */}
               <div>
                 <Label htmlFor="department">Related Department *</Label>
@@ -612,7 +612,7 @@ export default function ReceivedCouriers() {
               </div>
             </div>
 
-            <div className="flex gap-3 pt-4">
+            <div className="flex gap-3 pt-4 border-t bg-white sticky bottom-0">
               <Button
                 type="button"
                 variant="outline"
