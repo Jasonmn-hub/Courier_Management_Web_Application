@@ -327,14 +327,9 @@ export default function ReceivedCouriers() {
                                   ? 'bg-blue-100 text-blue-800'
                                   : 'bg-gray-100 text-gray-800'
                               }`}>
-                                {(courier as any).status === 'received' ? 'Confirmed Received' : 
+                                {(courier as any).status === 'received' ? 'Email Sent' : 
                                  (courier as any).status === 'dispatched' ? 'Dispatched' : 'Pending'}
                               </span>
-                              {(courier as any).status === 'received' && (
-                                <span className="text-xs text-green-600 font-medium">
-                                  ✅ Confirmed via Email
-                                </span>
-                              )}
                             </div>
                           </TableCell>
                           <TableCell data-testid={`text-remarks-${courier.id}`}>

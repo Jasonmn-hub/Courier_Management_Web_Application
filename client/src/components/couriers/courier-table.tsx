@@ -472,7 +472,11 @@ export default function CourierTable({
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-700">Vendor</label>
-                  <p className="text-sm text-gray-900">{viewingCourier.vendor || '-'}</p>
+                  <p className="text-sm text-gray-900">
+                    {viewingCourier.vendor === 'Others' && viewingCourier.customVendor 
+                      ? viewingCourier.customVendor 
+                      : viewingCourier.vendor || '-'}
+                  </p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-700">Courier Date</label>
@@ -484,6 +488,16 @@ export default function CourierTable({
                   <label className="text-sm font-medium text-gray-700">Status</label>
                   <div className="mt-1">{getStatusBadge(viewingCourier.status)}</div>
                 </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-700">Department</label>
+                  <p className="text-sm text-gray-900">{viewingCourier.department?.name || 'N/A'}</p>
+                </div>
+                {viewingCourier.receiverName && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Receiver Name</label>
+                    <p className="text-sm text-gray-900">{viewingCourier.receiverName}</p>
+                  </div>
+                )}
                 {viewingCourier.receivedDate && (
                   <div>
                     <label className="text-sm font-medium text-gray-700">Received Date</label>
@@ -519,6 +533,43 @@ export default function CourierTable({
                 <div>
                   <label className="text-sm font-medium text-gray-700">Received Remarks</label>
                   <p className="text-sm text-gray-900 mt-1">{viewingCourier.receivedRemarks}</p>
+                </div>
+              )}
+              
+              {/* POD Copy Attachment Section */}
+              {viewingCourier.podCopyPath && (
+                <div>
+                  <label className="text-sm font-medium text-gray-700">POD Copy Attachment</label>
+                  <div className="mt-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => {
+                        const link = document.createElement('a');
+                        link.href = `/uploads/${viewingCourier.podCopyPath}`;
+                        link.download = viewingCourier.podCopyPath;
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                      }}
+                      className="text-blue-600 border-blue-600 hover:bg-blue-50"
+                    >
+                      📎 Download POD Copy
+                    </Button>
+                  </div>
+                </div>
+              )}
+              
+              {/* Creator Information */}
+              {viewingCourier.creator && (
+                <div>
+                  <label className="text-sm font-medium text-gray-700">Created By</label>
+                  <p className="text-sm text-gray-900 mt-1">
+                    {viewingCourier.creator.name || viewingCourier.creator.email}
+                    {viewingCourier.creator.employeeCode && (
+                      <span className="text-gray-500"> ({viewingCourier.creator.employeeCode})</span>
+                    )}
+                  </p>
                 </div>
               )}
             </div>
