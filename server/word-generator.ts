@@ -21,12 +21,12 @@ export class WordGenerator {
       result[key] = FieldTransformations.transformFieldValue(value, config);
     });
     
-    // Add current date in multiple formats for backward compatibility
+    // Add current date in multiple formats for backward compatibility (only if not already set)
     const currentDate = new Date().toLocaleDateString('en-GB');
-    result['currentDate'] = currentDate;
-    result['current_date'] = currentDate;
-    result['Currunt Date'] = currentDate; // Handle typo in existing templates
-    result['Current Date'] = currentDate;
+    if (!result['currentDate']) result['currentDate'] = currentDate;
+    if (!result['current_date']) result['current_date'] = currentDate;
+    if (!result['Currunt Date']) result['Currunt Date'] = currentDate; // Handle typo in existing templates
+    if (!result['Current Date']) result['Current Date'] = currentDate;
     
     return result;
   }

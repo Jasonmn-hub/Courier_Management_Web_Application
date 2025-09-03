@@ -444,6 +444,8 @@ export default function ManageAuthorityLetter() {
         fieldLabel: editingField.fieldLabel,
         fieldType: editingField.fieldType,
         textTransform: editingField.textTransform,
+        numberFormat: editingField.numberFormat,
+        dateFormat: editingField.dateFormat,
         isRequired: editingField.isRequired
       }
     });
