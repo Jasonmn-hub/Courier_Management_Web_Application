@@ -1228,7 +1228,7 @@ export default function AuthorityLetterNew() {
                           <SelectTrigger data-testid="select-text-transform">
                             <SelectValue placeholder="Select transform" />
                           </SelectTrigger>
-                          <SelectContent>
+                          <SelectContent className="max-h-60 overflow-y-auto">
                             <SelectItem value="none">None</SelectItem>
                             <SelectItem value="sentence">Sentence case</SelectItem>
                             <SelectItem value="lowercase">lowercase</SelectItem>
@@ -1251,7 +1251,7 @@ export default function AuthorityLetterNew() {
                           <SelectTrigger data-testid="select-number-format">
                             <SelectValue placeholder="Select number format" />
                           </SelectTrigger>
-                          <SelectContent>
+                          <SelectContent className="max-h-60 overflow-y-auto">
                             <SelectItem value="none">Without comma</SelectItem>
                             <SelectItem value="with_commas">With comma</SelectItem>
                           </SelectContent>
@@ -1270,7 +1270,7 @@ export default function AuthorityLetterNew() {
                           <SelectTrigger data-testid="select-date-format">
                             <SelectValue placeholder="Select date format" />
                           </SelectTrigger>
-                          <SelectContent>
+                          <SelectContent className="max-h-60 overflow-y-auto">
                             <SelectItem value="DD-MM-YYYY">DD-MM-YYYY (02-09-2025)</SelectItem>
                             <SelectItem value="MM-DD-YYYY">MM-DD-YYYY (09-02-2025)</SelectItem>
                             <SelectItem value="YYYY-MM-DD">YYYY-MM-DD (2025-09-02)</SelectItem>
