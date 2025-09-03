@@ -3202,34 +3202,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Update authority letter field
-  app.put('/api/authority-letter-fields/:id', authenticateToken, requireRole(['admin']), setCurrentUser(), async (req: any, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      if (isNaN(id)) {
-        return res.status(400).json({ message: "Invalid field ID" });
-      }
-
-      const validatedData = insertAuthorityLetterFieldSchema.partial().parse(req.body);
-      const field = await storage.updateAuthorityLetterField(id, validatedData);
-      
-      if (!field) {
-        return res.status(404).json({ message: "Field not found" });
-      }
-      
-      await logAudit(req.currentUser.id, 'UPDATE', 'authority_letter_field', id);
-      
-      res.json(field);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Validation error", errors: error.errors });
-      }
-      console.error("Error updating authority letter field:", error);
-      res.status(500).json({ message: "Failed to update field" });
-    }
-  });
-
-  // Reorder authority letter fields
+  // Reorder authority letter fields (must come before /:id route)
   app.put('/api/authority-letter-fields/reorder', authenticateToken, requireRole(['admin']), setCurrentUser(), async (req: any, res) => {
     console.log('=== REORDER ENDPOINT HIT ===');
     console.log('Request body:', JSON.stringify(req.body, null, 2));
@@ -3312,6 +3285,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error reordering fields:", error);
       res.status(500).json({ message: "Failed to reorder fields" });
+    }
+  });
+
+  // Update authority letter field
+  app.put('/api/authority-letter-fields/:id', authenticateToken, requireRole(['admin']), setCurrentUser(), async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid field ID" });
+      }
+
+      const validatedData = insertAuthorityLetterFieldSchema.partial().parse(req.body);
+      const field = await storage.updateAuthorityLetterField(id, validatedData);
+      
+      if (!field) {
+        return res.status(404).json({ message: "Field not found" });
+      }
+      
+      await logAudit(req.currentUser.id, 'UPDATE', 'authority_letter_field', id);
+      
+      res.json(field);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      console.error("Error updating authority letter field:", error);
+      res.status(500).json({ message: "Failed to update field" });
     }
   });
 
