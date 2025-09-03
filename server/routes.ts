@@ -3242,23 +3242,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get department's custom fields
       const fields = await storage.getAllAuthorityLetterFields(departmentId);
       
-      // Helper function to apply text transformations
-      const applyTextTransform = (text: string, transform: string): string => {
-        switch (transform) {
-          case 'uppercase':
-            return text.toUpperCase();
-          case 'capitalize':
-            return text.split(' ').map(word => 
-              word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
-            ).join(' ');
-          case 'toggle':
-            return text.split('').map(char => 
-              char === char.toUpperCase() ? char.toLowerCase() : char.toUpperCase()
-            ).join('');
-          default:
-            return text;
-        }
-      };
+      // Create field configurations for transformations
+      const fieldConfigs: Record<string, any> = {};
+      fields.forEach(field => {
+        fieldConfigs[field.fieldName] = {
+          fieldType: field.fieldType,
+          textTransform: field.textTransform,
+          numberFormat: field.numberFormat,
+          dateFormat: field.dateFormat
+        };
+      });
 
       // Generate preview content that matches the actual letter format
       let dateValue = fieldValues['Currunt Date'] || '##Currunt Date##';
@@ -3267,28 +3260,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         dateValue = `${day}-${month}-${year}`;
       }
       
-      // Apply text transform to address field
-      const addressField = fields.find(f => f.fieldName === 'Address');
-      let addressValue = fieldValues['Address'] || '##Address##';
-      if (addressField?.textTransform && fieldValues['Address']) {
-        addressValue = applyTextTransform(fieldValues['Address'], addressField.textTransform);
-      }
+      // Process all field values with proper transformations
+      const processedValues = FieldTransformations.transformAllFields(fieldValues || {}, fieldConfigs);
       
-      // Apply text transform to asset name field
-      const assetNameField = fields.find(f => f.fieldName === 'Asset Name');
-      let assetNameValue = fieldValues['Asset Name'] || '##Asset Name##';
-      if (assetNameField?.textTransform && fieldValues['Asset Name']) {
-        assetNameValue = applyTextTransform(fieldValues['Asset Name'], assetNameField.textTransform);
-      } else if (fieldValues['Asset Name']) {
-        assetNameValue = fieldValues['Asset Name'].toUpperCase(); // Default behavior for Asset Name
-      }
-      
-      // Apply text transform to value field
-      const valueField = fields.find(f => f.fieldName === 'Value');
-      let valueValue = fieldValues['Value'] || '##Value##';
-      if (valueField?.textTransform && fieldValues['Value']) {
-        valueValue = applyTextTransform(fieldValues['Value'], valueField.textTransform);
-      }
+      // Get formatted values for template replacement
+      const addressValue = processedValues['Address'] || fieldValues['Address'] || '##Address##';
+      const assetNameValue = processedValues['Asset Name'] || fieldValues['Asset Name'] || '##Asset Name##';
+      const valueValue = processedValues['Value'] || fieldValues['Value'] || '##Value##';
       
       let previewContent = `AUTHORITY LETTER
 
@@ -4408,34 +4386,27 @@ ${result.value}
       // Get template fields for proper transformations
       const fields = await storage.getAllAuthorityLetterFields(undefined, templateId);
       
-      // Helper function to apply text transformations
-      const applyTextTransform = (text: string, transform: string): string => {
-        switch (transform) {
-          case 'uppercase':
-            return text.toUpperCase();
-          case 'capitalize':
-            return text.charAt(0).toUpperCase() + text.slice(1).toLowerCase();
-          default:
-            return text;
-        }
-      };
+      // Create field configurations for transformations
+      const fieldConfigs: Record<string, any> = {};
+      fields.forEach(field => {
+        fieldConfigs[field.fieldName] = {
+          fieldType: field.fieldType,
+          textTransform: field.textTransform,
+          numberFormat: field.numberFormat,
+          dateFormat: field.dateFormat
+        };
+      });
+      
+      // Process all field values with proper transformations
+      const processedValues = FieldTransformations.transformAllFields(fieldValues || {}, fieldConfigs);
       
       // Replace placeholders for preview
       let htmlContent = template.templateContent;
       
-      // Apply field values with transformations
-      Object.entries(fieldValues || {}).forEach(([key, value]) => {
-        // Find the field to check for transformations
-        const field = fields.find(f => f.fieldName === key);
-        let transformedValue = value as string || '';
-        
-        // Apply text transformation if field is found
-        if (field && field.textTransform && field.textTransform !== 'none') {
-          transformedValue = applyTextTransform(transformedValue, field.textTransform);
-        }
-        
+      // Apply processed field values with transformations
+      Object.entries(processedValues).forEach(([key, value]) => {
         const placeholder = `##${key}##`;
-        htmlContent = htmlContent.replace(new RegExp(placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), transformedValue);
+        htmlContent = htmlContent.replace(new RegExp(placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), value as string);
       });
       
       // Add current date
