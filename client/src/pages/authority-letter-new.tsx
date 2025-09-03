@@ -1197,7 +1197,13 @@ export default function AuthorityLetterNew() {
                       <Label htmlFor="field-type">Field Type</Label>
                       <Select 
                         value={newField.fieldType} 
-                        onValueChange={(value) => setNewField({...newField, fieldType: value})}
+                        onValueChange={(value) => setNewField({
+                          ...newField, 
+                          fieldType: value,
+                          textTransform: 'none',
+                          numberFormat: 'none', 
+                          dateFormat: 'DD-MM-YYYY'
+                        })}
                       >
                         <SelectTrigger data-testid="select-field-type">
                           <SelectValue placeholder="Select field type" />
