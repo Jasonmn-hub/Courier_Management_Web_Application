@@ -29,7 +29,7 @@ const createUserSchema = z.object({
   email: z.string().email("Valid email is required"),
   employeeCode: z.string().optional(),
   mobileNumber: z.string().optional(),
-  role: z.enum(["admin", "manager", "user"], {
+  role: z.enum(["admin", "sub_admin", "manager", "user"], {
     required_error: "Role is required",
   }),
   departmentId: z.string().optional(),
@@ -41,7 +41,7 @@ const updateUserSchema = z.object({
   email: z.string().email("Valid email is required"),
   employeeCode: z.string().optional(),
   mobileNumber: z.string().optional(),
-  role: z.enum(["admin", "manager", "user"], {
+  role: z.enum(["admin", "sub_admin", "manager", "user"], {
     required_error: "Role is required",
   }),
   departmentId: z.string().optional(),
