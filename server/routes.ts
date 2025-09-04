@@ -171,6 +171,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Update status to received and clear token
+      console.log(`✅ Updating sent courier ${courier.id} status to received`);
       await storage.updateCourier(courier.id, { 
         status: 'received' as any,
         confirmationToken: null,
@@ -201,11 +202,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             transportConfig.secure = false;
           }
 
-          const transporter = nodemailer.createTransporter(transportConfig);
+          const transporter = nodemailer.createTransport(transportConfig);
 
           // Build recipient list for reply-all functionality
-          const recipients = [];
-          const ccRecipients = [];
+          const recipients: string[] = [];
+          const ccRecipients: string[] = [];
 
           // Primary recipient: the person who sent the original courier
           if (courier.email) {
@@ -215,7 +216,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Add CC emails from original dispatch if available
           if ((courier as any).ccEmails) {
             const ccEmailList = (courier as any).ccEmails.split(',').map((email: string) => email.trim()).filter((email: string) => email);
-            ccEmailList.forEach(email => {
+            ccEmailList.forEach((email: string) => {
               if (!recipients.includes(email)) {
                 ccRecipients.push(email);
               }
@@ -225,9 +226,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Add department admin emails for CC
           if (courier.departmentId) {
             try {
-              const departmentUsers = await storage.getAllUsers({ departmentId: courier.departmentId });
-              departmentUsers.users.forEach(user => {
-                if (user.role === 'admin' || user.role === 'manager') {
+              const departmentUsers = await storage.getAllUsers();
+              departmentUsers.users.forEach((user: any) => {
+                if ((user.role === 'admin' || user.role === 'manager') && user.departmentId === courier.departmentId) {
                   if (user.email && !recipients.includes(user.email) && !ccRecipients.includes(user.email)) {
                     ccRecipients.push(user.email);
                   }
@@ -340,7 +341,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             };
 
             await transporter.sendMail(mailOptions);
-            console.log(`Confirmation receipt email sent for courier ${courier.id} to recipients: ${recipients.join(', ')}${ccRecipients.length > 0 ? `, CC: ${ccRecipients.join(', ')}` : ''}`);
+            console.log(`✅ CONFIRMATION EMAIL SENT for sent courier ${courier.id} to: ${recipients.join(', ')}${ccRecipients.length > 0 ? `, CC: ${ccRecipients.join(', ')}` : ''}`);
           }
         }
       } catch (emailError) {
@@ -424,6 +425,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Update status to received and clear token
+      console.log(`✅ Updating received courier ${courier.id} status to received`);
       await storage.updateReceivedCourier(courier.id, { 
         status: 'received' as any,
         confirmationToken: null
@@ -453,11 +455,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             transportConfig.secure = false;
           }
 
-          const transporter = nodemailer.createTransporter(transportConfig);
+          const transporter = nodemailer.createTransport(transportConfig);
 
           // Build recipient list for reply-all functionality
-          const recipients = [];
-          const ccRecipients = [];
+          const recipients: string[] = [];
+          const ccRecipients: string[] = [];
 
           // Primary recipient: the person who sent the original courier (if available)
           if ((courier as any).emailId) {
@@ -468,9 +470,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (courier.department?.name && courier.departmentId) {
             // Get department admin emails for CC
             try {
-              const departmentUsers = await storage.getAllUsers({ departmentId: courier.departmentId });
-              departmentUsers.users.forEach(user => {
-                if (user.role === 'admin' || user.role === 'manager') {
+              const departmentUsers = await storage.getAllUsers();
+              departmentUsers.users.forEach((user: any) => {
+                if ((user.role === 'admin' || user.role === 'manager') && user.departmentId === courier.departmentId) {
                   if (user.email && !recipients.includes(user.email) && user.email !== (courier as any).emailId) {
                     ccRecipients.push(user.email);
                   }
@@ -587,7 +589,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             };
 
             await transporter.sendMail(mailOptions);
-            console.log(`Confirmation receipt email sent for received courier ${courier.id} to recipients: ${recipients.join(', ')}${ccRecipients.length > 0 ? `, CC: ${ccRecipients.join(', ')}` : ''}`);
+            console.log(`✅ CONFIRMATION EMAIL SENT for received courier ${courier.id} to: ${recipients.join(', ')}${ccRecipients.length > 0 ? `, CC: ${ccRecipients.join(', ')}` : ''}`);
           }
         }
       } catch (emailError) {
