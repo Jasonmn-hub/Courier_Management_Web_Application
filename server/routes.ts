@@ -233,19 +233,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (courier.departmentId) {
             try {
               const departmentUsers = await storage.getAllUsers();
-              departmentUsers.users.forEach((user: any) => {
-                if ((user.role === 'admin' || user.role === 'manager') && user.departmentId === courier.departmentId) {
-                  if (user.email && !recipients.includes(user.email) && !ccRecipients.includes(user.email)) {
-                    ccRecipients.push(user.email);
+              if (departmentUsers && departmentUsers.users && Array.isArray(departmentUsers.users)) {
+                departmentUsers.users.forEach((user: any) => {
+                  if ((user.role === 'admin' || user.role === 'manager') && user.departmentId === courier.departmentId) {
+                    if (user.email && !recipients.includes(user.email) && !ccRecipients.includes(user.email)) {
+                      ccRecipients.push(user.email);
+                      console.log(`📧 Added CC recipient: ${user.email} (${user.role})`);
+                    }
                   }
-                }
-              });
+                });
+              }
             } catch (error) {
               console.error('Error fetching department users for CC:', error);
             }
           }
 
           // Only send if we have recipients
+          console.log(`📧 Final recipient list - TO: [${recipients.join(', ')}], CC: [${ccRecipients.join(', ')}]`);
           if (recipients.length > 0) {
             const mailOptions: any = {
               from: smtpSettings.fromEmail || smtpSettings.username,
@@ -477,19 +481,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Get department admin emails for CC
             try {
               const departmentUsers = await storage.getAllUsers();
-              departmentUsers.users.forEach((user: any) => {
-                if ((user.role === 'admin' || user.role === 'manager') && user.departmentId === courier.departmentId) {
-                  if (user.email && !recipients.includes(user.email) && user.email !== (courier as any).emailId) {
-                    ccRecipients.push(user.email);
+              if (departmentUsers && departmentUsers.users && Array.isArray(departmentUsers.users)) {
+                departmentUsers.users.forEach((user: any) => {
+                  if ((user.role === 'admin' || user.role === 'manager') && user.departmentId === courier.departmentId) {
+                    if (user.email && !recipients.includes(user.email) && user.email !== (courier as any).emailId) {
+                      ccRecipients.push(user.email);
+                      console.log(`📧 Added CC recipient: ${user.email} (${user.role})`);
+                    }
                   }
-                }
-              });
+                });
+              }
             } catch (error) {
               console.error('Error fetching department users for CC:', error);
             }
           }
 
           // Only send if we have recipients
+          console.log(`📧 Final recipient list - TO: [${recipients.join(', ')}], CC: [${ccRecipients.join(', ')}]`);
           if (recipients.length > 0) {
             const mailOptions: any = {
               from: smtpSettings.fromEmail || smtpSettings.username,
