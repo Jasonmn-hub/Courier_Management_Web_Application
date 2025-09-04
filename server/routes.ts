@@ -263,12 +263,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
           }
 
-          // Add the FROM email (SMTP sender) to CC if not already included
-          const fromEmail = smtpSettings.fromEmail || smtpSettings.username;
-          if (fromEmail && !recipients.includes(fromEmail) && !ccRecipients.includes(fromEmail)) {
-            ccRecipients.push(fromEmail);
-            console.log(`📧 Added FROM email to CC: ${fromEmail}`);
-          }
+          // No need to add SMTP email to CC anymore - it will be used as the From address
 
           // Only send if we have recipients
           console.log(`📧 Final recipient list - TO: [${recipients.join(', ')}], CC: [${ccRecipients.join(', ')}]`);
@@ -276,6 +271,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const mailOptions: any = {
               from: smtpSettings.fromEmail || smtpSettings.username,
               to: recipients.join(','),
+              replyTo: (courier as any).emailId, // Reply goes to the original courier recipient
               cc: ccRecipients.length > 0 ? ccRecipients.join(',') : undefined,
               subject: 'Courier Received Confirmation - Courier Management System',
               html: `
@@ -552,12 +548,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
           }
 
-          // Add the FROM email (SMTP sender) to CC if not already included
-          const fromEmail = smtpSettings.fromEmail || smtpSettings.username;
-          if (fromEmail && !recipients.includes(fromEmail) && !ccRecipients.includes(fromEmail)) {
-            ccRecipients.push(fromEmail);
-            console.log(`📧 Added FROM email to CC: ${fromEmail}`);
-          }
+          // No need to add SMTP email to CC anymore - it will be used as the From address
 
           // Only send if we have recipients
           console.log(`📧 Final recipient list - TO: [${recipients.join(', ')}], CC: [${ccRecipients.join(', ')}]`);
@@ -565,6 +556,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const mailOptions: any = {
               from: smtpSettings.fromEmail || smtpSettings.username,
               to: recipients.join(','),
+              replyTo: (courier as any).emailId, // Reply goes to the original courier recipient
               cc: ccRecipients.length > 0 ? ccRecipients.join(',') : undefined,
               subject: 'Courier Received Confirmation - Courier Management System',
               html: `
@@ -2122,6 +2114,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const mailOptions: any = {
               from: smtpSettings.fromEmail || smtpSettings.username,
               to: req.body.email,
+              replyTo: user.email, // Reply goes to the person who created the courier
               cc: req.body.ccEmails ? req.body.ccEmails.split(',').map((email: string) => email.trim()).filter((email: string) => email) : undefined,
               subject: 'Courier Dispatch Notification - Courier Management System',
               html: `
@@ -3033,6 +3026,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const mailOptions = {
               from: smtpSettings.fromEmail || smtpSettings.username,
               to: req.body.emailId,
+              replyTo: user.email, // Reply goes to the person who marked the courier as received
               subject: 'Courier Received Notification - Courier Management System',
               html: `
 <!DOCTYPE html>
@@ -3184,6 +3178,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         confirmationToken: confirmationToken
       });
 
+      // Get user info for replyTo field
+      const user = await storage.getUserById(userId);
+      
       // Send email notification
       try {
         const smtpSettings = await storage.getSmtpSettings();
@@ -3211,6 +3208,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const mailOptions: any = {
             from: smtpSettings.fromEmail || smtpSettings.username,
             to: (courier as any).emailId,
+            replyTo: user?.email, // Reply goes to the person who dispatched the courier
             subject: 'Courier Dispatched - Courier Management System',
             html: `
 <!DOCTYPE html>
