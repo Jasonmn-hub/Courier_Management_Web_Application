@@ -177,6 +177,177 @@ export async function registerRoutes(app: Express): Promise<Server> {
         receivedDate: new Date().toISOString().split('T')[0]
       });
 
+      // Send confirmation receipt email to courier-related contacts
+      try {
+        const smtpSettings = await storage.getSmtpSettings();
+        if (smtpSettings && smtpSettings.host && smtpSettings.username && smtpSettings.password) {
+          const nodemailer = await import('nodemailer');
+          
+          const transportConfig: any = {
+            host: smtpSettings.host,
+            port: smtpSettings.port || 587,
+            auth: {
+              user: smtpSettings.username,
+              pass: smtpSettings.password,
+            }
+          };
+
+          if (smtpSettings.useSSL) {
+            transportConfig.secure = true;
+          } else if (smtpSettings.useTLS) {
+            transportConfig.secure = false;
+            transportConfig.requireTLS = true;
+          } else {
+            transportConfig.secure = false;
+          }
+
+          const transporter = nodemailer.createTransporter(transportConfig);
+
+          // Build recipient list for reply-all functionality
+          const recipients = [];
+          const ccRecipients = [];
+
+          // Primary recipient: the person who sent the original courier
+          if (courier.email) {
+            recipients.push(courier.email);
+          }
+
+          // Add CC emails from original dispatch if available
+          if ((courier as any).ccEmails) {
+            const ccEmailList = (courier as any).ccEmails.split(',').map((email: string) => email.trim()).filter((email: string) => email);
+            ccEmailList.forEach(email => {
+              if (!recipients.includes(email)) {
+                ccRecipients.push(email);
+              }
+            });
+          }
+
+          // Add department admin emails for CC
+          if (courier.departmentId) {
+            try {
+              const departmentUsers = await storage.getAllUsers({ departmentId: courier.departmentId });
+              departmentUsers.users.forEach(user => {
+                if (user.role === 'admin' || user.role === 'manager') {
+                  if (user.email && !recipients.includes(user.email) && !ccRecipients.includes(user.email)) {
+                    ccRecipients.push(user.email);
+                  }
+                }
+              });
+            } catch (error) {
+              console.error('Error fetching department users for CC:', error);
+            }
+          }
+
+          // Only send if we have recipients
+          if (recipients.length > 0) {
+            const mailOptions: any = {
+              from: smtpSettings.fromEmail || smtpSettings.username,
+              to: recipients.join(','),
+              cc: ccRecipients.length > 0 ? ccRecipients.join(',') : undefined,
+              subject: 'Courier Received Confirmation - Courier Management System',
+              html: `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width" />
+  <title>Courier Received Confirmation</title>
+</head>
+<body style="margin:0;padding:0;background:#f4f6f8;">
+  <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background:#f4f6f8;">
+    <tr>
+      <td align="center" style="padding:24px 12px;">
+        <table role="presentation" cellpadding="0" cellspacing="0" width="600" style="max-width:600px;background:#ffffff;border-radius:12px;overflow:hidden;font-family:Segoe UI,Arial,Helvetica,sans-serif;">
+          
+          <!-- Header -->
+          <tr>
+            <td style="background:#16a34a;color:#fff;padding:18px 24px;font-size:18px;font-weight:600;">
+              ✅ Courier Received Successfully
+            </td>
+          </tr>
+          
+          <!-- Intro -->
+          <tr>
+            <td style="padding:20px 24px;color:#111827;font-size:14px;line-height:1.5;">
+              This is to confirm that the courier has been <strong>successfully received</strong> and acknowledged by the recipient.
+            </td>
+          </tr>
+          
+          <!-- Details Table -->
+          <tr>
+            <td style="padding:0 24px 12px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e5e7eb;border-radius:10px;">
+                <tr>
+                  <td style="padding:12px 16px;background:#f9fafb;font-weight:600;font-size:13px;">
+                    Confirmation Details
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:12px 16px;">
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:13px;color:#374151;">
+                      <tr>
+                        <td style="padding:4px 0;font-weight:600;">POD Number:</td>
+                        <td style="padding:4px 0;">${courier.podNo}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding:4px 0;font-weight:600;">To Branch:</td>
+                        <td style="padding:4px 0;">${courier.toBranch}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding:4px 0;font-weight:600;">Courier Vendor:</td>
+                        <td style="padding:4px 0;">${courier.vendor === 'Others' && courier.customVendor ? courier.customVendor : courier.vendor}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding:4px 0;font-weight:600;">Courier Date:</td>
+                        <td style="padding:4px 0;">${courier.courierDate || 'N/A'}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding:4px 0;font-weight:600;">Status:</td>
+                        <td style="padding:4px 0;"><span style="background:#dcfce7;color:#166534;padding:2px 8px;border-radius:4px;font-size:12px;">RECEIVED</span></td>
+                      </tr>
+                      <tr>
+                        <td style="padding:4px 0;font-weight:600;">Confirmed At:</td>
+                        <td style="padding:4px 0;">${new Date().toLocaleString()}</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          
+          <!-- Note -->
+          <tr>
+            <td style="padding:20px 24px;color:#111827;font-size:14px;line-height:1.5;">
+              <em>This confirmation was generated automatically when the recipient clicked the confirmation link. The courier status has been updated in the system.</em>
+            </td>
+          </tr>
+          
+          <!-- Footer -->
+          <tr>
+            <td style="padding:20px 24px;color:#6b7280;font-size:12px;border-top:1px solid #e5e7eb;">
+              This is an automated confirmation from the Courier Management System.<br>
+              For any queries, please contact the courier desk.
+            </td>
+          </tr>
+          
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`
+            };
+
+            await transporter.sendMail(mailOptions);
+            console.log(`Confirmation receipt email sent for courier ${courier.id} to recipients: ${recipients.join(', ')}${ccRecipients.length > 0 ? `, CC: ${ccRecipients.join(', ')}` : ''}`);
+          }
+        }
+      } catch (emailError) {
+        console.error('Error sending confirmation receipt email for courier:', emailError);
+        // Don't fail the confirmation if email fails
+      }
+
       // Log audit for email confirmation with email address for tracking
       await logAudit(courier.createdBy || 'system', 'EMAIL_CONFIRM_RECEIVED', 'courier', `${courier.id} (${courier.email})`, courier.email);
 
@@ -257,6 +428,172 @@ export async function registerRoutes(app: Express): Promise<Server> {
         status: 'received' as any,
         confirmationToken: null
       });
+
+      // Send confirmation receipt email to courier-related contacts
+      try {
+        const smtpSettings = await storage.getSmtpSettings();
+        if (smtpSettings && smtpSettings.host && smtpSettings.username && smtpSettings.password) {
+          const nodemailer = await import('nodemailer');
+          
+          const transportConfig: any = {
+            host: smtpSettings.host,
+            port: smtpSettings.port || 587,
+            auth: {
+              user: smtpSettings.username,
+              pass: smtpSettings.password,
+            }
+          };
+
+          if (smtpSettings.useSSL) {
+            transportConfig.secure = true;
+          } else if (smtpSettings.useTLS) {
+            transportConfig.secure = false;
+            transportConfig.requireTLS = true;
+          } else {
+            transportConfig.secure = false;
+          }
+
+          const transporter = nodemailer.createTransporter(transportConfig);
+
+          // Build recipient list for reply-all functionality
+          const recipients = [];
+          const ccRecipients = [];
+
+          // Primary recipient: the person who sent the original courier (if available)
+          if ((courier as any).emailId) {
+            recipients.push((courier as any).emailId);
+          }
+
+          // Add department email if available
+          if (courier.department?.name && courier.departmentId) {
+            // Get department admin emails for CC
+            try {
+              const departmentUsers = await storage.getAllUsers({ departmentId: courier.departmentId });
+              departmentUsers.users.forEach(user => {
+                if (user.role === 'admin' || user.role === 'manager') {
+                  if (user.email && !recipients.includes(user.email) && user.email !== (courier as any).emailId) {
+                    ccRecipients.push(user.email);
+                  }
+                }
+              });
+            } catch (error) {
+              console.error('Error fetching department users for CC:', error);
+            }
+          }
+
+          // Only send if we have recipients
+          if (recipients.length > 0) {
+            const mailOptions: any = {
+              from: smtpSettings.fromEmail || smtpSettings.username,
+              to: recipients.join(','),
+              cc: ccRecipients.length > 0 ? ccRecipients.join(',') : undefined,
+              subject: 'Courier Received Confirmation - Courier Management System',
+              html: `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width" />
+  <title>Courier Received Confirmation</title>
+</head>
+<body style="margin:0;padding:0;background:#f4f6f8;">
+  <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background:#f4f6f8;">
+    <tr>
+      <td align="center" style="padding:24px 12px;">
+        <table role="presentation" cellpadding="0" cellspacing="0" width="600" style="max-width:600px;background:#ffffff;border-radius:12px;overflow:hidden;font-family:Segoe UI,Arial,Helvetica,sans-serif;">
+          
+          <!-- Header -->
+          <tr>
+            <td style="background:#16a34a;color:#fff;padding:18px 24px;font-size:18px;font-weight:600;">
+              ✅ Courier Received Successfully
+            </td>
+          </tr>
+          
+          <!-- Intro -->
+          <tr>
+            <td style="padding:20px 24px;color:#111827;font-size:14px;line-height:1.5;">
+              This is to confirm that the courier has been <strong>successfully received</strong> and acknowledged by the recipient.
+            </td>
+          </tr>
+          
+          <!-- Details Table -->
+          <tr>
+            <td style="padding:0 24px 12px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e5e7eb;border-radius:10px;">
+                <tr>
+                  <td style="padding:12px 16px;background:#f9fafb;font-weight:600;font-size:13px;">
+                    Confirmation Details
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:12px 16px;">
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:13px;color:#374151;">
+                      <tr>
+                        <td style="padding:4px 0;font-weight:600;">POD Number:</td>
+                        <td style="padding:4px 0;">${courier.podNumber}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding:4px 0;font-weight:600;">Received Date:</td>
+                        <td style="padding:4px 0;">${courier.receivedDate ? new Date(courier.receivedDate + 'T00:00:00').toLocaleDateString() : 'N/A'}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding:4px 0;font-weight:600;">From Location:</td>
+                        <td style="padding:4px 0;">${courier.fromLocation}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding:4px 0;font-weight:600;">Courier Vendor:</td>
+                        <td style="padding:4px 0;">${courier.courierVendor === 'Others' && (courier as any).customVendor ? (courier as any).customVendor : courier.courierVendor}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding:4px 0;font-weight:600;">Department:</td>
+                        <td style="padding:4px 0;">${courier.department?.name || (courier as any).customDepartment || 'N/A'}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding:4px 0;font-weight:600;">Status:</td>
+                        <td style="padding:4px 0;"><span style="background:#dcfce7;color:#166534;padding:2px 8px;border-radius:4px;font-size:12px;">RECEIVED</span></td>
+                      </tr>
+                      <tr>
+                        <td style="padding:4px 0;font-weight:600;">Confirmed At:</td>
+                        <td style="padding:4px 0;">${new Date().toLocaleString()}</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          
+          <!-- Note -->
+          <tr>
+            <td style="padding:20px 24px;color:#111827;font-size:14px;line-height:1.5;">
+              <em>This confirmation was generated automatically when the recipient clicked the confirmation link. The courier status has been updated in the system.</em>
+            </td>
+          </tr>
+          
+          <!-- Footer -->
+          <tr>
+            <td style="padding:20px 24px;color:#6b7280;font-size:12px;border-top:1px solid #e5e7eb;">
+              This is an automated confirmation from the Courier Management System.<br>
+              For any queries, please contact the courier desk.
+            </td>
+          </tr>
+          
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`
+            };
+
+            await transporter.sendMail(mailOptions);
+            console.log(`Confirmation receipt email sent for received courier ${courier.id} to recipients: ${recipients.join(', ')}${ccRecipients.length > 0 ? `, CC: ${ccRecipients.join(', ')}` : ''}`);
+          }
+        }
+      } catch (emailError) {
+        console.error('Error sending confirmation receipt email for received courier:', emailError);
+        // Don't fail the confirmation if email fails
+      }
 
       // Log audit for email confirmation with email address for tracking
       await logAudit(null, 'EMAIL_CONFIRM_RECEIVED', 'received_courier', `${courier.id} (${(courier as any).emailId})`, (courier as any).emailId);
