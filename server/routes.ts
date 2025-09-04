@@ -352,10 +352,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
             await transporter.sendMail(mailOptions);
             console.log(`✅ CONFIRMATION EMAIL SENT for sent courier ${courier.id} to: ${recipients.join(', ')}${ccRecipients.length > 0 ? `, CC: ${ccRecipients.join(', ')}` : ''}`);
+            console.log(`📧 Email transport config - Host: ${smtpSettings.host}, Port: ${smtpSettings.port}, User: ${smtpSettings.username}`);
+            console.log(`📧 Email content preview - Subject: "${mailOptions.subject}", From: ${mailOptions.from}`);
           }
         }
       } catch (emailError) {
-        console.error('Error sending confirmation receipt email for courier:', emailError);
+        console.error('❌ Error sending confirmation receipt email for courier:', emailError);
+        console.error('❌ SMTP settings check:', { 
+          host: smtpSettings.host, 
+          port: smtpSettings.port, 
+          username: smtpSettings.username,
+          fromEmail: smtpSettings.fromEmail,
+          hasPassword: !!smtpSettings.password
+        });
         // Don't fail the confirmation if email fails
       }
 
