@@ -143,7 +143,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Find courier by token
+      console.log(`🔍 Looking for courier with token: ${token}`);
       const allCouriers = await storage.getAllCouriers({});
+      console.log(`📋 Found ${allCouriers.couriers.length} total couriers`);
+      console.log(`🎯 Couriers with tokens:`, allCouriers.couriers
+        .filter(c => (c as any).confirmationToken)
+        .map(c => ({ id: c.id, podNo: c.podNo, token: (c as any).confirmationToken, status: (c as any).status }))
+      );
       const courier = allCouriers.couriers.find(c => (c as any).confirmationToken === token);
       
       if (!courier) {
