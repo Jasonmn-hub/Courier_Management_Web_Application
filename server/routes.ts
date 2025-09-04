@@ -2555,7 +2555,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const couriers = await storage.getAllReceivedCouriers(filters);
-      res.json(couriers);
+      
+      // Transform the data to include flattened department name for frontend compatibility
+      const transformedCouriers = couriers.map(courier => ({
+        ...courier,
+        departmentName: courier.department?.name || null,
+        creatorName: courier.creator?.name || null
+      }));
+      
+      res.json(transformedCouriers);
     } catch (error) {
       console.error("Error fetching received couriers:", error);
       res.status(500).json({ message: "Failed to fetch received couriers" });
