@@ -216,7 +216,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           // Add the FROM user (creator) to recipients
           try {
-            const creatorUser = await storage.getUserById((courier as any).createdBy);
+            const creatorUser = await storage.getUser((courier as any).createdBy);
             console.log(`🔍 Creator user found:`, creatorUser ? { id: creatorUser.id, email: creatorUser.email } : 'Not found');
             if (creatorUser && creatorUser.email) {
               recipients.push(creatorUser.email);
@@ -500,7 +500,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           // Add the FROM user (creator) to recipients
           try {
-            const creatorUser = await storage.getUserById((courier as any).createdBy);
+            const creatorUser = await storage.getUser((courier as any).createdBy);
             console.log(`🔍 Creator user found:`, creatorUser ? { id: creatorUser.id, email: creatorUser.email } : 'Not found');
             if (creatorUser && creatorUser.email) {
               recipients.push(creatorUser.email);
@@ -3179,7 +3179,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       // Get user info for replyTo field
-      const user = await storage.getUserById(userId);
+      const user = await storage.getUser(userId);
       
       // Send email notification
       try {
