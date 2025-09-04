@@ -84,6 +84,7 @@ export const couriers = pgTable("couriers", {
   createdBy: varchar("created_by").references(() => users.id),
   toBranch: varchar("to_branch", { length: 100 }),
   email: varchar("email", { length: 100 }),
+  ccEmails: text("cc_emails"), // Store comma-separated CC email addresses
   courierDate: date("courier_date"),
   vendor: varchar("vendor", { length: 100 }),
   customVendor: varchar("custom_vendor", { length: 100 }),
