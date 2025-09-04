@@ -214,17 +214,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const recipients: string[] = [];
           const ccRecipients: string[] = [];
 
+          // Add the FROM user (creator) to recipients
+          try {
+            const creatorUser = await storage.getUserById((courier as any).createdBy);
+            console.log(`🔍 Creator user found:`, creatorUser ? { id: creatorUser.id, email: creatorUser.email } : 'Not found');
+            if (creatorUser && creatorUser.email) {
+              recipients.push(creatorUser.email);
+              console.log(`📧 Added creator to recipients: ${creatorUser.email}`);
+            }
+          } catch (error) {
+            console.error('Error fetching creator user:', error);
+          }
+
           // Primary recipient: the person who sent the original courier
-          if (courier.email) {
+          if (courier.email && !recipients.includes(courier.email)) {
             recipients.push(courier.email);
+            console.log(`📧 Added original sender to recipients: ${courier.email}`);
           }
 
           // Add CC emails from original dispatch if available
           if ((courier as any).ccEmails) {
+            console.log(`🔍 Original CC emails found:`, (courier as any).ccEmails);
             const ccEmailList = (courier as any).ccEmails.split(',').map((email: string) => email.trim()).filter((email: string) => email);
             ccEmailList.forEach((email: string) => {
-              if (!recipients.includes(email)) {
+              if (email && !recipients.includes(email) && !ccRecipients.includes(email)) {
                 ccRecipients.push(email);
+                console.log(`📧 Added CC email: ${email}`);
               }
             });
           }
@@ -480,9 +495,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const recipients: string[] = [];
           const ccRecipients: string[] = [];
 
+          // Add the FROM user (creator) to recipients
+          try {
+            const creatorUser = await storage.getUserById((courier as any).createdBy);
+            console.log(`🔍 Creator user found:`, creatorUser ? { id: creatorUser.id, email: creatorUser.email } : 'Not found');
+            if (creatorUser && creatorUser.email) {
+              recipients.push(creatorUser.email);
+              console.log(`📧 Added creator to recipients: ${creatorUser.email}`);
+            }
+          } catch (error) {
+            console.error('Error fetching creator user:', error);
+          }
+
           // Primary recipient: the person who sent the original courier (if available)
-          if ((courier as any).emailId) {
+          if ((courier as any).emailId && !recipients.includes((courier as any).emailId)) {
             recipients.push((courier as any).emailId);
+            console.log(`📧 Added original emailId to recipients: ${(courier as any).emailId}`);
+          }
+
+          // Add CC emails from original dispatch if available
+          if ((courier as any).ccEmails) {
+            console.log(`🔍 Original CC emails found:`, (courier as any).ccEmails);
+            const ccEmailList = (courier as any).ccEmails.split(',').map((email: string) => email.trim()).filter((email: string) => email);
+            ccEmailList.forEach((email: string) => {
+              if (email && !recipients.includes(email) && !ccRecipients.includes(email)) {
+                ccRecipients.push(email);
+                console.log(`📧 Added CC email: ${email}`);
+              }
+            });
           }
 
           // Add department email if available
