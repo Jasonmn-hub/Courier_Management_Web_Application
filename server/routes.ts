@@ -263,6 +263,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
           }
 
+          // Add the FROM email (SMTP sender) to CC if not already included
+          const fromEmail = smtpSettings.fromEmail || smtpSettings.username;
+          if (fromEmail && !recipients.includes(fromEmail) && !ccRecipients.includes(fromEmail)) {
+            ccRecipients.push(fromEmail);
+            console.log(`📧 Added FROM email to CC: ${fromEmail}`);
+          }
+
           // Only send if we have recipients
           console.log(`📧 Final recipient list - TO: [${recipients.join(', ')}], CC: [${ccRecipients.join(', ')}]`);
           if (recipients.length > 0) {
@@ -543,6 +550,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
             } catch (error) {
               console.error('Error fetching department users for CC:', error);
             }
+          }
+
+          // Add the FROM email (SMTP sender) to CC if not already included
+          const fromEmail = smtpSettings.fromEmail || smtpSettings.username;
+          if (fromEmail && !recipients.includes(fromEmail) && !ccRecipients.includes(fromEmail)) {
+            ccRecipients.push(fromEmail);
+            console.log(`📧 Added FROM email to CC: ${fromEmail}`);
           }
 
           // Only send if we have recipients
