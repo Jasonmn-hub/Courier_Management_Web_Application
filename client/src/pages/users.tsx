@@ -73,11 +73,17 @@ export default function Users() {
     // Create a CSV template with headers
     const headers = ['name', 'email', 'employeeCode', 'mobileNumber', 'role', 'departmentName', 'password'];
     const sampleData = [
-      ['John Doe', 'john@example.com', 'EMP001', '9123456789', 'user', 'IT Department', 'password123'],
-      ['Jane Smith', 'jane@example.com', 'EMP002', '9876543210', 'manager', 'HR Department', 'password456']
+      ['John Doe', 'john@example.com', 'EMP001', '9123456789', 'admin', 'IT Department', 'password123'],
+      ['Jane Smith', 'jane@example.com', 'EMP002', '9876543210', 'sub_admin', 'HR Department', 'password456'],
+      ['Mike Johnson', 'mike@example.com', 'EMP003', '9555666777', 'manager', 'Finance Department', 'password789'],
+      ['Sarah Wilson', 'sarah@example.com', 'EMP004', '9444555666', 'user', 'Operations Department', 'password012']
     ];
     
+    // Add comment row to explain valid roles
+    const roleComment = ['# Valid roles: admin, sub_admin, manager, user', '', '', '', '', '', ''];
+    
     const csvContent = [
+      roleComment.join(','),
       headers.join(','),
       ...sampleData.map(row => row.map(cell => `"${cell}"`).join(','))
     ].join('\n');
@@ -126,50 +132,57 @@ export default function Users() {
                 Manage user accounts and role assignments
               </p>
             </div>
-            <div className="mt-4 flex space-x-3 md:mt-0 md:ml-4">
-              <Button 
-                variant="outline" 
-                onClick={downloadTemplate}
-                data-testid="button-download-template"
-              >
-                <Download className="h-4 w-4 mr-2" />
-                Download Template
-              </Button>
-              
-              <div className="flex items-center space-x-2">
-                <Input
-                  type="file"
-                  accept=".csv"
-                  onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
-                  className="hidden"
-                  id="csv-upload"
-                />
-                <label htmlFor="csv-upload">
-                  <Button variant="outline" type="button" asChild>
-                    <span className="cursor-pointer" data-testid="button-select-csv">
-                      <Upload className="h-4 w-4 mr-2" />
-                      Select CSV
-                    </span>
-                  </Button>
-                </label>
-                {selectedFile && (
+            <div className="mt-4 flex flex-col md:flex-row md:items-center md:justify-end space-y-3 md:space-y-0 md:space-x-3 md:mt-0 md:ml-4">
+              <div className="flex flex-col space-y-2">
+                <div className="flex space-x-3">
                   <Button 
-                    onClick={handleBulkUpload}
-                    disabled={bulkUploadMutation.isPending}
-                    data-testid="button-bulk-upload"
+                    variant="outline" 
+                    onClick={downloadTemplate}
+                    data-testid="button-download-template"
                   >
-                    {bulkUploadMutation.isPending ? "Uploading..." : "Upload Users"}
+                    <Download className="h-4 w-4 mr-2" />
+                    Download Template
                   </Button>
-                )}
+                  
+                  <div className="flex items-center space-x-2">
+                    <Input
+                      type="file"
+                      accept=".csv"
+                      onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+                      className="hidden"
+                      id="csv-upload"
+                    />
+                    <label htmlFor="csv-upload">
+                      <Button variant="outline" type="button" asChild>
+                        <span className="cursor-pointer" data-testid="button-select-csv">
+                          <Upload className="h-4 w-4 mr-2" />
+                          Select CSV
+                        </span>
+                      </Button>
+                    </label>
+                    {selectedFile && (
+                      <Button 
+                        onClick={handleBulkUpload}
+                        disabled={bulkUploadMutation.isPending}
+                        data-testid="button-bulk-upload"
+                      >
+                        {bulkUploadMutation.isPending ? "Uploading..." : "Upload Users"}
+                      </Button>
+                    )}
+                  </div>
+                  
+                  <Button 
+                    onClick={() => setShowUserForm(true)}
+                    data-testid="button-add-user"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add User
+                  </Button>
+                </div>
+                <div className="text-xs text-slate-500 md:text-right">
+                  Valid roles: <code className="bg-slate-100 px-1 rounded">admin</code>, <code className="bg-slate-100 px-1 rounded">sub_admin</code>, <code className="bg-slate-100 px-1 rounded">manager</code>, <code className="bg-slate-100 px-1 rounded">user</code>
+                </div>
               </div>
-              
-              <Button 
-                onClick={() => setShowUserForm(true)}
-                data-testid="button-add-user"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Add User
-              </Button>
             </div>
           </div>
 
