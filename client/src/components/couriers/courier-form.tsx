@@ -28,6 +28,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { Autocomplete } from "@/components/ui/autocomplete";
+import MultiEmailInput from "@/components/ui/multi-email-input";
 import { useAuth } from "@/hooks/useAuth";
 
 const courierSchema = z.object({
@@ -637,15 +638,35 @@ export default function CourierForm({ courier, onClose, onSuccess }: CourierForm
                 name="ccEmails"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>CC Emails (comma separated)</FormLabel>
+                    <FormLabel>CC Emails</FormLabel>
                     <FormControl>
-                      <Input 
-                        placeholder="email1@example.com, email2@example.com" 
-                        {...field} 
+                      <MultiEmailInput
+                        value={field.value || ""}
+                        onChange={field.onChange}
+                        placeholder="Type email addresses... (press Tab or Enter to add)"
+                        suggestions={[
+                          // User emails from the system
+                          ...users.map((user: any) => ({
+                            email: user.email,
+                            name: user.name,
+                            type: 'user' as const
+                          })),
+                          // Branch emails
+                          ...branches
+                            .filter((branch: any) => branch.email)
+                            .map((branch: any) => ({
+                              email: branch.email,
+                              name: `${branch.branchName} (${branch.branchCode})`,
+                              type: 'branch' as const
+                            }))
+                        ]}
                         data-testid="input-cc-emails"
                       />
                     </FormControl>
                     <FormMessage />
+                    <p className="text-xs text-muted-foreground">
+                      Type an email address and press Tab, Enter, or comma to add it. Start typing to see suggestions from users and branches.
+                    </p>
                   </FormItem>
                 )}
               />
