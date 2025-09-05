@@ -2467,18 +2467,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.get('/api/branches', authenticateToken, async (req: any, res) => {
     try {
-      const { status, search, limit = "50", offset = "0", departmentId } = req.query;
+      const { status, search, limit = "50", offset = "0", departmentId, ids_only } = req.query;
       
+      // If ids_only is requested, remove pagination to get all IDs
       const filters = {
         status: status || undefined,
         search: search || undefined,
         departmentId: departmentId ? parseInt(departmentId) : undefined,
-        limit: parseInt(limit),
-        offset: parseInt(offset)
+        limit: ids_only === 'true' ? undefined : parseInt(limit),
+        offset: ids_only === 'true' ? undefined : parseInt(offset)
       };
       
       const result = await storage.getAllBranches(filters);
-      res.json(result);
+      
+      // If ids_only is requested, return only the branch IDs
+      if (ids_only === 'true') {
+        const branchIds = result.branches.map(branch => branch.id);
+        res.json({ branchIds, total: result.total });
+      } else {
+        res.json(result);
+      }
     } catch (error) {
       console.error("Error fetching branches:", error);
       res.status(500).json({ message: "Failed to fetch branches" });

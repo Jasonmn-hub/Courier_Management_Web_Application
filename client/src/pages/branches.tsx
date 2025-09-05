@@ -326,22 +326,39 @@ export default function Branches() {
     }
   };
 
-  // Handle select all
+  // Fetch all branch IDs for select all functionality
+  const { data: allBranchIds } = useQuery({
+    queryKey: ['/api/branches/ids', { status: activeTab, search: searchTerm }],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      params.set('status', activeTab);
+      if (searchTerm) params.set('search', searchTerm);
+      params.set('ids_only', 'true'); // Request only IDs
+      
+      const response = await apiRequest('GET', `/api/branches?${params.toString()}`);
+      const data = await response.json();
+      return data.branchIds || [];
+    },
+    enabled: isAuthenticated && canViewBranches,
+  });
+
+  // Handle select all (all pages)
   const handleSelectAll = (checked: boolean) => {
-    if (checked && branches?.length > 0) {
-      setSelectedBranches(branches.map(branch => branch.id));
+    if (checked && allBranchIds?.length > 0) {
+      setSelectedBranches(allBranchIds);
     } else {
       setSelectedBranches([]);
     }
   };
 
-  // Check if all visible branches are selected
-  const allSelected = branches?.length > 0 && selectedBranches.length === branches.length;
-  const someSelected = selectedBranches.length > 0 && selectedBranches.length < (branches?.length || 0);
+  // Check if all branches are selected (across all pages)
+  const allSelected = allBranchIds?.length > 0 && selectedBranches.length === allBranchIds.length;
+  const someSelected = selectedBranches.length > 0 && selectedBranches.length < (allBranchIds?.length || 0);
 
-  // Reset to first page when filters change
+  // Reset to first page and clear selection when filters change
   useEffect(() => {
     setCurrentPage(1);
+    setSelectedBranches([]); // Clear selection when filter changes
   }, [activeTab, searchTerm]);
 
   // Handle page change with proper validation
@@ -465,7 +482,7 @@ export default function Branches() {
                   data-testid="button-bulk-delete"
                 >
                   <Trash2 className="h-4 w-4 mr-2" />
-                  Delete Selected ({selectedBranches.length})
+                  Delete Selected ({selectedBranches.length}{allBranchIds?.length && selectedBranches.length === allBranchIds.length ? ' - All' : ''})
                 </Button>
               )}
               <Button onClick={() => setShowBulkUpload(true)} variant="outline" data-testid="button-bulk-upload">
