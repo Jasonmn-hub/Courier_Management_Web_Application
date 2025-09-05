@@ -11,6 +11,7 @@ import {
 import { Menu, Bell, ChevronDown } from "lucide-react";
 import { useLocation } from "wouter";
 import AccountProfile from "./account-profile";
+import lightLogo from "@/assets/light-logo.png";
 
 interface TopNavbarProps {
   onMenuClick: () => void;
@@ -53,7 +54,21 @@ export default function TopNavbar({ onMenuClick }: TopNavbarProps) {
         <Menu className="h-5 w-5" />
       </button>
 
-      <div className="flex-1 px-4 flex justify-end items-center">
+      <div className="flex-1 px-4 flex justify-between items-center">
+        {/* Left side - Logo and Title */}
+        <div className="flex items-center space-x-4">
+          <div className="flex-shrink-0">
+            <img 
+              src={lightLogo} 
+              alt="Light Microfinance" 
+              className="h-12 w-12 object-contain" 
+            />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold text-slate-800">Light Finance Courier Management System</h1>
+          </div>
+        </div>
+        
         {/* Right side */}
         <div className="ml-4 flex items-center md:ml-6 space-x-4">
           {/* Notifications */}
