@@ -16,6 +16,7 @@ import { Download, Plus, FileText, Trash2, Mail, User, Calendar, Search, Pencil,
 import { apiRequest } from "@/lib/queryClient";
 import { ExportDialog } from "@/components/export-dialog";
 import { formatEntityId } from "@/lib/idUtils";
+import { formatDateDDMMYYYY, formatTimeHHMM } from "@/lib/utils";
 
 interface User {
   id: string;
@@ -350,9 +351,9 @@ function AuditLogsTable() {
                   }
                 </TableCell>
                 <TableCell className="text-sm">
-                  {new Date(log.timestamp).toLocaleDateString()}
+                  {formatDateDDMMYYYY(log.timestamp)}
                   <div className="text-xs text-slate-500">
-                    {new Date(log.timestamp).toLocaleTimeString()}
+                    {formatTimeHHMM(log.timestamp)}
                   </div>
                 </TableCell>
                 <TableCell>

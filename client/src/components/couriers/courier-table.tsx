@@ -19,6 +19,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { formatEntityId } from "@/lib/idUtils";
+import { formatDateDDMMYYYY } from "@/lib/utils";
 
 interface CourierTableProps {
   title?: string;
@@ -306,7 +307,7 @@ export default function CourierTable({
                         </TableCell>
                         <TableCell>{courier.vendor}</TableCell>
                         <TableCell>
-                          {courier.courierDate ? new Date(courier.courierDate).toLocaleDateString() : '-'}
+                          {courier.courierDate ? formatDateDDMMYYYY(courier.courierDate) : '-'}
                         </TableCell>
                         <TableCell>
                           <div className="text-sm">

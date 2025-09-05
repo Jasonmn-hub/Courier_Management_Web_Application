@@ -328,16 +328,16 @@ export default function Branches() {
 
   // Handle select all
   const handleSelectAll = (checked: boolean) => {
-    if (checked && branches?.branches) {
-      setSelectedBranches(branches.branches.map(branch => branch.id));
+    if (checked && branches?.length > 0) {
+      setSelectedBranches(branches.map(branch => branch.id));
     } else {
       setSelectedBranches([]);
     }
   };
 
   // Check if all visible branches are selected
-  const allSelected = branches?.branches?.length > 0 && selectedBranches.length === branches.branches.length;
-  const someSelected = selectedBranches.length > 0 && selectedBranches.length < (branches?.branches?.length || 0);
+  const allSelected = branches?.length > 0 && selectedBranches.length === branches.length;
+  const someSelected = selectedBranches.length > 0 && selectedBranches.length < (branches?.length || 0);
 
   // Reset to first page when filters change
   useEffect(() => {

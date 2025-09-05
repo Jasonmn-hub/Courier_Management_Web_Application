@@ -6,6 +6,7 @@ import { Plus, Mail, Eye } from "lucide-react";
 import { Autocomplete } from "@/components/ui/autocomplete";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { formatDateDDMMYYYY } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -296,7 +297,7 @@ export default function ReceivedCouriers() {
                             {courier.podNumber}
                           </TableCell>
                           <TableCell data-testid={`text-received-date-${courier.id}`}>
-                            {courier.receivedDate ? new Date(courier.receivedDate + 'T00:00:00').toLocaleDateString() : '-'}
+                            {courier.receivedDate ? formatDateDDMMYYYY(courier.receivedDate + 'T00:00:00') : '-'}
                           </TableCell>
                           <TableCell data-testid={`text-from-${courier.id}`}>
                             {courier.fromLocation}
