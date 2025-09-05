@@ -983,7 +983,9 @@ function BranchesTable({
                   <TableHead className="w-12">
                     <Checkbox
                       checked={allSelected}
-                      onCheckedChange={onSelectAll}
+                      onCheckedChange={(checked) => {
+                        onSelectAll?.(checked as boolean);
+                      }}
                       data-testid="checkbox-select-all"
                     />
                   </TableHead>
