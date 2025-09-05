@@ -58,7 +58,9 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     ...(shouldShowBranches ? [{ name: "Branch List", href: "/branches", icon: MapPin, current: location === "/branches", group: "management" }] : []),
     { name: "Vendor Master", href: "/vendors", icon: Store, current: location === "/vendors", group: "management" },
     { name: "Manage Authority Letter", href: "/manage-authority-letter", icon: FileText, current: location === "/manage-authority-letter", group: "management" },
-    { name: "Settings", href: "/settings", icon: Settings, current: location === "/settings" || location === "/custom-fields" || location === "/audit-logs", group: "settings" },
+    { name: "Settings", href: "/settings", icon: Settings, current: location === "/settings", group: "settings" },
+    { name: "Custom Fields", href: "/custom-fields", icon: FormInput, current: location === "/custom-fields", group: "settings" },
+    { name: "Audit Logs", href: "/audit-logs", icon: History, current: location === "/audit-logs", group: "settings" },
     { name: "Export Data", href: "/export", icon: FileDown, group: "tools" },
   ] : [];
 

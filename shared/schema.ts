@@ -136,6 +136,24 @@ export const smtpSettings = pgTable("smtp_settings", {
   applicationUrl: varchar("application_url", { length: 255 }), // Login link URL for emails
 });
 
+export const samlSettings = pgTable("saml_settings", {
+  id: serial("id").primaryKey(),
+  enabled: boolean("enabled").default(false),
+  entityId: varchar("entity_id", { length: 500 }), // Service Provider Entity ID
+  ssoUrl: varchar("sso_url", { length: 500 }), // Identity Provider SSO URL
+  sloUrl: varchar("slo_url", { length: 500 }), // Single Logout URL
+  x509Certificate: text("x509_certificate"), // IdP X.509 Certificate
+  attributeMapping: jsonb("attribute_mapping"), // Map SAML attributes to user fields
+  nameIdFormat: varchar("name_id_format", { length: 200 }).default('urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress'),
+  signRequests: boolean("sign_requests").default(false),
+  wantAssertionsSigned: boolean("want_assertions_signed").default(true),
+  skillmineIntegration: boolean("skillmine_integration").default(false), // Skillmine SSO specific
+  callbackUrl: varchar("callback_url", { length: 500 }), // ACS URL
+  metadataUrl: varchar("metadata_url", { length: 500 }), // SP Metadata URL
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 export const auditLogs = pgTable("audit_logs", {
   id: serial("id").primaryKey(),
   userId: varchar("user_id").references(() => users.id),
@@ -360,6 +378,12 @@ export const insertSmtpSettingsSchema = createInsertSchema(smtpSettings).omit({
   id: true,
 });
 
+export const insertSamlSettingsSchema = createInsertSchema(samlSettings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const insertAuditLogSchema = createInsertSchema(auditLogs).omit({
   id: true,
   timestamp: true,
@@ -414,6 +438,8 @@ export type Field = typeof fields.$inferSelect;
 export type InsertField = z.infer<typeof insertFieldSchema>;
 export type SmtpSettings = typeof smtpSettings.$inferSelect;
 export type InsertSmtpSettings = z.infer<typeof insertSmtpSettingsSchema>;
+export type SamlSettings = typeof samlSettings.$inferSelect;
+export type InsertSamlSettings = z.infer<typeof insertSamlSettingsSchema>;
 export type AuditLog = typeof auditLogs.$inferSelect;
 export type InsertAuditLog = z.infer<typeof insertAuditLogSchema>;
 export type AuthorityLetterTemplate = typeof authorityLetterTemplates.$inferSelect;

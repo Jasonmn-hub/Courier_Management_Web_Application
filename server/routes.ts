@@ -3416,6 +3416,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // SAML SSO settings routes
+  app.get('/api/saml-settings', authenticateToken, requireRole(['admin']), async (req: any, res) => {
+    try {
+      const settings = await storage.getSamlSettings();
+      res.json(settings || {});
+    } catch (error) {
+      console.error("Error fetching SAML settings:", error);
+      res.status(500).json({ message: "Failed to fetch SAML settings" });
+    }
+  });
+
+  app.put('/api/saml-settings', authenticateToken, requireRole(['admin']), setCurrentUser(), async (req: any, res) => {
+    try {
+      const validatedData = insertSamlSettingsSchema.parse(req.body);
+      const settings = await storage.updateSamlSettings(validatedData);
+      
+      await logAudit(req.currentUser.id, 'UPDATE', 'saml_settings');
+      
+      res.json(settings);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      console.error("Error updating SAML settings:", error);
+      res.status(500).json({ message: "Failed to update SAML settings" });
+    }
+  });
+
+  app.post('/api/saml-settings/test', authenticateToken, requireRole(['admin']), async (req: any, res) => {
+    try {
+      const { testEntityId } = req.body;
+      
+      if (!testEntityId) {
+        return res.status(400).json({ message: "Test Entity ID is required" });
+      }
+
+      // Get current SAML settings
+      const samlSettings = await storage.getSamlSettings();
+      if (!samlSettings || !samlSettings.entityId || !samlSettings.ssoUrl) {
+        return res.status(400).json({ message: "SAML settings incomplete. Please configure Entity ID and SSO URL." });
+      }
+
+      // Validate configuration
+      const validationResults = {
+        entityId: !!samlSettings.entityId,
+        ssoUrl: !!samlSettings.ssoUrl,
+        x509Certificate: !!samlSettings.x509Certificate,
+        callbackUrl: !!samlSettings.callbackUrl,
+        skillmineIntegration: samlSettings.skillmineIntegration || false
+      };
+
+      const isValid = Object.values(validationResults).every(Boolean);
+      
+      res.json({ 
+        message: isValid ? "SAML configuration is valid and ready for integration" : "SAML configuration incomplete",
+        valid: isValid,
+        validationResults,
+        skillmineReady: samlSettings.skillmineIntegration && validationResults.entityId && validationResults.ssoUrl
+      });
+    } catch (error) {
+      console.error("Error testing SAML configuration:", error);
+      res.status(500).json({ message: "Failed to test SAML configuration" });
+    }
+  });
 
   // Audit logs route
   app.get('/api/audit-logs', authenticateToken, requireRole(['admin', 'sub_admin']), async (req: any, res) => {

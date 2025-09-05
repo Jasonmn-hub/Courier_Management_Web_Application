@@ -6,6 +6,7 @@ import {
   fields,
   departmentFields,
   smtpSettings,
+  samlSettings,
   auditLogs,
   authorityLetterTemplates,
   authorityLetterFields,
@@ -27,6 +28,8 @@ import {
   type InsertField,
   type SmtpSettings,
   type InsertSmtpSettings,
+  type SamlSettings,
+  type InsertSamlSettings,
   type AuditLog,
   type InsertAuditLog,
   type AuthorityLetterTemplate,
@@ -590,6 +593,19 @@ export class DatabaseStorage implements IStorage {
     // Delete existing settings and insert new ones
     await db.delete(smtpSettings);
     const [newSettings] = await db.insert(smtpSettings).values(settings).returning();
+    return newSettings;
+  }
+
+  // SAML SSO operations
+  async getSamlSettings(): Promise<SamlSettings | undefined> {
+    const [settings] = await db.select().from(samlSettings).limit(1);
+    return settings;
+  }
+
+  async updateSamlSettings(settings: InsertSamlSettings): Promise<SamlSettings> {
+    // Delete existing settings and insert new ones
+    await db.delete(samlSettings);
+    const [newSettings] = await db.insert(samlSettings).values(settings).returning();
     return newSettings;
   }
 
