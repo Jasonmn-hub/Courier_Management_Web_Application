@@ -387,7 +387,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Log audit for email confirmation with email address for tracking
-      await logAudit(courier.createdBy || 'system', 'EMAIL_CONFIRM_RECEIVED', 'courier', `${courier.id} (${courier.email})`, courier.email);
+      await logAudit(courier.createdBy || 'system', 'EMAIL_CONFIRM_RECEIVED', 'courier', `${courier.id} (${courier.email})`, courier.email, `POD Number: ${courier.podNo}`);
 
       // Success response
       res.send(`
@@ -667,7 +667,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Log audit for email confirmation with email address for tracking
-      await logAudit(null, 'EMAIL_CONFIRM_RECEIVED', 'received_courier', `${courier.id} (${(courier as any).emailId})`, (courier as any).emailId);
+      await logAudit(null, 'EMAIL_CONFIRM_RECEIVED', 'received_courier', `${courier.id} (${(courier as any).emailId})`, (courier as any).emailId, `POD Number: ${courier.podNo}`);
 
       // Success response
       res.send(`
@@ -756,7 +756,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       // Log successful login
-      await logAudit(user.id, 'LOGIN', 'user', user.id, user.email);
+      await logAudit(user.id, 'LOGIN', 'user', user.id, user.email, `User Email ID and Name: ${user.email} - ${user.name}`);
 
       res.json({ token, user: { id: user.id, email: user.email, name: user.name, role: user.role } });
     } catch (error) {
@@ -797,7 +797,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       // Log user registration
-      await logAudit(newUser.id, 'REGISTER', 'user', newUser.id, newUser.email);
+      await logAudit(newUser.id, 'REGISTER', 'user', newUser.id, newUser.email, `User Email ID and Name: ${newUser.email} - ${newUser.name}`);
 
       res.status(201).json({ token, user: { id: newUser.id, email: newUser.email, name: newUser.name, role: newUser.role } });
     } catch (error) {
@@ -812,7 +812,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = req.user;
       
       // Log successful logout
-      await logAudit(user.id, 'LOGOUT', 'user', user.id, user.email);
+      await logAudit(user.id, 'LOGOUT', 'user', user.id, user.email, `User Email ID and Name: ${user.email} - ${user.name}`);
       
       res.json({ message: 'Logged out successfully' });
     } catch (error) {
@@ -1084,8 +1084,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         'CREATE', 
         'user', 
         newUser.id,
-        undefined,
-        `User created: ${newUser.name} (${newUser.email})`,
+        newUser.email,
+        `User Email ID and Name: ${newUser.email} - ${newUser.name}`,
         {
           userName: newUser.name,
           userEmail: newUser.email,
@@ -1263,7 +1263,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: 'User not found' });
       }
 
-      await logAudit(req.currentUser.id, 'UPDATE', 'user', userId);
+      // Get user details for audit log
+      await logAudit(req.currentUser.id, 'UPDATE', 'user', userId, updateData.email, `User Email ID and Name: ${updateData.email} - ${updateData.name}`);
 
       res.json(updatedUser);
     } catch (error) {
@@ -1299,7 +1300,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: 'User not found' });
       }
 
-      await logAudit(req.user.id, 'UPDATE', 'user_profile_image', req.user.id);
+      await logAudit(req.user.id, 'UPDATE', 'user_profile_image', req.user.id, updatedUser.email, `User Email ID and Name: ${updatedUser.email} - ${updatedUser.name}`);
 
       res.json({ 
         message: 'Profile image updated successfully',
@@ -1321,18 +1322,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const success = await storage.deleteUser(userId);
       if (!success) {
         // If user doesn't exist, consider it already deleted (success case)
-        await logAudit(req.currentUser.id, 'DELETE', 'user', userId);
+        // Get user for audit before deletion
+        const userToDelete = await storage.getUser(userId);
+        await logAudit(req.currentUser.id, 'DELETE', 'user', userId, userToDelete?.email, `User Email ID and Name: ${userToDelete?.email} - ${userToDelete?.name}`);
         return res.json({ message: 'User deleted successfully' });
       }
 
-      await logAudit(req.currentUser.id, 'DELETE', 'user', userId);
+      // Note: user already deleted at this point, using userId for reference
+      await logAudit(req.currentUser.id, 'DELETE', 'user', userId, null, `User deleted (ID: ${userId})`);
 
       res.json({ message: 'User deleted successfully' });
     } catch (error) {
       console.error('User deletion error:', error);
       // Log the deletion attempt even if it fails
       try {
-        await logAudit(req.currentUser.id, 'DELETE_ATTEMPT', 'user', req.params.id);
+        // Get user for audit log
+        const userForAudit = await storage.getUser(req.params.id);
+        await logAudit(req.currentUser.id, 'DELETE_ATTEMPT', 'user', req.params.id, userForAudit?.email, `User Email ID and Name: ${userForAudit?.email} - ${userForAudit?.name}`);
       } catch (auditError) {
         console.error('Audit log error:', auditError);
       }
@@ -1625,7 +1631,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validatedData = insertFieldSchema.parse(req.body);
       const field = await storage.createField(validatedData);
       
-      await logAudit(req.currentUser.id, 'CREATE', 'field', field.id);
+      await logAudit(req.currentUser.id, 'CREATE', 'field', field.id, null, `Field Name: ${field.name}`);
       
       res.status(201).json(field);
     } catch (error) {
@@ -1649,7 +1655,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: 'Field not found' });
       }
 
-      await logAudit(req.currentUser.id, 'DELETE', 'field', fieldId);
+      // Get field name before deletion
+      const fieldToDelete = await storage.getField(fieldId);
+      await logAudit(req.currentUser.id, 'DELETE', 'field', fieldId, null, `Field Name: ${fieldToDelete?.name || 'Unknown'}`);
 
       res.json({ message: 'Field deleted successfully' });
     } catch (error) {
@@ -1690,7 +1698,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         sortOrder: sortOrder || 0
       });
 
-      await logAudit(req.currentUser.id, 'CREATE', 'field_dropdown_option', option.id);
+      // Get field name for audit
+      const field = await storage.getField(fieldId);
+      await logAudit(req.currentUser.id, 'CREATE', 'field_dropdown_option', option.id, null, `Field Name: ${field?.name || 'Unknown'}`);
       
       res.status(201).json(option);
     } catch (error) {
@@ -1718,7 +1728,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Dropdown option not found" });
       }
 
-      await logAudit(req.currentUser.id, 'UPDATE', 'field_dropdown_option', id);
+      // Get field name for audit
+      const fieldForUpdate = await storage.getFieldByDropdownOptionId(id);
+      await logAudit(req.currentUser.id, 'UPDATE', 'field_dropdown_option', id, null, `Field Name: ${fieldForUpdate?.name || 'Unknown'}`);
       
       res.json(option);
     } catch (error) {
@@ -1739,7 +1751,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Dropdown option not found" });
       }
 
-      await logAudit(req.currentUser.id, 'DELETE', 'field_dropdown_option', id);
+      // Get field name for audit
+      const fieldForDelete = await storage.getFieldByDropdownOptionId(id);
+      await logAudit(req.currentUser.id, 'DELETE', 'field_dropdown_option', id, null, `Field Name: ${fieldForDelete?.name || 'Unknown'}`);
       
       res.json({ message: "Dropdown option deleted successfully" });
     } catch (error) {
@@ -1764,7 +1778,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validatedData = insertDepartmentSchema.parse(req.body);
       const department = await storage.createDepartment(validatedData);
       
-      await logAudit(req.currentUser.id, 'CREATE', 'department', department.id);
+      await logAudit(req.currentUser.id, 'CREATE', 'department', department.id, null, `Department Name: ${department.name}`);
       
       res.status(201).json(department);
     } catch (error) {
@@ -1786,7 +1800,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Department not found" });
       }
       
-      await logAudit(req.currentUser.id, 'UPDATE', 'department', department.id);
+      await logAudit(req.currentUser.id, 'UPDATE', 'department', department.id, null, `Department Name: ${department.name}`);
       
       res.json(department);
     } catch (error) {
@@ -1807,7 +1821,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Department not found" });
       }
       
-      await logAudit(req.currentUser.id, 'DELETE', 'department', id);
+      // Get department name before deletion
+      const deptToDelete = await storage.getDepartment(id);
+      await logAudit(req.currentUser.id, 'DELETE', 'department', id, null, `Department Name: ${deptToDelete?.name || 'Unknown'}`);
       
       res.json({ message: "Department deleted successfully" });
     } catch (error) {
@@ -2308,7 +2324,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      await logAudit(userId, 'CREATE', 'courier', courier.id);
+      await logAudit(userId, 'CREATE', 'courier', courier.id, null, `POD Number: ${courier.podNo}`);
       
       res.status(201).json(courier);
     } catch (error) {
@@ -2344,7 +2360,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validatedData = insertCourierSchema.partial().parse(req.body);
       const courier = await storage.updateCourier(id, validatedData);
       
-      await logAudit(userId, 'UPDATE', 'courier', id);
+      await logAudit(userId, 'UPDATE', 'courier', id, null, `POD Number: ${courier?.podNo || existingCourier?.podNo || 'Unknown'}`);
       
       res.json(courier);
     } catch (error) {
@@ -2400,7 +2416,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validatedData = insertCourierSchema.partial().parse(updateData);
       const courier = await storage.updateCourier(id, validatedData);
       
-      await logAudit(userId, 'UPDATE', 'courier', id);
+      await logAudit(userId, 'UPDATE', 'courier', id, null, `POD Number: ${courier?.podNo || existingCourier?.podNo || 'Unknown'}`);
       
       res.json(courier);
     } catch (error) {
@@ -2421,7 +2437,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Courier not found" });
       }
       
-      await logAudit(req.currentUser.id, 'DELETE', 'courier', id);
+      // Get courier POD before deletion
+      const courierToDelete = await storage.getCourierById(id);
+      await logAudit(req.currentUser.id, 'DELETE', 'courier', id, null, `POD Number: ${courierToDelete?.podNo || 'Unknown'}`);
       
       res.json({ message: "Courier deleted successfully" });
     } catch (error) {
@@ -2439,7 +2457,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Courier not found" });
       }
       
-      await logAudit(req.currentUser.id, 'RESTORE', 'courier', id);
+      // Get courier POD for audit
+      const courierToRestore = await storage.getCourierById(id);
+      await logAudit(req.currentUser.id, 'RESTORE', 'courier', id, null, `POD Number: ${courierToRestore?.podNo || 'Unknown'}`);
       
       res.json({ message: "Courier restored successfully" });
     } catch (error) {
@@ -3505,7 +3525,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validatedData = insertFieldSchema.parse(req.body);
       const field = await storage.createField(validatedData);
       
-      await logAudit(req.currentUser.id, 'CREATE', 'field', field.id);
+      await logAudit(req.currentUser.id, 'CREATE', 'field', field.id, null, `Field Name: ${field.name}`);
       
       res.status(201).json(field);
     } catch (error) {
@@ -3533,7 +3553,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validatedData = insertSmtpSettingsSchema.parse(req.body);
       const settings = await storage.updateSmtpSettings(validatedData);
       
-      await logAudit(req.currentUser.id, 'UPDATE', 'smtp_settings');
+      await logAudit(req.currentUser.id, 'UPDATE', 'smtp_settings', null, req.currentUser.email, `User Email ID and Name: ${req.currentUser.email} - ${req.currentUser.name}`);
       
       res.json(settings);
     } catch (error) {
@@ -3561,7 +3581,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validatedData = insertSmtpSettingsSchema.parse(req.body);
       const settings = await storage.updateSamlSettings(validatedData);
       
-      await logAudit(req.currentUser.id, 'UPDATE', 'saml_settings');
+      await logAudit(req.currentUser.id, 'UPDATE', 'saml_settings', null, req.currentUser.email, `User Email ID and Name: ${req.currentUser.email} - ${req.currentUser.name}`);
       
       res.json(settings);
     } catch (error) {
@@ -3759,7 +3779,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validatedData = insertAuthorityLetterTemplateSchema.parse(req.body);
       const template = await storage.createAuthorityLetterTemplate(validatedData);
       
-      await logAudit(req.currentUser.id, 'CREATE', 'authority_letter_template', template.id);
+      await logAudit(req.currentUser.id, 'CREATE', 'authority_letter_template', template.id, req.currentUser.email, `User Email ID and Name: ${req.currentUser.email} - ${req.currentUser.name}`);
       
       res.status(201).json(template);
     } catch (error) {
@@ -3781,7 +3801,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Template not found" });
       }
       
-      await logAudit(req.currentUser.id, 'UPDATE', 'authority_letter_template', template.id);
+      await logAudit(req.currentUser.id, 'UPDATE', 'authority_letter_template', template.id, req.currentUser.email, `User Email ID and Name: ${req.currentUser.email} - ${req.currentUser.name}`);
       
       res.json(template);
     } catch (error) {
@@ -3802,7 +3822,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Template not found" });
       }
       
-      await logAudit(req.currentUser.id, 'DELETE', 'authority_letter_template', id);
+      await logAudit(req.currentUser.id, 'DELETE', 'authority_letter_template', id, req.currentUser.email, `User Email ID and Name: ${req.currentUser.email} - ${req.currentUser.name}`);
       
       res.json({ message: "Template deleted successfully" });
     } catch (error) {
@@ -3846,7 +3866,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validatedData = insertAuthorityLetterFieldSchema.parse(req.body);
       const field = await storage.createAuthorityLetterField(validatedData);
       
-      await logAudit(req.currentUser.id, 'CREATE', 'authority_letter_field', field.id);
+      await logAudit(req.currentUser.id, 'CREATE', 'authority_letter_field', field.id, req.currentUser.email, `User Email ID and Name: ${req.currentUser.email} - ${req.currentUser.name}`);
       
       res.status(201).json(field);
     } catch (error) {
@@ -3903,7 +3923,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      await logAudit(req.currentUser.id, 'UPDATE', 'authority_letter_field_order', numericFieldId);
+      await logAudit(req.currentUser.id, 'UPDATE', 'authority_letter_field_order', numericFieldId, req.currentUser.email, `User Email ID and Name: ${req.currentUser.email} - ${req.currentUser.name}`);
       
       res.json({ message: "Field order updated successfully" });
     } catch (error) {
@@ -3927,7 +3947,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Field not found" });
       }
       
-      await logAudit(req.currentUser.id, 'UPDATE', 'authority_letter_field', id);
+      await logAudit(req.currentUser.id, 'UPDATE', 'authority_letter_field', id, req.currentUser.email, `User Email ID and Name: ${req.currentUser.email} - ${req.currentUser.name}`);
       
       res.json(field);
     } catch (error) {
@@ -3949,7 +3969,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Field not found" });
       }
       
-      await logAudit(req.currentUser.id, 'DELETE', 'authority_letter_field', id);
+      await logAudit(req.currentUser.id, 'DELETE', 'authority_letter_field', id, req.currentUser.email, `User Email ID and Name: ${req.currentUser.email} - ${req.currentUser.name}`);
       
       res.json({ message: "Field deleted successfully" });
     } catch (error) {
@@ -4181,7 +4201,7 @@ Jigar Jodhani
         fileName: fileName || `authority_letter_${department.name}_${Date.now()}.pdf`
       });
       
-      await logAudit(user.id, 'CREATE', 'authority_letter_pdf_dept', department.id.toString());
+      await logAudit(user.id, 'CREATE', 'authority_letter_pdf_dept', department.id.toString(), user.email, `User Email ID and Name: ${user.email} - ${user.name}`);
       
       // Set headers for PDF download
       const finalFileName = fileName?.endsWith('.pdf') ? fileName : `${fileName || 'authority_letter'}.pdf`;
@@ -4322,7 +4342,7 @@ Jigar Jodhani
       
       const zipBuffer = await zip.generateAsync({ type: 'nodebuffer' });
       
-      await logAudit(user.id, 'CREATE', 'bulk_authority_letters_dept', `${results.length} PDFs for dept ${department.id}`);
+      await logAudit(user.id, 'CREATE', 'bulk_authority_letters_dept', `${results.length} PDFs for dept ${department.id}`, user.email, `User Email ID and Name: ${user.email} - ${user.name}`);
       
       // Send ZIP file
       res.setHeader('Content-Type', 'application/zip');
@@ -4723,7 +4743,7 @@ ${content}
       }
       
       const newTemplate = await storage.createAuthorityLetterTemplate(templateData);
-      await logAudit(user.id, 'CREATE', 'authority_template', newTemplate.id.toString());
+      await logAudit(user.id, 'CREATE', 'authority_template', newTemplate.id.toString(), user.email, `User Email ID and Name: ${user.email} - ${user.name}`);
       
       res.status(201).json(newTemplate);
     } catch (error) {
@@ -4757,7 +4777,7 @@ ${content}
         return res.status(404).json({ message: "Template not found" });
       }
       
-      await logAudit(user.id, 'UPDATE', 'authority_template', templateId.toString());
+      await logAudit(user.id, 'UPDATE', 'authority_template', templateId.toString(), user.email, `User Email ID and Name: ${user.email} - ${user.name}`);
       res.json(updatedTemplate);
     } catch (error) {
       console.error("Error updating authority template:", error);
@@ -4776,7 +4796,7 @@ ${content}
         return res.status(404).json({ message: "Template not found" });
       }
       
-      await logAudit(user.id, 'DELETE', 'authority_template', templateId.toString());
+      await logAudit(user.id, 'DELETE', 'authority_template', templateId.toString(), user.email, `User Email ID and Name: ${user.email} - ${user.name}`);
       res.json({ message: "Template deleted successfully" });
     } catch (error) {
       console.error("Error deleting authority template:", error);
@@ -4866,7 +4886,7 @@ ${result.value}
         return res.status(404).json({ message: "Failed to update template" });
       }
       
-      await logAudit(user.id, 'UPLOAD', 'authority_word_template', templateId.toString());
+      await logAudit(user.id, 'UPLOAD', 'authority_word_template', templateId.toString(), user.email, `User Email ID and Name: ${user.email} - ${user.name}`);
       
       res.json({ 
         message: "Word template uploaded successfully",
