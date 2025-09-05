@@ -60,8 +60,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     ...(shouldShowBranches ? [{ name: "Branch List", href: "/branches", icon: MapPin, current: location === "/branches", group: "management" }] : []),
     { name: "Vendor Master", href: "/vendors", icon: Store, current: location === "/vendors", group: "management" },
     { name: "Manage Authority Letter", href: "/manage-authority-letter", icon: FileText, current: location === "/manage-authority-letter", group: "management" },
-    { name: "Settings", href: "/settings", icon: Settings, current: false, group: "settings" },
-    { name: "SAML SSO", href: "/settings?tab=saml", icon: KeyRound, current: false, group: "settings" },
+    { name: "Settings", href: "/settings", icon: Settings, current: location === "/settings", group: "settings" },
+    { name: "SAML SSO", href: "/saml-sso", icon: KeyRound, current: location === "/saml-sso", group: "settings" },
     { name: "Custom Fields", href: "/custom-fields", icon: FormInput, current: location === "/custom-fields", group: "settings" },
     { name: "Audit Logs", href: "/audit-logs", icon: History, current: location === "/audit-logs", group: "settings" },
     { name: "Export Data", href: "/export", icon: FileDown, group: "tools" },
@@ -186,27 +186,14 @@ function SidebarContent({ navigation, adminNavigation, user, onLogout }: any) {
               {adminNavigation
                 .filter((item: any) => item.group === "settings")
                 .map((item: any) => {
-                  // Dynamic current state based on item name and URL
-                  let isCurrent = false;
-                  if (item.name === "Settings") {
-                    isCurrent = isOnSettingsButNotSaml;
-                  } else if (item.name === "SAML SSO") {
-                    isCurrent = isOnSamlTab;
-                  } else {
-                    isCurrent = item.current;
-                  }
+                  // Use the item's current property directly since we fixed the href
+                  const isCurrent = item.current;
                   
                   return (
                     <button
                       key={item.name}
                       onClick={() => {
-                        if (item.name === "Settings") {
-                          navigate("/settings");
-                        } else if (item.name === "SAML SSO") {
-                          navigate("/settings?tab=saml");
-                        } else {
-                          navigate(item.href);
-                        }
+                        navigate(item.href);
                       }}
                       className={cn(
                         isCurrent

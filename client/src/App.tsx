@@ -18,6 +18,7 @@ import Departments from "@/pages/departments";
 import Branches from "@/pages/branches";
 import Vendors from "@/pages/vendors";
 import Settings from "@/pages/settings";
+import SamlSSO from "@/pages/saml-sso";
 import AppLayout from "@/components/layout/app-layout";
 
 function Router() {
@@ -55,6 +56,7 @@ function Router() {
             <Route path="/custom-fields" component={Settings} />
             <Route path="/audit-logs" component={Settings} />
             <Route path="/settings" component={Settings} />
+            <Route path="/saml-sso" component={SamlSSO} />
           </Switch>
         </AppLayout>
       )}

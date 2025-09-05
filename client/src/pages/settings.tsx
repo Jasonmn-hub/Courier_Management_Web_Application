@@ -34,12 +34,6 @@ interface SmtpSettings {
   password: string;
 }
 
-interface SamlSettings {
-  entityId: string;
-  ssoUrl: string;
-  certificateContent: string;
-  enabled: boolean;
-}
 
 interface CustomField {
   id: number;
@@ -656,9 +650,8 @@ export default function Settings() {
             const newUrl = tab === "saml" ? "/settings?tab=saml" : "/settings";
             window.history.replaceState({}, '', newUrl);
           }} className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="smtp" data-testid="tab-smtp-settings">SMTP Settings</TabsTrigger>
-              <TabsTrigger value="saml" data-testid="tab-saml-sso">SAML SSO</TabsTrigger>
               <TabsTrigger value="fields" data-testid="tab-fields">Fields</TabsTrigger>
               <TabsTrigger value="audit" data-testid="tab-audit-logs">Audit Logs</TabsTrigger>
             </TabsList>
@@ -795,9 +788,6 @@ export default function Settings() {
               </Card>
             </TabsContent>
 
-            <TabsContent value="saml" className="mt-6">
-              <SamlSSOSettings />
-            </TabsContent>
 
             <TabsContent value="fields" className="mt-6">
               <Card>
