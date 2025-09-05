@@ -244,8 +244,39 @@ function AuditLogsTable() {
     },
   });
 
+  // Fetch all users for entity resolution
+  const { data: allUsers } = useQuery({
+    queryKey: ['/api/users'],
+  });
+
   const [searchTerm, setSearchTerm] = useState("");
   const [viewingLog, setViewingLog] = useState<AuditLog | null>(null);
+
+  // Function to get entity details - shows user name/email for user entities
+  const getEntityDetails = (entityId: string | number, entityType: string, users: any) => {
+    if (entityType.toLowerCase() === 'user') {
+      // Look up user details from the users data
+      const usersList = (users as any)?.users || [];
+      const user = usersList.find((u: any) => u.id === String(entityId));
+      if (user) {
+        return `User: ${user.name || 'Unknown'} (${user.email || 'No email'})`;
+      }
+      return `User ID: ${entityId} (Details not found)`;
+    }
+    
+    // For non-user entities, use the original formatted ID
+    const entityTypeMap: Record<string, any> = {
+      'courier': 'courier',
+      'department': 'department', 
+      'branch': 'branch',
+      'vendor': 'vendor',
+      'received_courier': 'received_courier',
+      'audit_log': 'audit_log'
+    };
+    
+    const mappedType = entityTypeMap[entityType.toLowerCase()] || 'audit_log';
+    return `Entity ID: ${formatEntityId(entityId, mappedType)}`;
+  };
 
   const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(event.target.value);
@@ -352,12 +383,7 @@ function AuditLogsTable() {
                 <TableCell>
                   {log.action === 'EMAIL_CONFIRM_RECEIVED' ?
                     (log.emailId ? `Email Confirmed: ${log.emailId}` : 'Email Confirmation') :
-                    (log.details || (log.entityId ? `Entity ID: ${formatEntityId(log.entityId, log.entityType.toLowerCase() === 'courier' ? 'courier' : 
-                        log.entityType.toLowerCase() === 'user' ? 'user' : 
-                        log.entityType.toLowerCase() === 'department' ? 'department' : 
-                        log.entityType.toLowerCase() === 'branch' ? 'branch' : 
-                        log.entityType.toLowerCase() === 'vendor' ? 'vendor' :
-                        log.entityType.toLowerCase() === 'received_courier' ? 'received_courier' : 'audit_log')}` : 'N/A'))
+                    (log.details || (log.entityId ? getEntityDetails(log.entityId, log.entityType, allUsers) : 'N/A'))
                   }
                 </TableCell>
                 <TableCell>
