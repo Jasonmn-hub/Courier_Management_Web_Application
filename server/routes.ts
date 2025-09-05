@@ -377,11 +377,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } catch (emailError) {
         console.error('❌ Error sending confirmation receipt email for courier:', emailError);
         console.error('❌ SMTP settings check:', { 
-          host: smtpSettings.host, 
-          port: smtpSettings.port, 
-          username: smtpSettings.username,
-          fromEmail: smtpSettings.fromEmail,
-          hasPassword: !!smtpSettings.password
+          host: smtpSettings?.host, 
+          port: smtpSettings?.port, 
+          username: smtpSettings?.username,
+          fromEmail: smtpSettings?.fromEmail,
+          hasPassword: !!smtpSettings?.password
         });
         // Don't fail the confirmation if email fails
       }
@@ -3487,7 +3487,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put('/api/saml-settings', authenticateToken, requireRole(['admin']), setCurrentUser(), async (req: any, res) => {
     try {
-      const validatedData = insertSamlSettingsSchema.parse(req.body);
+      const validatedData = insertSmtpSettingsSchema.parse(req.body);
       const settings = await storage.updateSamlSettings(validatedData);
       
       await logAudit(req.currentUser.id, 'UPDATE', 'saml_settings');
@@ -4594,7 +4594,7 @@ ${content}
 </Relationships>`);
         
         // Generate the Word document
-        const wordBuffer = await zip.generateAsync({
+        const wordBuffer = await (zip as any).generateAsync({
           type: 'nodebuffer',
           compression: 'DEFLATE'
         });
