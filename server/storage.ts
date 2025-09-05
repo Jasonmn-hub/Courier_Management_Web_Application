@@ -170,6 +170,7 @@ export interface IStorage {
   createBranch(branch: InsertBranch): Promise<Branch>;
   updateBranch(id: number, branch: Partial<InsertBranch>): Promise<Branch | undefined>;
   deleteBranch(id: number): Promise<boolean>;
+  deleteBulkBranches(ids: number[]): Promise<number>;
   updateBranchStatus(id: number, status: string): Promise<Branch | undefined>;
   createBulkBranches(branches: InsertBranch[]): Promise<Branch[]>;
   exportBranches(status?: string): Promise<Branch[]>;
@@ -1341,6 +1342,16 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error("Error deleting branch:", error);
       return false;
+    }
+  }
+
+  async deleteBulkBranches(ids: number[]): Promise<number> {
+    try {
+      const result = await db.delete(branches).where(sql`${branches.id} = ANY(${ids})`);
+      return (result as any).rowCount || 0;
+    } catch (error) {
+      console.error("Error deleting branches:", error);
+      return 0;
     }
   }
 

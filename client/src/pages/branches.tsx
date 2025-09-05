@@ -40,6 +40,7 @@ import {
   ChevronLeft,
   ChevronRight
 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { formatEntityId } from "@/lib/idUtils";
@@ -77,6 +78,8 @@ export default function Branches() {
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [exportType, setExportType] = useState<'all' | 'active' | 'closed'>('all');
   const [duplicateData, setDuplicateData] = useState<any>(null);
+  const [selectedBranches, setSelectedBranches] = useState<number[]>([]);
+  const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
 
   const [formData, setFormData] = useState({
     branchName: '',
@@ -271,6 +274,34 @@ export default function Branches() {
     },
   });
 
+  // Bulk delete branches mutation
+  const bulkDeleteMutation = useMutation({
+    mutationFn: async (branchIds: number[]) => {
+      const response = await apiRequest('POST', '/api/branches/bulk-delete', { branchIds });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({ title: "Success", description: data.message });
+      refetchBranches();
+      setSelectedBranches([]);
+      setShowBulkDeleteDialog(false);
+    },
+    onError: (error: any) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({ title: "Error", description: error.message || "Failed to delete branches", variant: "destructive" });
+    },
+  });
+
   const resetForm = () => {
     setFormData({
       branchName: '',
@@ -285,6 +316,28 @@ export default function Branches() {
     });
     setEditingBranch(null);
   };
+
+  // Handle checkbox selection
+  const handleSelectBranch = (branchId: number, checked: boolean) => {
+    if (checked) {
+      setSelectedBranches(prev => [...prev, branchId]);
+    } else {
+      setSelectedBranches(prev => prev.filter(id => id !== branchId));
+    }
+  };
+
+  // Handle select all
+  const handleSelectAll = (checked: boolean) => {
+    if (checked && branches?.branches) {
+      setSelectedBranches(branches.branches.map(branch => branch.id));
+    } else {
+      setSelectedBranches([]);
+    }
+  };
+
+  // Check if all visible branches are selected
+  const allSelected = branches?.branches?.length > 0 && selectedBranches.length === branches.branches.length;
+  const someSelected = selectedBranches.length > 0 && selectedBranches.length < (branches?.branches?.length || 0);
 
   // Reset to first page when filters change
   useEffect(() => {
@@ -405,6 +458,16 @@ export default function Branches() {
           </Button>
           {canModifyBranches && (
             <>
+              {selectedBranches.length > 0 && (
+                <Button 
+                  onClick={() => setShowBulkDeleteDialog(true)} 
+                  variant="destructive" 
+                  data-testid="button-bulk-delete"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete Selected ({selectedBranches.length})
+                </Button>
+              )}
               <Button onClick={() => setShowBulkUpload(true)} variant="outline" data-testid="button-bulk-upload">
                 <Upload className="h-4 w-4 mr-2" />
                 Bulk Upload
@@ -790,6 +853,41 @@ export default function Branches() {
           </DialogContent>
         </Dialog>
       )}
+
+      {/* Bulk Delete Confirmation Dialog */}
+      {showBulkDeleteDialog && (
+        <Dialog open={showBulkDeleteDialog} onOpenChange={setShowBulkDeleteDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Confirm Bulk Delete</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <p className="text-sm text-slate-600">
+                Are you sure you want to delete {selectedBranches.length} selected branch{selectedBranches.length > 1 ? 'es' : ''}? 
+                This action cannot be undone.
+              </p>
+              <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-sm text-red-800 font-medium">
+                  ⚠️ Warning: This will permanently delete all selected branches and their associated data.
+                </p>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowBulkDeleteDialog(false)} data-testid="button-cancel-bulk-delete">
+                Cancel
+              </Button>
+              <Button 
+                variant="destructive" 
+                onClick={() => bulkDeleteMutation.mutate(selectedBranches)}
+                disabled={bulkDeleteMutation.isPending}
+                data-testid="button-confirm-bulk-delete"
+              >
+                {bulkDeleteMutation.isPending ? 'Deleting...' : `Delete ${selectedBranches.length} Branch${selectedBranches.length > 1 ? 'es' : ''}`}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }
@@ -844,6 +942,16 @@ function BranchesTable({
           <Table>
             <TableHeader className="sticky top-0 bg-white z-10">
               <TableRow>
+                {canModifyBranches && (
+                  <TableHead className="w-12">
+                    <Checkbox
+                      checked={allSelected}
+                      indeterminate={someSelected}
+                      onCheckedChange={handleSelectAll}
+                      data-testid="checkbox-select-all"
+                    />
+                  </TableHead>
+                )}
                 <TableHead>Sr. No</TableHead>
                 <TableHead>Branch Name</TableHead>
                 <TableHead>Branch Code</TableHead>
@@ -858,6 +966,15 @@ function BranchesTable({
             <TableBody>
               {branches.map((branch) => (
                 <TableRow key={branch.id} data-testid={`row-branch-${branch.id}`}>
+                  {canModifyBranches && (
+                    <TableCell>
+                      <Checkbox
+                        checked={selectedBranches.includes(branch.id)}
+                        onCheckedChange={(checked) => handleSelectBranch(branch.id, checked as boolean)}
+                        data-testid={`checkbox-select-${branch.id}`}
+                      />
+                    </TableCell>
+                  )}
                   <TableCell>{branch.srNo || '-'}</TableCell>
                   <TableCell className="font-medium">{branch.branchName}</TableCell>
                   <TableCell>

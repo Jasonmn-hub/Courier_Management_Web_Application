@@ -47,7 +47,15 @@ export function useAuth() {
     },
   });
 
-  const logout = () => {
+  const logout = async () => {
+    try {
+      // Call logout endpoint to log the action
+      await apiRequest('POST', '/api/auth/logout');
+    } catch (error) {
+      // Even if logout fails, continue with local cleanup
+      console.error('Logout API call failed:', error);
+    }
+    
     localStorage.removeItem('auth_token');
     queryClient.setQueryData(["/api/auth/user"], null);
     queryClient.clear();

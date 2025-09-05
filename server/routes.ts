@@ -755,6 +755,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         role: user.role!
       });
 
+      // Log successful login
+      await logAudit(user.id, 'LOGIN', 'user', user.id, user.email);
+
       res.json({ token, user: { id: user.id, email: user.email, name: user.name, role: user.role } });
     } catch (error) {
       console.error('Login error:', error);
@@ -793,10 +796,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         role: newUser.role!
       });
 
+      // Log user registration
+      await logAudit(newUser.id, 'REGISTER', 'user', newUser.id, newUser.email);
+
       res.status(201).json({ token, user: { id: newUser.id, email: newUser.email, name: newUser.name, role: newUser.role } });
     } catch (error) {
       console.error('Registration error:', error);
       res.status(500).json({ message: 'Registration failed' });
+    }
+  });
+
+  // Logout endpoint
+  app.post('/api/auth/logout', authenticateToken, async (req: any, res) => {
+    try {
+      const user = req.user;
+      
+      // Log successful logout
+      await logAudit(user.id, 'LOGOUT', 'user', user.id, user.email);
+      
+      res.json({ message: 'Logged out successfully' });
+    } catch (error) {
+      console.error('Logout error:', error);
+      res.status(500).json({ message: 'Logout failed' });
     }
   });
 
@@ -2584,6 +2605,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Bulk delete branches
+  app.post('/api/branches/bulk-delete', authenticateToken, requireRole(['admin', 'sub_admin']), setCurrentUser(), async (req: any, res) => {
+    try {
+      const { branchIds } = req.body;
+      
+      if (!Array.isArray(branchIds) || branchIds.length === 0) {
+        return res.status(400).json({ message: "Branch IDs array is required" });
+      }
+
+      const deletedCount = await storage.deleteBulkBranches(branchIds);
+      
+      // Log individual audit entries for each branch deleted
+      for (const branchId of branchIds) {
+        await logAudit(req.currentUser.id, 'DELETE', 'branch', branchId);
+      }
+      
+      res.json({ 
+        message: `Successfully deleted ${deletedCount} branches`,
+        deletedCount 
+      });
+    } catch (error) {
+      console.error("Error in bulk branch deletion:", error);
+      res.status(500).json({ message: "Failed to delete branches" });
+    }
+  });
+
   app.patch('/api/branches/:id/status', authenticateToken, requireRole(['admin', 'sub_admin']), setCurrentUser(), async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
@@ -2740,7 +2787,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const createdBranches = await storage.createBulkBranches(branches);
       
-      await logAudit(req.currentUser.id, 'CREATE', 'branch', createdBranches.length);
+      // Log individual audit entries for each branch created
+      for (const branch of createdBranches) {
+        await logAudit(req.currentUser.id, 'CREATE', 'branch', branch.id);
+      }
 
       res.status(201).json({
         message: `Successfully created ${createdBranches.length} branches${duplicates.length > 0 ? ` (${duplicates.length} duplicates were approved and processed)` : ''}`,
