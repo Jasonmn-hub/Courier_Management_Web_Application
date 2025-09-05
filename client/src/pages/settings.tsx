@@ -486,13 +486,13 @@ function AuditLogsTable() {
                 <p>{viewingLog.entityType}</p>
               </div>
               
-              {/* Show details if available, otherwise fall back to entity ID */}
-              {viewingLog.details && (
-                <div>
-                  <Label className="font-semibold">Description</Label>
-                  <p className="text-blue-600 font-medium">{viewingLog.details}</p>
-                </div>
-              )}
+              {/* Show enhanced details if available, otherwise fall back to entity ID */}
+              <div>
+                <Label className="font-semibold">Description</Label>
+                <p className="text-blue-600 font-medium">
+                  {viewingLog.details || (viewingLog.entityId ? getEntityDetails(viewingLog.entityId, viewingLog.entityType, allUsers) : 'N/A')}
+                </p>
+              </div>
               
               <div>
                 <Label className="font-semibold">Entity ID</Label>
