@@ -197,20 +197,28 @@ function SidebarContent({ navigation, adminNavigation, user, onLogout }: any) {
                   }
                   
                   return (
-                    <Link
+                    <button
                       key={item.name}
-                      href={item.href}
+                      onClick={() => {
+                        if (item.name === "Settings") {
+                          window.location.href = "/settings";
+                        } else if (item.name === "SAML SSO") {
+                          window.location.href = "/settings?tab=saml";
+                        } else {
+                          window.location.href = item.href;
+                        }
+                      }}
                       className={cn(
                         isCurrent
                           ? "bg-primary bg-opacity-10 text-black font-bold"
                           : "text-slate-600 hover:bg-slate-50 hover:text-slate-900",
-                        "group flex items-center px-2 py-2 text-sm font-medium rounded-md"
+                        "w-full text-left group flex items-center px-2 py-2 text-sm font-medium rounded-md"
                       )}
                       data-testid={`link-${item.name.toLowerCase().replace(' ', '-')}`}
                     >
                       <item.icon className="mr-3 h-4 w-4" />
                       {item.name}
-                    </Link>
+                    </button>
                   );
                 })}
             </div>
