@@ -53,6 +53,13 @@ interface DropdownOption {
   sortOrder: number;
 }
 
+interface SamlSettings {
+  entityId?: string;
+  ssoUrl?: string;
+  certificateContent?: string;
+  enabled?: boolean;
+}
+
 interface AuditLog {
   id: number;
   userId: string;
@@ -62,6 +69,8 @@ interface AuditLog {
   timestamp: string;
   user?: User;
   emailId?: string;
+  details?: string;
+  entityData?: any;
 }
 
 function SamlSSOSettings() {
@@ -343,12 +352,12 @@ function AuditLogsTable() {
                 <TableCell>
                   {log.action === 'EMAIL_CONFIRM_RECEIVED' ?
                     (log.emailId ? `Email Confirmed: ${log.emailId}` : 'Email Confirmation') :
-                    (log.entityId ? `Entity ID: ${formatEntityId(log.entityId, log.entityType.toLowerCase() === 'courier' ? 'courier' : 
+                    (log.details || (log.entityId ? `Entity ID: ${formatEntityId(log.entityId, log.entityType.toLowerCase() === 'courier' ? 'courier' : 
                         log.entityType.toLowerCase() === 'user' ? 'user' : 
                         log.entityType.toLowerCase() === 'department' ? 'department' : 
                         log.entityType.toLowerCase() === 'branch' ? 'branch' : 
                         log.entityType.toLowerCase() === 'vendor' ? 'vendor' :
-                        log.entityType.toLowerCase() === 'received_courier' ? 'received_courier' : 'audit_log')}` : 'N/A')
+                        log.entityType.toLowerCase() === 'received_courier' ? 'received_courier' : 'audit_log')}` : 'N/A'))
                   }
                 </TableCell>
                 <TableCell>
@@ -431,10 +440,39 @@ function AuditLogsTable() {
                 <Label className="font-semibold">Entity Type</Label>
                 <p>{viewingLog.entityType}</p>
               </div>
+              
+              {/* Show details if available, otherwise fall back to entity ID */}
+              {viewingLog.details && (
+                <div>
+                  <Label className="font-semibold">Description</Label>
+                  <p className="text-blue-600 font-medium">{viewingLog.details}</p>
+                </div>
+              )}
+              
               <div>
                 <Label className="font-semibold">Entity ID</Label>
                 <p>{viewingLog.entityId || 'N/A'}</p>
               </div>
+
+              {/* Show entity data if available */}
+              {viewingLog.entityData && (
+                <div>
+                  <Label className="font-semibold">Entity Information</Label>
+                  <div className="bg-slate-50 p-3 rounded-md mt-2">
+                    {typeof viewingLog.entityData === 'object' ? (
+                      Object.entries(viewingLog.entityData).map(([key, value]) => (
+                        <div key={key} className="flex justify-between py-1 border-b border-slate-200 last:border-0">
+                          <span className="font-medium text-slate-600">{key}:</span>
+                          <span className="text-slate-800">{value as string}</span>
+                        </div>
+                      ))
+                    ) : (
+                      <p>{JSON.stringify(viewingLog.entityData)}</p>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {viewingLog.action === 'EMAIL_CONFIRM_RECEIVED' ? (
                 <>
                   <div>

@@ -1079,7 +1079,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         departmentId: departmentId || null
       });
 
-      await logAudit(req.currentUser.id, 'CREATE', 'user', newUser.id);
+      await logAudit(
+        req.currentUser.id, 
+        'CREATE', 
+        'user', 
+        newUser.id,
+        undefined,
+        `User created: ${newUser.name} (${newUser.email})`,
+        {
+          userName: newUser.name,
+          userEmail: newUser.email,
+          userRole: newUser.role,
+          employeeCode: newUser.employeeCode,
+          departmentId: newUser.departmentId
+        }
+      );
 
       // Send email notification to new user
       try {
@@ -1570,7 +1584,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Helper function to log audit
-  const logAudit = async (userId: string | null, action: string, entityType: string, entityId?: string | number, emailId?: string) => {
+  const logAudit = async (
+    userId: string | null, 
+    action: string, 
+    entityType: string, 
+    entityId?: string | number, 
+    emailId?: string,
+    details?: string,
+    entityData?: any
+  ) => {
     try {
       // For temp users or email confirmations, create audit logs with null userId to avoid foreign key constraint
       await storage.createAuditLog({
@@ -1579,6 +1601,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         entityType,
         entityId: typeof entityId === 'number' ? entityId.toString() : entityId,
         emailId: emailId || null,
+        details: details || null,
+        entityData: entityData || null,
       });
     } catch (error) {
       console.error("Failed to log audit:", error);
@@ -2561,7 +2585,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validatedData = insertBranchSchema.parse(req.body);
       const branch = await storage.createBranch(validatedData);
       
-      await logAudit(req.currentUser.id, 'CREATE', 'branch', branch.id);
+      await logAudit(
+        req.currentUser.id, 
+        'CREATE', 
+        'branch', 
+        branch.id,
+        undefined,
+        `Branch created: ${branch.branchName} (${branch.branchCode})`,
+        {
+          branchName: branch.branchName,
+          branchCode: branch.branchCode,
+          branchAddress: branch.branchAddress,
+          state: branch.state,
+          status: branch.status
+        }
+      );
       
       res.status(201).json(branch);
     } catch (error) {
@@ -2583,7 +2621,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Branch not found" });
       }
       
-      await logAudit(req.currentUser.id, 'UPDATE', 'branch', branch.id);
+      await logAudit(
+        req.currentUser.id, 
+        'UPDATE', 
+        'branch', 
+        branch.id,
+        undefined,
+        `Branch updated: ${branch.branchName} (${branch.branchCode})`,
+        {
+          branchName: branch.branchName,
+          branchCode: branch.branchCode,
+          branchAddress: branch.branchAddress,
+          state: branch.state,
+          status: branch.status,
+          updatedFields: Object.keys(validatedData)
+        }
+      );
       
       res.json(branch);
     } catch (error) {
@@ -2598,13 +2651,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete('/api/branches/:id', authenticateToken, requireRole(['admin', 'sub_admin']), setCurrentUser(), async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
+      
+      // Get branch details before deletion for audit log
+      const branchToDelete = await storage.getBranch(id);
+      
       const success = await storage.deleteBranch(id);
       
       if (!success) {
         return res.status(404).json({ message: "Branch not found" });
       }
       
-      await logAudit(req.currentUser.id, 'DELETE', 'branch', id);
+      await logAudit(
+        req.currentUser.id, 
+        'DELETE', 
+        'branch', 
+        id,
+        undefined,
+        branchToDelete ? `Branch deleted: ${branchToDelete.branchName} (${branchToDelete.branchCode})` : `Branch deleted: ID ${id}`,
+        branchToDelete ? {
+          branchName: branchToDelete.branchName,
+          branchCode: branchToDelete.branchCode,
+          branchAddress: branchToDelete.branchAddress,
+          state: branchToDelete.state,
+          status: branchToDelete.status
+        } : { branchId: id }
+      );
       
       res.json({ message: "Branch deleted successfully" });
     } catch (error) {

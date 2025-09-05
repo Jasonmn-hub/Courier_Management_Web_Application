@@ -161,6 +161,8 @@ export const auditLogs = pgTable("audit_logs", {
   entityType: varchar("entity_type", { length: 50 }),
   entityId: varchar("entity_id", { length: 100 }),
   emailId: varchar("email_id", { length: 255 }), // Track email ID for email confirmations
+  details: text("details"), // Store detailed description of what happened
+  entityData: jsonb("entity_data"), // Store relevant entity information for display
   timestamp: timestamp("timestamp").defaultNow(),
 });
 
