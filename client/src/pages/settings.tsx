@@ -249,10 +249,19 @@ function AuditLogsTable() {
     queryKey: ['/api/users'],
   });
 
+  // Fetch all couriers for entity resolution
+  const { data: allCouriers } = useQuery({
+    queryKey: ['/api/couriers-all'],
+    queryFn: async () => {
+      const response = await apiRequest('GET', '/api/couriers?limit=1000');
+      return response.json();
+    },
+  });
+
   const [searchTerm, setSearchTerm] = useState("");
   const [viewingLog, setViewingLog] = useState<AuditLog | null>(null);
 
-  // Function to get entity details - shows user name/email for user entities
+  // Function to get entity details - shows user name/email for user entities, POD numbers for couriers
   const getEntityDetails = (entityId: string | number, entityType: string, users: any) => {
     if (entityType.toLowerCase() === 'user') {
       // Look up user details from the users data
@@ -262,6 +271,16 @@ function AuditLogsTable() {
         return `User: ${user.name || 'Unknown'} (${user.email || 'No email'})`;
       }
       return `User ID: ${entityId} (Details not found)`;
+    }
+    
+    if (entityType.toLowerCase() === 'courier') {
+      // Look up courier details from the couriers data
+      const couriersList = (allCouriers as any)?.couriers || [];
+      const courier = couriersList.find((c: any) => c.id === Number(entityId));
+      if (courier) {
+        return `Courier POD: ${courier.podNo || 'No POD'} → ${courier.toBranch || 'Unknown Branch'}`;
+      }
+      return `Courier ID: ${entityId} (Details not found)`;
     }
     
     // For non-user entities, use the original formatted ID
