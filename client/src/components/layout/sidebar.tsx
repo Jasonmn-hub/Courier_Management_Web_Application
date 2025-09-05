@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { Link, useLocation } from "wouter";
+import { Link, useLocation, useRouter } from "wouter";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { ExportDialog } from "@/components/export-dialog";
@@ -112,7 +112,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 }
 
 function SidebarContent({ navigation, adminNavigation, user, onLogout }: any) {
-  const [location] = useLocation();
+  const [location, navigate] = useLocation();
   const [currentUrl, setCurrentUrl] = useState(window.location.href);
   
   // Update current URL when location changes
@@ -201,11 +201,11 @@ function SidebarContent({ navigation, adminNavigation, user, onLogout }: any) {
                       key={item.name}
                       onClick={() => {
                         if (item.name === "Settings") {
-                          window.location.href = "/settings";
+                          navigate("/settings");
                         } else if (item.name === "SAML SSO") {
-                          window.location.href = "/settings?tab=saml";
+                          navigate("/settings?tab=saml");
                         } else {
-                          window.location.href = item.href;
+                          navigate(item.href);
                         }
                       }}
                       className={cn(
