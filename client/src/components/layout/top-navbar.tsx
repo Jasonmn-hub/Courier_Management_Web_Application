@@ -55,15 +55,8 @@ export default function TopNavbar({ onMenuClick }: TopNavbarProps) {
       </button>
 
       <div className="flex-1 px-4 flex justify-between items-center">
-        {/* Left side - Logo and Title */}
-        <div className="flex items-center space-x-4">
-          <div className="flex-shrink-0">
-            <img 
-              src={lightLogo} 
-              alt="Light Microfinance" 
-              className="h-12 w-12 object-contain" 
-            />
-          </div>
+        {/* Left side - Title only */}
+        <div className="flex items-center">
           <div>
             <h1 className="text-xl font-bold text-slate-800">Light Finance Courier Management System</h1>
           </div>

@@ -109,20 +109,18 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 function SidebarContent({ navigation, adminNavigation, user, onLogout }: any) {
 
   return (
-    <div className="flex flex-col flex-grow bg-white border-r border-slate-200 pt-5 pb-4 overflow-y-auto">
-      <div className="flex items-center flex-shrink-0 px-6">
-        <div className="flex items-center">
-          <div className="flex-shrink-0">
-            <img 
-              src={lightLogo} 
-              alt="Light Microfinance" 
-              className="h-48 w-48 object-contain" 
-            />
-          </div>
+    <div className="flex flex-col flex-grow bg-white border-r border-slate-200 overflow-y-auto">
+      <div className="flex items-center justify-center flex-shrink-0 px-6 pt-5 pb-4">
+        <div className="flex-shrink-0">
+          <img 
+            src={lightLogo} 
+            alt="Light Microfinance" 
+            className="h-48 w-48 object-contain" 
+          />
         </div>
       </div>
       
-      <div className="mt-8 flex-grow flex flex-col">
+      <div className="flex-grow flex flex-col">
         <nav className="flex-1 px-4 space-y-1">
           {/* Main Navigation */}
           {navigation.map((item: any) => (
