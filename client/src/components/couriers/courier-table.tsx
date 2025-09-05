@@ -14,7 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Edit, Eye, Trash2, RotateCcw, ChevronLeft, ChevronRight, Check } from "lucide-react";
+import { Edit, Eye, Trash2, RotateCcw, ChevronLeft, ChevronRight, Check, CheckCheck } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
@@ -179,6 +179,39 @@ export default function CourierTable({
       toast({
         title: "Error",
         description: "Failed to update courier status",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const markAsCompletedMutation = useMutation({
+    mutationFn: async (id: number) => {
+      await apiRequest('PATCH', `/api/couriers/${id}`, { status: 'completed' });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/couriers'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/stats'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/stats/monthly'] });
+      toast({
+        title: "Success",
+        description: "Courier marked as completed - POD number added to details",
+      });
+    },
+    onError: (error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Error",
+        description: "Failed to mark courier as completed",
         variant: "destructive",
       });
     },
@@ -351,6 +384,19 @@ export default function CourierTable({
                                 title="Mark as Received"
                               >
                                 <Check className="h-4 w-4 text-green-600" />
+                              </Button>
+                            )}
+                            
+                            {courier.status === 'received' && (
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => markAsCompletedMutation.mutate(courier.id)}
+                                disabled={markAsCompletedMutation.isPending}
+                                data-testid={`button-completed-${courier.id}`}
+                                title="Mark as Done (Completed)"
+                              >
+                                <CheckCheck className="h-4 w-4 text-blue-600" />
                               </Button>
                             )}
                             

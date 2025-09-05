@@ -2358,6 +2358,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const validatedData = insertCourierSchema.partial().parse(req.body);
+      
+      // If status is being changed to 'completed', update details with POD number
+      if (validatedData.status === 'completed' && existingCourier.podNo) {
+        const existingDetails = existingCourier.details || '';
+        const podNote = `POD Number: ${existingCourier.podNo}`;
+        
+        // Only add POD note if it's not already in the details
+        if (!existingDetails.includes(podNote)) {
+          validatedData.details = existingDetails 
+            ? `${existingDetails}\n${podNote}` 
+            : podNote;
+        }
+      }
+      
       const courier = await storage.updateCourier(id, validatedData);
       
       await logAudit(userId, 'UPDATE', 'courier', id, null, `POD Number: ${courier?.podNo || existingCourier?.podNo || 'Unknown'}`);
