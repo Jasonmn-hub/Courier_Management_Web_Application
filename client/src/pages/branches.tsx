@@ -983,6 +983,11 @@ function BranchesTable({
                   <TableHead className="w-12">
                     <Checkbox
                       checked={allSelected}
+                      ref={(checkbox) => {
+                        if (checkbox) {
+                          checkbox.indeterminate = someSelected && !allSelected;
+                        }
+                      }}
                       onCheckedChange={(checked) => {
                         onSelectAll?.(checked as boolean);
                       }}

@@ -220,8 +220,19 @@ MIICXjCCAcegAwIBAgIBADANBgkqhkiG9w0BAQ0FADBLMQswCQYDVQQGEwJ1czEL...
 
 function AuditLogsTable() {
   const { toast } = useToast();
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize] = useState(20);
+  
   const { data: auditLogs, isLoading } = useQuery({
-    queryKey: ['/api/audit-logs'],
+    queryKey: ['/api/audit-logs', { limit: pageSize, offset: (currentPage - 1) * pageSize }],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      params.set('limit', pageSize.toString());
+      params.set('offset', ((currentPage - 1) * pageSize).toString());
+      
+      const response = await apiRequest('GET', `/api/audit-logs?${params.toString()}`);
+      return response.json();
+    },
   });
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -236,6 +247,8 @@ function AuditLogsTable() {
   }
 
   const logs = (auditLogs as any)?.logs || [];
+  const totalLogs = (auditLogs as any)?.total || 0;
+  const totalPages = Math.ceil(totalLogs / pageSize);
 
   const filteredLogs = logs.filter((log: AuditLog) => {
     const term = searchTerm.toLowerCase();
@@ -371,6 +384,36 @@ function AuditLogsTable() {
           )}
         </TableBody>
       </Table>
+
+      {/* Pagination Controls */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between px-4 py-3 border-t">
+          <div className="flex items-center text-sm text-slate-500">
+            Showing {Math.min((currentPage - 1) * pageSize + 1, totalLogs)} to {Math.min(currentPage * pageSize, totalLogs)} of {totalLogs} entries
+          </div>
+          <div className="flex items-center space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+              disabled={currentPage === 1}
+            >
+              Previous
+            </Button>
+            <span className="text-sm text-slate-600">
+              Page {currentPage} of {totalPages}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+              disabled={currentPage === totalPages}
+            >
+              Next
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Log Details Dialog */}
       <Dialog open={!!viewingLog} onOpenChange={(open) => { if (!open) setViewingLog(null); }}>

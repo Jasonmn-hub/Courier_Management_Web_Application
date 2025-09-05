@@ -115,7 +115,17 @@ export async function setupAuth(app: Express) {
     })(req, res, next);
   });
 
-  app.get("/api/logout", (req, res) => {
+  app.get("/api/logout", async (req: any, res) => {
+    try {
+      // Log logout before destroying session
+      if (req.user?.claims?.sub) {
+        const { logAudit } = await import('./routes');
+        await logAudit(req.user.claims.sub, 'LOGOUT', 'user', req.user.claims.sub, req.user.claims.email);
+      }
+    } catch (error) {
+      console.error('Error logging logout:', error);
+    }
+    
     req.logout(() => {
       res.redirect(
         client.buildEndSessionUrl(config, {
