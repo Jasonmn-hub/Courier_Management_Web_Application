@@ -1420,7 +1420,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             departmentId
           });
 
-          await logAudit(req.currentUser.id, 'CREATE', 'user', newUser.id);
+          await logAudit(req.currentUser.id, 'CREATE', 'user', newUser.id, newUser.email, `User Email ID and Name: ${newUser.email} - ${newUser.name}`);
 
           // Send email notification to new user
           try {
@@ -5336,7 +5336,10 @@ ${result.value}
       }
 
       await storage.assignUserToDepartments(userId, departmentIds);
-      await logAudit(req.currentUser.id, 'UPDATE', 'user_departments', userId);
+      
+      // Get user details for audit log
+      const targetUser = await storage.getUser(userId);
+      await logAudit(req.currentUser.id, 'UPDATE', 'user_departments', userId, targetUser?.email, `User Email ID and Name: ${targetUser?.email} - ${targetUser?.name}`);
       
       res.json({ message: "User departments updated successfully" });
     } catch (error) {
