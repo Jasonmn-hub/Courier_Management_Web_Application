@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
@@ -112,15 +113,16 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
 function SidebarContent({ navigation, adminNavigation, user, onLogout }: any) {
   const [location] = useLocation();
+  const [currentUrl, setCurrentUrl] = useState(window.location.href);
+  
+  // Update current URL when location changes
+  useEffect(() => {
+    setCurrentUrl(window.location.href);
+  }, [location]);
   
   // Check current URL parameters to determine active state
-  const isOnSamlTab = () => {
-    return location === "/settings" && window.location.search.includes("tab=saml");
-  };
-  
-  const isOnSettingsButNotSaml = () => {
-    return location === "/settings" && !window.location.search.includes("tab=saml");
-  };
+  const isOnSamlTab = currentUrl.includes("/settings") && currentUrl.includes("tab=saml");
+  const isOnSettingsButNotSaml = currentUrl.includes("/settings") && !currentUrl.includes("tab=saml");
 
   return (
     <div className="flex flex-col flex-grow bg-white border-r border-slate-200 overflow-y-auto">
@@ -187,9 +189,9 @@ function SidebarContent({ navigation, adminNavigation, user, onLogout }: any) {
                   // Dynamic current state based on item name and URL
                   let isCurrent = false;
                   if (item.name === "Settings") {
-                    isCurrent = isOnSettingsButNotSaml();
+                    isCurrent = isOnSettingsButNotSaml;
                   } else if (item.name === "SAML SSO") {
-                    isCurrent = isOnSamlTab();
+                    isCurrent = isOnSamlTab;
                   } else {
                     isCurrent = item.current;
                   }
