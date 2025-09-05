@@ -109,6 +109,10 @@ export interface IStorage {
   getSmtpSettings(): Promise<SmtpSettings | undefined>;
   updateSmtpSettings(settings: InsertSmtpSettings): Promise<SmtpSettings>;
   
+  // SAML SSO operations
+  getSamlSettings(): Promise<SamlSettings | undefined>;
+  updateSamlSettings(settings: InsertSamlSettings): Promise<SamlSettings>;
+  
   // Audit log operations
   createAuditLog(log: InsertAuditLog): Promise<AuditLog>;
   getAuditLogs(limit?: number, offset?: number, startDate?: string, endDate?: string): Promise<{ logs: (AuditLog & { user?: User })[]; total: number }>;
