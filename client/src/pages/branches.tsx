@@ -524,6 +524,11 @@ export default function Branches() {
             isLoading={branchesLoading}
             showStatusActions={true}
             canModify={canModifyBranches}
+            selectedBranches={selectedBranches}
+            onSelectBranch={handleSelectBranch}
+            onSelectAll={handleSelectAll}
+            allSelected={allSelected}
+            someSelected={someSelected}
           />
           {/* Pagination Controls */}
           <PaginationControls 
@@ -543,6 +548,11 @@ export default function Branches() {
             isLoading={branchesLoading}
             showStatusActions={true}
             canModify={canModifyBranches}
+            selectedBranches={selectedBranches}
+            onSelectBranch={handleSelectBranch}
+            onSelectAll={handleSelectAll}
+            allSelected={allSelected}
+            someSelected={someSelected}
           />
           {/* Pagination Controls */}
           <PaginationControls 
@@ -899,7 +909,12 @@ function BranchesTable({
   onStatusChange, 
   isLoading,
   showStatusActions = false,
-  canModify = false
+  canModify = false,
+  selectedBranches = [],
+  onSelectBranch,
+  onSelectAll,
+  allSelected = false,
+  someSelected = false
 }: {
   branches: Branch[];
   onEdit: (branch: Branch) => void;
@@ -908,6 +923,11 @@ function BranchesTable({
   isLoading: boolean;
   showStatusActions?: boolean;
   canModify?: boolean;
+  selectedBranches?: number[];
+  onSelectBranch?: (branchId: number, checked: boolean) => void;
+  onSelectAll?: (checked: boolean) => void;
+  allSelected?: boolean;
+  someSelected?: boolean;
 }) {
   if (isLoading) {
     return (
@@ -942,12 +962,11 @@ function BranchesTable({
           <Table>
             <TableHeader className="sticky top-0 bg-white z-10">
               <TableRow>
-                {canModifyBranches && (
+                {canModify && onSelectAll && (
                   <TableHead className="w-12">
                     <Checkbox
                       checked={allSelected}
-                      indeterminate={someSelected}
-                      onCheckedChange={handleSelectAll}
+                      onCheckedChange={onSelectAll}
                       data-testid="checkbox-select-all"
                     />
                   </TableHead>
@@ -966,11 +985,11 @@ function BranchesTable({
             <TableBody>
               {branches.map((branch) => (
                 <TableRow key={branch.id} data-testid={`row-branch-${branch.id}`}>
-                  {canModifyBranches && (
+                  {canModify && onSelectBranch && (
                     <TableCell>
                       <Checkbox
                         checked={selectedBranches.includes(branch.id)}
-                        onCheckedChange={(checked) => handleSelectBranch(branch.id, checked as boolean)}
+                        onCheckedChange={(checked) => onSelectBranch(branch.id, checked as boolean)}
                         data-testid={`checkbox-select-${branch.id}`}
                       />
                     </TableCell>
