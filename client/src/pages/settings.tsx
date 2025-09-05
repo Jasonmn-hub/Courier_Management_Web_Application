@@ -650,7 +650,12 @@ export default function Settings() {
           </div>
 
           {/* Settings Tabs */}
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <Tabs value={activeTab} onValueChange={(tab) => {
+            setActiveTab(tab);
+            // Update URL to reflect the current tab
+            const newUrl = tab === "saml" ? "/settings?tab=saml" : "/settings";
+            window.history.replaceState({}, '', newUrl);
+          }} className="w-full">
             <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="smtp" data-testid="tab-smtp-settings">SMTP Settings</TabsTrigger>
               <TabsTrigger value="saml" data-testid="tab-saml-sso">SAML SSO</TabsTrigger>
