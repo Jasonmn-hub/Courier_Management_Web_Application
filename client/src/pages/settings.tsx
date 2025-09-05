@@ -289,6 +289,7 @@ export default function Settings() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const queryClient = useQueryClient();
   const [location] = useLocation();
+  const [activeTab, setActiveTab] = useState("smtp");
   const [newFieldName, setNewFieldName] = useState("");
   const [newFieldType, setNewFieldType] = useState("text");
   const [showDropdownDialog, setShowDropdownDialog] = useState(false);
@@ -296,12 +297,12 @@ export default function Settings() {
   const [newOptionValue, setNewOptionValue] = useState("");
   const [newOptionLabel, setNewOptionLabel] = useState("");
 
-  // Determine active tab based on route
-  const getActiveTab = () => {
-    if (location === "/custom-fields") return "fields";
-    if (location === "/audit-logs") return "audit";
-    return "smtp";
-  };
+  // Initialize active tab based on route
+  useEffect(() => {
+    if (location === "/custom-fields") setActiveTab("fields");
+    else if (location === "/audit-logs") setActiveTab("audit");
+    else setActiveTab("smtp");
+  }, [location]);
 
   // Fetch all fields
   const { data: fields = [], isLoading: fieldsLoading } = useQuery<CustomField[]>({
@@ -484,7 +485,7 @@ export default function Settings() {
           </div>
 
           {/* Settings Tabs */}
-          <Tabs value={getActiveTab()} className="w-full">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="smtp" data-testid="tab-smtp-settings">SMTP Settings</TabsTrigger>
               <TabsTrigger value="fields" data-testid="tab-fields">Fields</TabsTrigger>
