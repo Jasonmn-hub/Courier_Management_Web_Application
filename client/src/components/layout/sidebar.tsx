@@ -19,7 +19,8 @@ import {
   LogOut,
   FileText,
   Shield,
-  Store
+  Store,
+  KeyRound
 } from "lucide-react";
 
 interface SidebarProps {
@@ -59,6 +60,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     { name: "Vendor Master", href: "/vendors", icon: Store, current: location === "/vendors", group: "management" },
     { name: "Manage Authority Letter", href: "/manage-authority-letter", icon: FileText, current: location === "/manage-authority-letter", group: "management" },
     { name: "Settings", href: "/settings", icon: Settings, current: location === "/settings", group: "settings" },
+    { name: "SAML SSO", href: "/settings?tab=saml", icon: KeyRound, current: location === "/settings" && window.location.search.includes("tab=saml"), group: "settings" },
     { name: "Custom Fields", href: "/custom-fields", icon: FormInput, current: location === "/custom-fields", group: "settings" },
     { name: "Audit Logs", href: "/audit-logs", icon: History, current: location === "/audit-logs", group: "settings" },
     { name: "Export Data", href: "/export", icon: FileDown, group: "tools" },

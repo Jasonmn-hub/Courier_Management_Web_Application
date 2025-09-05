@@ -458,10 +458,14 @@ export default function Settings() {
   const [newOptionValue, setNewOptionValue] = useState("");
   const [newOptionLabel, setNewOptionLabel] = useState("");
 
-  // Initialize active tab based on route
+  // Initialize active tab based on route and URL parameters
   useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const tabParam = urlParams.get('tab');
+    
     if (location === "/custom-fields") setActiveTab("fields");
     else if (location === "/audit-logs") setActiveTab("audit");
+    else if (tabParam === "saml") setActiveTab("saml");
     else setActiveTab("smtp");
   }, [location]);
 
