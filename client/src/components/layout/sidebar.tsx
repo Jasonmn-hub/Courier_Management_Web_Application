@@ -112,6 +112,13 @@ function SidebarContent({ navigation, adminNavigation, user, onLogout }: any) {
     <div className="flex flex-col flex-grow bg-white border-r border-slate-200 pt-5 pb-4 overflow-y-auto">
       <div className="flex items-center flex-shrink-0 px-6">
         <div className="flex items-center">
+          <div className="flex-shrink-0">
+            <img 
+              src={lightLogo} 
+              alt="Light Microfinance" 
+              className="h-48 w-48 object-contain" 
+            />
+          </div>
         </div>
       </div>
       
