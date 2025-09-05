@@ -59,8 +59,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     ...(shouldShowBranches ? [{ name: "Branch List", href: "/branches", icon: MapPin, current: location === "/branches", group: "management" }] : []),
     { name: "Vendor Master", href: "/vendors", icon: Store, current: location === "/vendors", group: "management" },
     { name: "Manage Authority Letter", href: "/manage-authority-letter", icon: FileText, current: location === "/manage-authority-letter", group: "management" },
-    { name: "Settings", href: "/settings", icon: Settings, current: location === "/settings" && !window.location.search.includes("tab=saml"), group: "settings" },
-    { name: "SAML SSO", href: "/settings?tab=saml", icon: KeyRound, current: location === "/settings" && window.location.search.includes("tab=saml"), group: "settings" },
+    { name: "Settings", href: "/settings", icon: Settings, current: false, group: "settings" },
+    { name: "SAML SSO", href: "/settings?tab=saml", icon: KeyRound, current: false, group: "settings" },
     { name: "Custom Fields", href: "/custom-fields", icon: FormInput, current: location === "/custom-fields", group: "settings" },
     { name: "Audit Logs", href: "/audit-logs", icon: History, current: location === "/audit-logs", group: "settings" },
     { name: "Export Data", href: "/export", icon: FileDown, group: "tools" },
@@ -111,6 +111,16 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 }
 
 function SidebarContent({ navigation, adminNavigation, user, onLogout }: any) {
+  const [location] = useLocation();
+  
+  // Check current URL parameters to determine active state
+  const isOnSamlTab = () => {
+    return location === "/settings" && window.location.search.includes("tab=saml");
+  };
+  
+  const isOnSettingsButNotSaml = () => {
+    return location === "/settings" && !window.location.search.includes("tab=saml");
+  };
 
   return (
     <div className="flex flex-col flex-grow bg-white border-r border-slate-200 overflow-y-auto">
@@ -173,22 +183,34 @@ function SidebarContent({ navigation, adminNavigation, user, onLogout }: any) {
             <div className="pt-4 border-t border-slate-200">
               {adminNavigation
                 .filter((item: any) => item.group === "settings")
-                .map((item: any) => (
-                  <Link
-                    key={item.name}
-                    href={item.href}
-                    className={cn(
-                      item.current
-                        ? "bg-primary bg-opacity-10 text-black font-bold"
-                        : "text-slate-600 hover:bg-slate-50 hover:text-slate-900",
-                      "group flex items-center px-2 py-2 text-sm font-medium rounded-md"
-                    )}
-                    data-testid={`link-${item.name.toLowerCase().replace(' ', '-')}`}
-                  >
-                    <item.icon className="mr-3 h-4 w-4" />
-                    {item.name}
-                  </Link>
-                ))}
+                .map((item: any) => {
+                  // Dynamic current state based on item name and URL
+                  let isCurrent = false;
+                  if (item.name === "Settings") {
+                    isCurrent = isOnSettingsButNotSaml();
+                  } else if (item.name === "SAML SSO") {
+                    isCurrent = isOnSamlTab();
+                  } else {
+                    isCurrent = item.current;
+                  }
+                  
+                  return (
+                    <Link
+                      key={item.name}
+                      href={item.href}
+                      className={cn(
+                        isCurrent
+                          ? "bg-primary bg-opacity-10 text-black font-bold"
+                          : "text-slate-600 hover:bg-slate-50 hover:text-slate-900",
+                        "group flex items-center px-2 py-2 text-sm font-medium rounded-md"
+                      )}
+                      data-testid={`link-${item.name.toLowerCase().replace(' ', '-')}`}
+                    >
+                      <item.icon className="mr-3 h-4 w-4" />
+                      {item.name}
+                    </Link>
+                  );
+                })}
             </div>
           )}
 
