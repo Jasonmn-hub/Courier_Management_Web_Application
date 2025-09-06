@@ -97,6 +97,7 @@ export interface IStorage {
   
   // Field operations
   getAllFields(): Promise<Field[]>;
+  getField(id: number): Promise<Field | undefined>;
   createField(field: InsertField): Promise<Field>;
   updateField(id: number, field: Partial<InsertField>): Promise<Field | undefined>;
   deleteField(id: number): Promise<boolean>;
@@ -567,6 +568,11 @@ export class DatabaseStorage implements IStorage {
   // Field operations
   async getAllFields(): Promise<Field[]> {
     return await db.select().from(fields).orderBy(fields.name);
+  }
+
+  async getField(id: number): Promise<Field | undefined> {
+    const [field] = await db.select().from(fields).where(eq(fields.id, id));
+    return field;
   }
 
   async createField(field: InsertField): Promise<Field> {
