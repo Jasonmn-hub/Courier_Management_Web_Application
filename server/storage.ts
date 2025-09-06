@@ -682,6 +682,7 @@ export class DatabaseStorage implements IStorage {
         entityType: auditLogs.entityType,
         entityId: auditLogs.entityId,
         emailId: auditLogs.emailId,
+        details: auditLogs.details,
         timestamp: auditLogs.timestamp,
         user: users,
       })
