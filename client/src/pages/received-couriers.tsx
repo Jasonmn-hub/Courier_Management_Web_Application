@@ -514,6 +514,54 @@ export default function ReceivedCouriers() {
                 </div>
               </div>
 
+              {/* Department Information Group */}
+              <div className="space-y-3 p-3 bg-green-50 rounded-lg border">
+                <h4 className="text-sm font-semibold text-green-700 mb-2">🏢 Department</h4>
+                
+                {/* Related Department */}
+                <div className="space-y-1">
+                  <Label htmlFor="department" className="text-sm font-medium">Related Department *</Label>
+                  <Select
+                    value={formData.departmentId?.toString() || ""}
+                    onValueChange={(value) => {
+                      if (value === "other") {
+                        setFormData({ ...formData, departmentId: undefined });
+                      } else {
+                        setFormData({ ...formData, departmentId: parseInt(value), customDepartment: "" });
+                      }
+                    }}
+                  >
+                    <SelectTrigger className="h-9" data-testid="select-department">
+                      <SelectValue placeholder="Select department" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {departments.map((dept) => (
+                        <SelectItem key={dept.id} value={dept.id.toString()}>
+                          {dept.name}
+                        </SelectItem>
+                      ))}
+                      <SelectItem value="other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                {/* Other Department */}
+                {formData.departmentId === undefined && (
+                  <div className="space-y-1">
+                    <Label htmlFor="customDepartment" className="text-sm font-medium">Other Department *</Label>
+                    <Input
+                      id="customDepartment"
+                      value={formData.customDepartment || ""}
+                      onChange={(e) => setFormData({ ...formData, customDepartment: e.target.value })}
+                      placeholder="Enter other department name"
+                      className="h-9"
+                      required
+                      data-testid="input-custom-department"
+                    />
+                  </div>
+                )}
+              </div>
+
               {/* Sender & Receiver Information Group */}
               <div className="space-y-3 p-3 bg-blue-50 rounded-lg border">
                 <h4 className="text-sm font-semibold text-blue-700 mb-2">👥 Sender & Receiver</h4>
@@ -555,54 +603,6 @@ export default function ReceivedCouriers() {
                     data-testid="input-to-user"
                   />
                 </div>
-              </div>
-
-              {/* Department Information Group */}
-              <div className="space-y-3 p-3 bg-green-50 rounded-lg border">
-                <h4 className="text-sm font-semibold text-green-700 mb-2">🏢 Department</h4>
-                
-                {/* Related Department */}
-                <div className="space-y-1">
-                  <Label htmlFor="department" className="text-sm font-medium">Related Department *</Label>
-                  <Select
-                    value={formData.departmentId?.toString() || ""}
-                    onValueChange={(value) => {
-                      if (value === "other") {
-                        setFormData({ ...formData, departmentId: undefined });
-                      } else {
-                        setFormData({ ...formData, departmentId: parseInt(value), customDepartment: "" });
-                      }
-                    }}
-                  >
-                    <SelectTrigger className="h-9" data-testid="select-department">
-                      <SelectValue placeholder="Select department" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {departments.map((dept) => (
-                        <SelectItem key={dept.id} value={dept.id.toString()}>
-                          {dept.name}
-                        </SelectItem>
-                      ))}
-                      <SelectItem value="other">Other</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                {/* Custom Department */}
-                {formData.departmentId === undefined && (
-                  <div className="space-y-1">
-                    <Label htmlFor="customDepartment" className="text-sm font-medium">Custom Department Name *</Label>
-                    <Input
-                      id="customDepartment"
-                      value={formData.customDepartment || ""}
-                      onChange={(e) => setFormData({ ...formData, customDepartment: e.target.value })}
-                      placeholder="Enter department name"
-                      className="h-9"
-                      required
-                      data-testid="input-custom-department"
-                    />
-                  </div>
-                )}
               </div>
 
               {/* Courier & Delivery Details Group */}
