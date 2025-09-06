@@ -4,6 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Plus, Mail, Eye, AlertTriangle } from "lucide-react";
 import { Autocomplete } from "@/components/ui/autocomplete";
+import MultiEmailInput from "@/components/ui/multi-email-input";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { formatDateDDMMYYYY } from "@/lib/utils";
@@ -666,35 +667,39 @@ export default function ReceivedCouriers() {
               <div className="space-y-3 p-3 bg-purple-50 rounded-lg border">
                 <h4 className="text-sm font-semibold text-purple-700 mb-2">📧 Notification Settings</h4>
                 
-                {/* Email ID with auto-fill indicator and autocomplete */}
+                {/* Multiple Email IDs with suggestions */}
                 <div className="space-y-1">
-                  <Label htmlFor="emailId" className="text-sm font-medium">Email ID</Label>
-                  <Autocomplete
+                  <Label htmlFor="emailId" className="text-sm font-medium">Email IDs</Label>
+                  <MultiEmailInput
                     value={formData.emailId || ""}
                     onChange={(value) => setFormData({ ...formData, emailId: value, sendEmailNotification: value ? true : false })}
-                    options={[
+                    suggestions={[
                       ...(branchesData?.branches || [])
                         .filter((branch: any) => branch.email)
                         .map((branch: any) => ({
-                          value: branch.email,
-                          label: `${branch.email} (${branch.branchName})`
+                          email: branch.email,
+                          name: branch.branchName,
+                          type: 'branch' as const
                         })),
                       ...(usersData?.users || [])
                         .filter((user: any) => user.email)
                         .map((user: any) => ({
-                          value: user.email,
-                          label: `${user.email} (${user.name || 'User'})`
+                          email: user.email,
+                          name: user.name || 'User',
+                          type: 'user' as const
                         }))
                     ]}
-                    placeholder="Type email address..."
-                    onAddNew={(value) => setFormData({ ...formData, emailId: value, sendEmailNotification: value ? true : false })}
-                    data-testid="autocomplete-email-id"
+                    placeholder="Type email addresses..."
+                    data-testid="multi-email-input"
                   />
                   {formData.emailId && (
                     <div className="text-xs text-green-600">
-                      ✅ Email auto-filled from sender selection
+                      ✅ Multiple email recipients selected
                     </div>
                   )}
+                  <div className="text-xs text-slate-500">
+                    💡 Type to see suggestions, press Enter or comma to add emails
+                  </div>
                 </div>
 
                 {/* Enhanced Email Notification Options */}
