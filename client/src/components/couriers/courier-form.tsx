@@ -480,27 +480,6 @@ export default function CourierForm({ courier, onClose, onSuccess }: CourierForm
                 )}
               />
 
-              {/* Courier Details - Hidden for dispatched couriers */}
-              {courier?.status !== 'dispatched' && (
-                <FormField
-                  control={form.control}
-                  name="details"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Courier Details</FormLabel>
-                      <FormControl>
-                        <Textarea 
-                          rows={3}
-                          placeholder="Describe the courier contents/details" 
-                          {...field} 
-                          data-testid="textarea-details"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              )}
 
             {/* Render Custom Fields Inline */}
             {departmentFields.map((field: any) => {
