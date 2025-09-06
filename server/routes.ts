@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { authenticateToken, requireRole, hashPassword, comparePassword, generateToken } from "./auth";
-import { insertCourierSchema, insertDepartmentSchema, insertFieldSchema, insertSmtpSettingsSchema, insertReceivedCourierSchema, insertAuthorityLetterTemplateSchema, insertAuthorityLetterFieldSchema, insertBranchSchema, insertUserPolicySchema, type InsertBranch } from "@shared/schema";
+import { insertCourierSchema, insertDepartmentSchema, insertFieldSchema, insertSmtpSettingsSchema, insertSamlSettingsSchema, insertReceivedCourierSchema, insertAuthorityLetterTemplateSchema, insertAuthorityLetterFieldSchema, insertBranchSchema, insertUserPolicySchema, type InsertBranch } from "@shared/schema";
 import { z } from "zod";
 import multer from "multer";
 import path from "path";
@@ -3678,7 +3678,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get existing settings for comparison
       const existingSettings = await storage.getSamlSettings();
       
-      const validatedData = insertSmtpSettingsSchema.parse(req.body);
+      const validatedData = insertSamlSettingsSchema.parse(req.body);
       const settings = await storage.updateSamlSettings(validatedData);
       
       // Create detailed audit log showing what changed
