@@ -806,25 +806,77 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Logout endpoint
-  app.post('/api/auth/logout', authenticateToken, async (req: any, res) => {
+  // Logout endpoint - handles token validation gracefully to allow logout audit logging
+  app.post('/api/auth/logout', async (req: any, res) => {
     try {
-      const user = req.user;
-      console.log('Logout attempt - user object:', JSON.stringify(user, null, 2));
+      console.log('Logout attempt - headers:', req.headers.authorization);
       
-      if (!user) {
-        console.error('Logout failed: No user object in request');
-        return res.status(401).json({ message: 'User not authenticated' });
+      const authHeader = req.headers.authorization;
+      const token = authHeader && authHeader.split(' ')[1];
+      
+      if (!token) {
+        console.error('Logout failed: No token provided');
+        return res.status(401).json({ message: 'Access token required' });
       }
       
-      if (!user.id) {
-        console.error('Logout failed: User ID is missing', user);
-        return res.status(400).json({ message: 'Invalid user data' });
+      // Try to decode token (even if expired) to get user info for audit logging
+      let payload;
+      try {
+        // Decode without verification to get payload even if expired
+        const decoded = jwt.decode(token) as any;
+        console.log('Decoded token payload:', decoded);
+        
+        if (decoded && decoded.userId) {
+          payload = decoded;
+        }
+      } catch (decodeError) {
+        console.error('Failed to decode token:', decodeError);
+      }
+      
+      // If we can't decode the token at all, try with verification
+      if (!payload) {
+        payload = verifyToken(token);
+        console.log('Verified token payload:', payload);
+      }
+      
+      if (!payload || !payload.userId) {
+        console.error('Logout failed: Cannot extract user info from token');
+        return res.status(403).json({ message: 'Invalid token format' });
+      }
+      
+      // Get user info for audit logging
+      let user;
+      try {
+        if (payload.userId.startsWith('temp_')) {
+          user = {
+            id: payload.userId,
+            email: payload.email,
+            name: payload.email?.split('@')[0] || 'Temp User'
+          };
+        } else {
+          user = await storage.getUser(payload.userId);
+          if (!user) {
+            // If user not found in DB, create a minimal user object for audit logging
+            user = {
+              id: payload.userId,
+              email: payload.email,
+              name: payload.email?.split('@')[0] || 'Unknown User'
+            };
+          }
+        }
+      } catch (dbError) {
+        console.error('Error fetching user for logout audit:', dbError);
+        // Create minimal user object for audit logging
+        user = {
+          id: payload.userId,
+          email: payload.email,
+          name: payload.email?.split('@')[0] || 'Unknown User'
+        };
       }
       
       console.log('Attempting to log logout audit for user:', user.id, user.email);
       
-      // Log successful logout
+      // Log logout audit
       await logAudit(user.id, 'LOGOUT', 'user', user.id, user.email, `User Email ID and Name: ${user.email} - ${user.name}`);
       
       console.log('Logout audit logged successfully for user:', user.id);
