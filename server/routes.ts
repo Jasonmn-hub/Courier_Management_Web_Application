@@ -3619,10 +3619,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put('/api/smtp-settings', authenticateToken, requireRole(['admin', 'sub_admin']), setCurrentUser(), async (req: any, res) => {
     try {
+      // Get existing settings for comparison
+      const existingSettings = await storage.getSmtpSettings();
+      
       const validatedData = insertSmtpSettingsSchema.parse(req.body);
       const settings = await storage.updateSmtpSettings(validatedData);
       
-      await logAudit(req.currentUser.id, 'UPDATE', 'smtp_settings', null, req.currentUser.email, `User Email ID and Name: ${req.currentUser.email} - ${req.currentUser.name}`);
+      // Create detailed audit log showing what changed
+      const changes = [];
+      if (!existingSettings || existingSettings.host !== validatedData.host) {
+        changes.push(`Host: "${existingSettings?.host || 'None'}" → "${validatedData.host}"`);
+      }
+      if (!existingSettings || existingSettings.port !== validatedData.port) {
+        changes.push(`Port: "${existingSettings?.port || 'None'}" → "${validatedData.port}"`);
+      }
+      if (!existingSettings || existingSettings.username !== validatedData.username) {
+        changes.push(`Username: "${existingSettings?.username || 'None'}" → "${validatedData.username}"`);
+      }
+      if (!existingSettings || existingSettings.fromName !== validatedData.fromName) {
+        changes.push(`From Name: "${existingSettings?.fromName || 'None'}" → "${validatedData.fromName}"`);
+      }
+      if (!existingSettings || existingSettings.fromEmail !== validatedData.fromEmail) {
+        changes.push(`From Email: "${existingSettings?.fromEmail || 'None'}" → "${validatedData.fromEmail}"`);
+      }
+      if (validatedData.password) {
+        changes.push('Password: Updated');
+      }
+
+      const auditDetails = changes.length > 0 ? 
+        `SMTP Settings updated by ${req.currentUser.name} (${req.currentUser.email}). Changes: ${changes.join(', ')}` :
+        `SMTP Settings accessed by ${req.currentUser.name} (${req.currentUser.email}) - No changes detected`;
+      
+      await logAudit(req.currentUser.id, 'UPDATE', 'smtp_settings', null, req.currentUser.email, auditDetails);
       
       res.json(settings);
     } catch (error) {
@@ -3647,10 +3675,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put('/api/saml-settings', authenticateToken, requireRole(['admin']), setCurrentUser(), async (req: any, res) => {
     try {
+      // Get existing settings for comparison
+      const existingSettings = await storage.getSamlSettings();
+      
       const validatedData = insertSmtpSettingsSchema.parse(req.body);
       const settings = await storage.updateSamlSettings(validatedData);
       
-      await logAudit(req.currentUser.id, 'UPDATE', 'saml_settings', null, req.currentUser.email, `User Email ID and Name: ${req.currentUser.email} - ${req.currentUser.name}`);
+      // Create detailed audit log showing what changed
+      const changes = [];
+      if (!existingSettings || existingSettings.entityId !== validatedData.entityId) {
+        changes.push(`Entity ID: "${existingSettings?.entityId || 'None'}" → "${validatedData.entityId}"`);
+      }
+      if (!existingSettings || existingSettings.ssoUrl !== validatedData.ssoUrl) {
+        changes.push(`SSO URL: "${existingSettings?.ssoUrl || 'None'}" → "${validatedData.ssoUrl}"`);
+      }
+      if (!existingSettings || existingSettings.callbackUrl !== validatedData.callbackUrl) {
+        changes.push(`Callback URL: "${existingSettings?.callbackUrl || 'None'}" → "${validatedData.callbackUrl}"`);
+      }
+      if (!existingSettings || existingSettings.skillmineIntegration !== validatedData.skillmineIntegration) {
+        changes.push(`Skillmine Integration: "${existingSettings?.skillmineIntegration || false}" → "${validatedData.skillmineIntegration || false}"`);
+      }
+      if (validatedData.x509Certificate && (!existingSettings || existingSettings.x509Certificate !== validatedData.x509Certificate)) {
+        changes.push('X509 Certificate: Updated');
+      }
+
+      const auditDetails = changes.length > 0 ? 
+        `SAML Settings updated by ${req.currentUser.name} (${req.currentUser.email}). Changes: ${changes.join(', ')}` :
+        `SAML Settings accessed by ${req.currentUser.name} (${req.currentUser.email}) - No changes detected`;
+      
+      await logAudit(req.currentUser.id, 'UPDATE', 'saml_settings', null, req.currentUser.email, auditDetails);
       
       res.json(settings);
     } catch (error) {
