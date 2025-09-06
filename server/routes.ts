@@ -810,9 +810,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/auth/logout', authenticateToken, async (req: any, res) => {
     try {
       const user = req.user;
+      console.log('Logout attempt - user object:', JSON.stringify(user, null, 2));
+      
+      if (!user) {
+        console.error('Logout failed: No user object in request');
+        return res.status(401).json({ message: 'User not authenticated' });
+      }
+      
+      if (!user.id) {
+        console.error('Logout failed: User ID is missing', user);
+        return res.status(400).json({ message: 'Invalid user data' });
+      }
+      
+      console.log('Attempting to log logout audit for user:', user.id, user.email);
       
       // Log successful logout
       await logAudit(user.id, 'LOGOUT', 'user', user.id, user.email, `User Email ID and Name: ${user.email} - ${user.name}`);
+      
+      console.log('Logout audit logged successfully for user:', user.id);
       
       res.json({ message: 'Logged out successfully' });
     } catch (error) {
