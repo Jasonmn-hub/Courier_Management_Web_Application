@@ -1243,6 +1243,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: 'Name and email are required' });
       }
 
+      // Get the current user data before update for audit comparison
+      const existingUser = await storage.getUser(userId);
+      if (!existingUser) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
       const updateData: any = {
         name,
         email,
@@ -1263,8 +1269,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: 'User not found' });
       }
 
-      // Get user details for audit log
-      await logAudit(req.currentUser.id, 'UPDATE', 'user', userId, updateData.email, `User Email ID and Name: ${updateData.email} - ${updateData.name}`);
+      // Create detailed audit log showing what changed
+      const changes = [];
+      if (existingUser.name !== updateData.name) {
+        changes.push(`Name: "${existingUser.name}" → "${updateData.name}"`);
+      }
+      if (existingUser.email !== updateData.email) {
+        changes.push(`Email: "${existingUser.email}" → "${updateData.email}"`);
+      }
+      if (existingUser.employeeCode !== updateData.employeeCode) {
+        changes.push(`Employee Code: "${existingUser.employeeCode || 'None'}" → "${updateData.employeeCode || 'None'}"`);
+      }
+      if (existingUser.mobileNumber !== updateData.mobileNumber) {
+        changes.push(`Mobile: "${existingUser.mobileNumber || 'None'}" → "${updateData.mobileNumber || 'None'}"`);
+      }
+      if (existingUser.role !== updateData.role) {
+        changes.push(`Role: "${existingUser.role}" → "${updateData.role}"`);
+      }
+      if (existingUser.departmentId !== updateData.departmentId) {
+        changes.push(`Department ID: "${existingUser.departmentId || 'None'}" → "${updateData.departmentId || 'None'}"`);
+      }
+      if (password && password.trim()) {
+        changes.push('Password: Updated');
+      }
+
+      const auditDetails = changes.length > 0 ? 
+        `User "${existingUser.name}" (${existingUser.email}) updated. Changes: ${changes.join(', ')}` :
+        `User "${existingUser.name}" (${existingUser.email}) updated - No changes detected`;
+
+      await logAudit(req.currentUser.id, 'UPDATE', 'user', userId, updateData.email, auditDetails);
 
       res.json(updatedUser);
     } catch (error) {
@@ -2374,7 +2407,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const courier = await storage.updateCourier(id, validatedData);
       
-      await logAudit(userId, 'UPDATE', 'courier', id, null, `POD Number: ${courier?.podNo || existingCourier?.podNo || 'Unknown'}`);
+      // Create detailed audit log showing what changed
+      const changes = [];
+      if (validatedData.status && existingCourier.status !== validatedData.status) {
+        changes.push(`Status: "${existingCourier.status}" → "${validatedData.status}"`);
+      }
+      if (validatedData.toBranch && existingCourier.toBranch !== validatedData.toBranch) {
+        changes.push(`To Branch: "${existingCourier.toBranch}" → "${validatedData.toBranch}"`);
+      }
+      if (validatedData.fromBranch && existingCourier.fromBranch !== validatedData.fromBranch) {
+        changes.push(`From Branch: "${existingCourier.fromBranch}" → "${validatedData.fromBranch}"`);
+      }
+      if (validatedData.details && existingCourier.details !== validatedData.details) {
+        changes.push(`Details: Updated`);
+      }
+      if (validatedData.priority && existingCourier.priority !== validatedData.priority) {
+        changes.push(`Priority: "${existingCourier.priority}" → "${validatedData.priority}"`);
+      }
+
+      const auditDetails = changes.length > 0 ? 
+        `Courier POD "${existingCourier.podNo}" updated. Changes: ${changes.join(', ')}` :
+        `Courier POD "${existingCourier.podNo}" updated - No changes detected`;
+      
+      await logAudit(userId, 'UPDATE', 'courier', id, null, auditDetails);
       
       res.json(courier);
     } catch (error) {
