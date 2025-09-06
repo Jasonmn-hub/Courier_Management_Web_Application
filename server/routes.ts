@@ -810,13 +810,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Logout endpoint - handles token validation gracefully to allow logout audit logging
   app.post('/api/auth/logout', async (req: any, res) => {
     try {
-      console.log('Logout attempt - headers:', req.headers.authorization);
-      
       const authHeader = req.headers.authorization;
       const token = authHeader && authHeader.split(' ')[1];
       
       if (!token) {
-        console.error('Logout failed: No token provided');
         return res.status(401).json({ message: 'Access token required' });
       }
       
@@ -825,23 +822,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         // Decode without verification to get payload even if expired
         const decoded = jwt.decode(token) as any;
-        console.log('Decoded token payload:', decoded);
-        
         if (decoded && decoded.userId) {
           payload = decoded;
         }
       } catch (decodeError) {
-        console.error('Failed to decode token:', decodeError);
+        // Silent fallback
       }
       
       // If we can't decode the token at all, try with verification
       if (!payload) {
         payload = verifyToken(token);
-        console.log('Verified token payload:', payload);
       }
       
       if (!payload || !payload.userId) {
-        console.error('Logout failed: Cannot extract user info from token');
         return res.status(403).json({ message: 'Invalid token format' });
       }
       
@@ -866,7 +859,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
       } catch (dbError) {
-        console.error('Error fetching user for logout audit:', dbError);
         // Create minimal user object for audit logging
         user = {
           id: payload.userId,
@@ -875,12 +867,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
       }
       
-      console.log('Attempting to log logout audit for user:', user.id, user.email);
-      
-      // Log logout audit
-      await logAudit(user.id, 'LOGOUT', 'user', user.id, user.email, `User Email ID and Name: ${user.email} - ${user.name}`);
-      
-      console.log('Logout audit logged successfully for user:', user.id);
+      // Log logout audit with foreign key constraint handling
+      try {
+        await logAudit(user.id, 'LOGOUT', 'user', user.id, user.email, `User Email ID and Name: ${user.email} - ${user.name}`);
+      } catch (auditError: any) {
+        // If foreign key constraint error, retry with null userId to avoid constraint
+        if (auditError.code === '23503') {
+          try {
+            await logAudit(null, 'LOGOUT', 'user', user.id, user.email, `User Email ID and Name: ${user.email} - ${user.name} (user may have been deleted)`);
+          } catch (retryError) {
+            console.error('Failed to log logout audit:', retryError);
+          }
+        }
+      }
       
       res.json({ message: 'Logged out successfully' });
     } catch (error) {
