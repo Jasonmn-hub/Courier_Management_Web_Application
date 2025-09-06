@@ -41,7 +41,7 @@ import {
   ChevronRight
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { formatEntityId } from "@/lib/idUtils";
 
@@ -274,9 +274,6 @@ export default function Branches() {
     },
   });
 
-  // Get query client for cache invalidation
-  const queryClient = useQueryClient();
-  
   // Bulk delete branches mutation
   const bulkDeleteMutation = useMutation({
     mutationFn: async (branchIds: number[]) => {
