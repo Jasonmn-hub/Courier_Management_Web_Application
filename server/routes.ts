@@ -869,12 +869,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Log logout audit with foreign key constraint handling
       try {
-        await logAudit(user.id, 'LOGOUT', 'user', user.id, user.email, `User Email ID and Name: ${user.email} - ${user.name}`);
+        await logAudit(user.id, 'LOGOUT', 'user', user.id, user.email, `${user.email} - ${user.name}`);
       } catch (auditError: any) {
         // If foreign key constraint error, retry with null userId to avoid constraint
         if (auditError.code === '23503') {
           try {
-            await logAudit(null, 'LOGOUT', 'user', user.id, user.email, `User Email ID and Name: ${user.email} - ${user.name} (user may have been deleted)`);
+            await logAudit(null, 'LOGOUT', 'user', user.id, user.email, `${user.email} - ${user.name} (user may have been deleted)`);
           } catch (retryError) {
             console.error('Failed to log logout audit:', retryError);
           }

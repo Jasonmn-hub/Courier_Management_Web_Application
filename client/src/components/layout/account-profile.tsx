@@ -13,7 +13,7 @@ import { apiRequest } from "@/lib/queryClient";
 import ChangePasswordDialog from "@/components/change-password-dialog";
 
 export default function AccountProfile() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
@@ -41,9 +41,9 @@ export default function AccountProfile() {
     return `${day}/${month}/${year}`;
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('auth_token');
-    window.location.href = '/';
+  const handleLogout = async () => {
+    await logout();
+    // logout() already handles the cleanup and redirect
   };
 
   const uploadImageMutation = useMutation({

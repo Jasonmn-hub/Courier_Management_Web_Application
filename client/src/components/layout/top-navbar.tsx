@@ -23,9 +23,9 @@ export default function TopNavbar({ onMenuClick }: TopNavbarProps) {
 
 
 
-  const handleLogout = () => {
-    logout();
-    window.location.href = "/login";
+  const handleLogout = async () => {
+    await logout();
+    // logout() already handles the redirect, so no need to redirect here
   };
 
   const getInitials = (name?: string, firstName?: string, lastName?: string) => {
