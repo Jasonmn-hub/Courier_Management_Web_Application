@@ -44,7 +44,7 @@ import {
   type InsertVendor,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, ilike, or, sql, lt, gt } from "drizzle-orm";
+import { eq, and, desc, ilike, or, sql, lt, gt, inArray } from "drizzle-orm";
 
 export interface IStorage {
   // User operations
@@ -1348,7 +1348,7 @@ export class DatabaseStorage implements IStorage {
 
   async deleteBulkBranches(ids: number[]): Promise<number> {
     try {
-      const result = await db.delete(branches).where(sql`${branches.id} = ANY(${sql.raw(`ARRAY[${ids.join(',')}]`)}))`);
+      const result = await db.delete(branches).where(inArray(branches.id, ids));
       return (result as any).rowCount || 0;
     } catch (error) {
       console.error("Error deleting branches:", error);
