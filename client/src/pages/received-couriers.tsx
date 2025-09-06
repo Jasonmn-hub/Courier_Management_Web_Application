@@ -296,6 +296,17 @@ export default function ReceivedCouriers() {
     createMutation.mutate(submitData);
   };
 
+  // Auto-add current user's email to the email field
+  useEffect(() => {
+    if (user?.email && (!formData.emailId || !formData.emailId.includes(user.email))) {
+      setFormData(prev => ({
+        ...prev,
+        emailId: prev.emailId ? `${prev.emailId}, ${user.email}` : user.email,
+        sendEmailNotification: true
+      }));
+    }
+  }, [user?.email]);
+
   if (isLoading || !isAuthenticated) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
