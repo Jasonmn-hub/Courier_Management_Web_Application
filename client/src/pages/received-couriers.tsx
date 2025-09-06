@@ -75,7 +75,6 @@ export default function ReceivedCouriers() {
     customDepartment: "",
     receiverName: "",
     emailId: "",
-    ccEmails: "",
     sendEmailNotification: false,
     remarks: "",
   });
@@ -261,7 +260,6 @@ export default function ReceivedCouriers() {
       customDepartment: "",
       receiverName: "",
       emailId: "",
-      ccEmails: "",
       sendEmailNotification: false,
       remarks: "",
     });
@@ -668,88 +666,35 @@ export default function ReceivedCouriers() {
               <div className="space-y-3 p-3 bg-purple-50 rounded-lg border">
                 <h4 className="text-sm font-semibold text-purple-700 mb-2">📧 Notification Settings</h4>
                 
-                {/* Email ID with auto-fill indicator */}
+                {/* Email ID with auto-fill indicator and autocomplete */}
                 <div className="space-y-1">
                   <Label htmlFor="emailId" className="text-sm font-medium">Email ID</Label>
-                  <Input
-                    id="emailId"
-                    type="email"
+                  <Autocomplete
                     value={formData.emailId || ""}
-                    onChange={(e) => setFormData({ ...formData, emailId: e.target.value, sendEmailNotification: e.target.value ? true : false })}
-                    placeholder="email@example.com"
-                    className="h-9"
-                    data-testid="input-email-id"
+                    onChange={(value) => setFormData({ ...formData, emailId: value, sendEmailNotification: value ? true : false })}
+                    options={[
+                      ...(branchesData?.branches || [])
+                        .filter((branch: any) => branch.email)
+                        .map((branch: any) => ({
+                          value: branch.email,
+                          label: `${branch.email} (${branch.branchName})`
+                        })),
+                      ...(usersData?.users || [])
+                        .filter((user: any) => user.email)
+                        .map((user: any) => ({
+                          value: user.email,
+                          label: `${user.email} (${user.name || 'User'})`
+                        }))
+                    ]}
+                    placeholder="Type email address..."
+                    onAddNew={(value) => setFormData({ ...formData, emailId: value, sendEmailNotification: value ? true : false })}
+                    data-testid="autocomplete-email-id"
                   />
                   {formData.emailId && (
                     <div className="text-xs text-green-600">
                       ✅ Email auto-filled from sender selection
                     </div>
                   )}
-                </div>
-
-                {/* CC Email Suggestions */}
-                <div className="space-y-1">
-                  <Label className="text-sm font-medium">CC Email Suggestions</Label>
-                  <div className="flex flex-wrap gap-2 p-2 bg-slate-50 rounded border text-xs">
-                    {[
-                      ...(branchesData?.branches || [])
-                        .filter((branch: any) => branch.email && branch.email !== formData.emailId)
-                        .slice(0, 3)
-                        .map((branch: any) => ({
-                          email: branch.email,
-                          label: `${branch.branchName} Branch`,
-                          type: 'branch'
-                        })),
-                      ...(usersData?.users || [])
-                        .filter((user: any) => user.email && user.email !== formData.emailId)
-                        .slice(0, 2)
-                        .map((user: any) => ({
-                          email: user.email,
-                          label: user.name || user.email,
-                          type: 'user'
-                        }))
-                    ].map((suggestion, index) => (
-                      <button
-                        key={`${suggestion.type}-${index}`}
-                        type="button"
-                        onClick={() => {
-                          if (!formData.ccEmails) {
-                            setFormData({ ...formData, ccEmails: suggestion.email });
-                          } else if (!formData.ccEmails.includes(suggestion.email)) {
-                            setFormData({ 
-                              ...formData, 
-                              ccEmails: formData.ccEmails ? `${formData.ccEmails}, ${suggestion.email}` : suggestion.email 
-                            });
-                          }
-                        }}
-                        className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded text-xs border"
-                        title={`Add ${suggestion.email} to CC`}
-                      >
-                        <Mail className="h-3 w-3" />
-                        {suggestion.label}
-                      </button>
-                    ))}
-                  </div>
-                  <div className="text-xs text-slate-500">
-                    💡 Click suggestions above to quickly add CC recipients
-                  </div>
-                </div>
-
-                {/* CC Emails Field */}
-                <div className="space-y-1">
-                  <Label htmlFor="ccEmails" className="text-sm font-medium">CC Emails</Label>
-                  <Input
-                    id="ccEmails"
-                    type="text"
-                    value={formData.ccEmails || ""}
-                    onChange={(e) => setFormData({ ...formData, ccEmails: e.target.value })}
-                    placeholder="additional@email.com, another@email.com"
-                    className="h-9"
-                    data-testid="input-cc-emails"
-                  />
-                  <div className="text-xs text-slate-500">
-                    📧 Separate multiple email addresses with commas
-                  </div>
                 </div>
 
                 {/* Enhanced Email Notification Options */}
