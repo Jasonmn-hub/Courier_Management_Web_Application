@@ -1348,7 +1348,7 @@ export class DatabaseStorage implements IStorage {
 
   async deleteBulkBranches(ids: number[]): Promise<number> {
     try {
-      const result = await db.delete(branches).where(sql`${branches.id} = ANY(${ids})`);
+      const result = await db.delete(branches).where(sql`${branches.id} = ANY(${sql.raw(`ARRAY[${ids.join(',')}]`)}))`);
       return (result as any).rowCount || 0;
     } catch (error) {
       console.error("Error deleting branches:", error);
