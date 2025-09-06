@@ -274,6 +274,9 @@ export default function Branches() {
     },
   });
 
+  // Get query client for cache invalidation
+  const queryClient = useQueryClient();
+  
   // Bulk delete branches mutation
   const bulkDeleteMutation = useMutation({
     mutationFn: async (branchIds: number[]) => {
@@ -282,6 +285,9 @@ export default function Branches() {
     },
     onSuccess: (data) => {
       toast({ title: "Success", description: data.message });
+      // Invalidate all branch-related queries to force refresh
+      queryClient.invalidateQueries({ queryKey: ['/api/branches'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/branches/ids'] });
       refetchBranches();
       setSelectedBranches([]);
       setShowBulkDeleteDialog(false);

@@ -30,7 +30,7 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const [location] = useLocation();
 
   // Fetch user's accessible tabs based on their department policies
@@ -75,9 +75,9 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   // Combine admin and manager navigation (sub_admin is already included in adminNavigation)
   const privilegedNavigation = [...adminNavigation, ...managerNavigation];
 
-  const handleLogout = () => {
-    localStorage.removeItem('auth_token');
-    window.location.href = '/';
+  const handleLogout = async () => {
+    await logout();
+    // logout() already handles the cleanup and redirect
   };
 
   return (
