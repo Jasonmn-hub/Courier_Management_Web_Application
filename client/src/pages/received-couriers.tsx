@@ -68,6 +68,7 @@ export default function ReceivedCouriers() {
     podNumber: "",
     receivedDate: "",
     fromLocation: "",
+    toUser: "",
     courierVendor: "",
     customVendor: "",
     departmentId: undefined,
@@ -184,6 +185,7 @@ export default function ReceivedCouriers() {
       podNumber: "",
       receivedDate: "",
       fromLocation: "",
+      toUser: "",
       courierVendor: "",
       customVendor: "",
       departmentId: undefined,
@@ -281,6 +283,7 @@ export default function ReceivedCouriers() {
                         <TableHead>POD Number</TableHead>
                         <TableHead>Received Date</TableHead>
                         <TableHead>From</TableHead>
+                        <TableHead>To User</TableHead>
                         <TableHead>Department</TableHead>
                         <TableHead>Receiver</TableHead>
                         <TableHead>Courier Vendor</TableHead>
@@ -301,6 +304,9 @@ export default function ReceivedCouriers() {
                           </TableCell>
                           <TableCell data-testid={`text-from-${courier.id}`}>
                             {courier.fromLocation}
+                          </TableCell>
+                          <TableCell data-testid={`text-to-user-${courier.id}`}>
+                            {(courier as any).toUser || '-'}
                           </TableCell>
                           <TableCell data-testid={`text-department-${courier.id}`}>
                             {(courier as any).departmentName || (courier as any).customDepartment || '-'}
@@ -456,6 +462,39 @@ export default function ReceivedCouriers() {
                 />
                 <div className="text-xs text-gray-500 mt-1">
                   Type to search for existing branches/users or enter a custom location
+                </div>
+              </div>
+
+              {/* To User - Third Field */}
+              <div>
+                <Label htmlFor="toUser">To User</Label>
+                <Autocomplete
+                  value={formData.toUser || ""}
+                  onChange={(value) => {
+                    setFormData({ ...formData, toUser: value });
+                  }}
+                  options={[
+                    ...(branchesData?.branches || []).map((branch: any) => ({
+                      value: branch.branchName,
+                      label: `${branch.branchName} - ${branch.email || 'No Email'}`
+                    })),
+                    ...(usersData?.users || []).map((user: any) => ({
+                      value: user.name || user.email,
+                      label: `${user.name} - ${user.email}`
+                    }))
+                  ]}
+                  placeholder="Type user name, branch name, or custom recipient..."
+                  onAddNew={(value) => {
+                    setFormData({ ...formData, toUser: value });
+                    toast({ 
+                      title: "Custom Recipient", 
+                      description: `Using custom recipient: ${value}` 
+                    });
+                  }}
+                  data-testid="autocomplete-to-user"
+                />
+                <div className="text-xs text-gray-500 mt-1">
+                  Type to search for existing users/branches or enter a custom recipient
                 </div>
               </div>
 

@@ -111,6 +111,7 @@ export const receivedCouriers = pgTable("received_couriers", {
   podNumber: varchar("pod_number", { length: 100 }).notNull(),
   receivedDate: date("received_date").notNull(),
   fromLocation: varchar("from_location", { length: 200 }).notNull(), // Branch/Other
+  toUser: varchar("to_user", { length: 200 }), // To User/Branch
   courierVendor: varchar("courier_vendor", { length: 100 }).notNull(),
   customVendor: varchar("custom_vendor", { length: 100 }),
   receiverName: varchar("receiver_name", { length: 100 }),
