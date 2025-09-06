@@ -48,17 +48,32 @@ export function useAuth() {
   });
 
   const logout = async () => {
+    console.log('Frontend logout initiated');
+    const token = localStorage.getItem('auth_token');
+    console.log('Token present for logout:', !!token, token ? 'exists' : 'missing');
+    
     try {
       // Call logout endpoint to log the action
-      await apiRequest('POST', '/api/auth/logout');
+      console.log('Calling logout API endpoint...');
+      const response = await apiRequest('POST', '/api/auth/logout');
+      console.log('Logout API response:', response.status, response.statusText);
+      const result = await response.json();
+      console.log('Logout API result:', result);
     } catch (error) {
       // Even if logout fails, continue with local cleanup
       console.error('Logout API call failed:', error);
+      console.error('Error details:', {
+        name: (error as any)?.name,
+        message: (error as any)?.message,
+        stack: (error as any)?.stack
+      });
     }
     
+    console.log('Performing local cleanup...');
     localStorage.removeItem('auth_token');
     queryClient.setQueryData(["/api/auth/user"], null);
     queryClient.clear();
+    console.log('Redirecting to login page...');
     window.location.href = "/?showLogin=true";
   };
 
