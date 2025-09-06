@@ -3662,8 +3662,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { startDate, endDate } = req.query;
       const result = await storage.getAuditLogs(10000, 0, startDate, endDate);
       
-      // Create CSV content
-      const headers = ['Action', 'Entity Type', 'Entity ID', 'User Name', 'User Email', 'Date & Time'];
+      // Create CSV content with all available fields
+      const headers = ['Action', 'Entity Type', 'Entity ID', 'Details', 'User Name', 'User Email', 'Email ID', 'Date & Time'];
       const csvRows = [headers.join(',')];
       
       result.logs.forEach(log => {
@@ -3671,8 +3671,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           log.action || '',
           log.entityType || '',
           log.entityId || '',
+          log.details || '',
           log.user?.name || 'Unknown',
           log.user?.email || '',
+          log.emailId || '',
           log.timestamp ? new Date(log.timestamp).toLocaleString() : ''
         ].map(field => `"${(field || '').toString().replace(/"/g, '""')}"`);
         csvRows.push(row.join(','));
