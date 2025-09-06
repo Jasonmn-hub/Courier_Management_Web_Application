@@ -1,7 +1,8 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { authenticateToken, requireRole, hashPassword, comparePassword, generateToken } from "./auth";
+import { authenticateToken, requireRole, hashPassword, comparePassword, generateToken, verifyToken } from "./auth";
+import jwt from "jsonwebtoken";
 import { insertCourierSchema, insertDepartmentSchema, insertFieldSchema, insertSmtpSettingsSchema, insertSamlSettingsSchema, insertReceivedCourierSchema, insertAuthorityLetterTemplateSchema, insertAuthorityLetterFieldSchema, insertBranchSchema, insertUserPolicySchema, type InsertBranch } from "@shared/schema";
 import { z } from "zod";
 import multer from "multer";
