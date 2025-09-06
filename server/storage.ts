@@ -159,6 +159,7 @@ export interface IStorage {
   createFieldDropdownOption(option: { fieldId: number; departmentId: number; optionValue: string; optionLabel: string; sortOrder?: number }): Promise<any>;
   updateFieldDropdownOption(id: number, option: { optionValue?: string; optionLabel?: string; sortOrder?: number }): Promise<any>;
   deleteFieldDropdownOption(id: number): Promise<boolean>;
+  getFieldByDropdownOptionId(optionId: number): Promise<Field | undefined>;
   
   // Branch operations
   getAllBranches(filters?: {
@@ -573,6 +574,15 @@ export class DatabaseStorage implements IStorage {
   async getField(id: number): Promise<Field | undefined> {
     const [field] = await db.select().from(fields).where(eq(fields.id, id));
     return field;
+  }
+
+  async getFieldByDropdownOptionId(optionId: number): Promise<Field | undefined> {
+    const [result] = await db
+      .select({ field: fields })
+      .from(fieldDropdownOptions)
+      .innerJoin(fields, eq(fieldDropdownOptions.fieldId, fields.id))
+      .where(eq(fieldDropdownOptions.id, optionId));
+    return result?.field;
   }
 
   async createField(field: InsertField): Promise<Field> {
@@ -1254,8 +1264,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteFieldDropdownOption(id: number): Promise<boolean> {
-    const result = await db.delete(fieldDropdownOptions).where(eq(fieldDropdownOptions.id, id));
-    return result.rowCount !== undefined ? result.rowCount > 0 : result.length > 0;
+    try {
+      const result = await db.delete(fieldDropdownOptions).where(eq(fieldDropdownOptions.id, id));
+      return (result as any).rowCount > 0 || result.length > 0;
+    } catch (error) {
+      console.error("Error deleting field dropdown option:", error);
+      return false;
+    }
   }
 
   // Branch methods
