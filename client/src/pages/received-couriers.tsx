@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Plus, Mail, Eye } from "lucide-react";
+import { Plus, Mail, Eye, AlertTriangle } from "lucide-react";
 import { Autocomplete } from "@/components/ui/autocomplete";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -78,7 +78,8 @@ export default function ReceivedCouriers() {
     sendEmailNotification: false,
     remarks: "",
   });
-  const [selectedDate, setSelectedDate] = useState<Date>();
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date()); // Default to today
+  const [podError, setPodError] = useState<string>("");
 
   // Redirect to home if not authenticated
   useEffect(() => {
@@ -180,6 +181,73 @@ export default function ReceivedCouriers() {
     },
   });
 
+  // POD number validation function
+  const checkDuplicatePOD = async (podNumber: string) => {
+    if (!podNumber.trim()) {
+      setPodError("");
+      return;
+    }
+    
+    try {
+      const response = await apiRequest('GET', `/api/received-couriers`);
+      const data = await response.json();
+      const existingPOD = data.find((courier: any) => 
+        courier.podNumber?.toLowerCase() === podNumber.toLowerCase()
+      );
+      
+      if (existingPOD) {
+        setPodError("⚠️ This POD number already exists in the system");
+      } else {
+        setPodError("");
+      }
+    } catch (error) {
+      console.error('Error checking duplicate POD:', error);
+    }
+  };
+
+  // Auto-fill email from branch/user selection
+  const handleFromLocationChange = (value: string) => {
+    setFormData({ ...formData, fromLocation: value });
+    
+    // Auto-fill email if branch is selected
+    const selectedBranch = branchesData?.branches?.find((b: any) => 
+      b.branchName?.toLowerCase().includes(value.toLowerCase()) ||
+      b.branchCode?.toLowerCase().includes(value.toLowerCase())
+    );
+    
+    if (selectedBranch && selectedBranch.email) {
+      setFormData(prev => ({ 
+        ...prev, 
+        fromLocation: value,
+        emailId: selectedBranch.email, 
+        sendEmailNotification: true 
+      }));
+      toast({ 
+        title: "Email Auto-filled", 
+        description: `Email set to: ${selectedBranch.email}` 
+      });
+    } else {
+      // Check if it's a user
+      const selectedUser = usersData?.users?.find((u: any) => 
+        u.name?.toLowerCase().includes(value.toLowerCase()) ||
+        u.email?.toLowerCase().includes(value.toLowerCase())
+      );
+      
+      if (selectedUser && selectedUser.email) {
+        setFormData(prev => ({ 
+          ...prev, 
+          fromLocation: value,
+          emailId: selectedUser.email, 
+          sendEmailNotification: true 
+        }));
+        toast({ 
+          title: "Email Auto-filled", 
+          description: `Email set to: ${selectedUser.email}` 
+        });
+      }
+    }
+  };
+
   const resetForm = () => {
     setFormData({
       podNumber: "",
@@ -195,11 +263,23 @@ export default function ReceivedCouriers() {
       sendEmailNotification: false,
       remarks: "",
     });
-    setSelectedDate(undefined);
+    setSelectedDate(new Date()); // Reset to today
+    setPodError("");
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Prevent submission if POD number already exists
+    if (podError) {
+      toast({
+        title: "Duplicate POD Number",
+        description: "Please use a different POD number",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     if (!formData.podNumber || !selectedDate || !formData.fromLocation || !formData.courierVendor) {
       toast({ title: "Error", description: "Please fill in all required fields", variant: "destructive" });
       return;
@@ -383,206 +463,271 @@ export default function ReceivedCouriers() {
 
       {/* Add Received Courier Modal */}
       <Dialog open={showForm} onOpenChange={setShowForm}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-lg font-semibold">Add Received Courier</DialogTitle>
           </DialogHeader>
           
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-3">
-              {/* Related Department */}
-              <div className="space-y-1">
-                <Label htmlFor="department" className="text-sm font-medium">Related Department *</Label>
-                <Select
-                  value={formData.departmentId?.toString() || ""}
-                  onValueChange={(value) => {
-                    if (value === "other") {
-                      setFormData({ ...formData, departmentId: undefined });
-                    } else {
-                      setFormData({ ...formData, departmentId: parseInt(value), customDepartment: "" });
-                    }
-                  }}
-                >
-                  <SelectTrigger className="h-9" data-testid="select-department">
-                    <SelectValue placeholder="Select department" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {departments.map((dept) => (
-                      <SelectItem key={dept.id} value={dept.id.toString()}>
-                        {dept.name}
-                      </SelectItem>
-                    ))}
-                    <SelectItem value="other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* From (Branch/Other) */}
-              <div className="space-y-1">
-                <Label htmlFor="fromLocation" className="text-sm font-medium">From (Branch/Other) *</Label>
-                <Input
-                  id="fromLocation"
-                  value={formData.fromLocation || ""}
-                  onChange={(e) => setFormData({ ...formData, fromLocation: e.target.value })}
-                  placeholder="Enter branch name or location"
-                  className="h-9"
-                  data-testid="input-from-location"
-                />
-              </div>
-
-              {/* To User */}
-              <div className="space-y-1">
-                <Label htmlFor="toUser" className="text-sm font-medium">To User</Label>
-                <Input
-                  id="toUser"
-                  value={formData.toUser || ""}
-                  onChange={(e) => setFormData({ ...formData, toUser: e.target.value })}
-                  placeholder="Enter recipient name"
-                  className="h-9"
-                  data-testid="input-to-user"
-                />
-              </div>
-
-              {/* Received Date */}
-              <div className="space-y-1">
-                <Label className="text-sm font-medium">Received Date *</Label>
-                <Input
-                  type="date"
-                  value={selectedDate ? format(selectedDate, "yyyy-MM-dd") : ""}
-                  onChange={(e) => {
-                    const date = e.target.value ? new Date(e.target.value) : undefined;
-                    setSelectedDate(date);
-                  }}
-                  className="h-9"
-                  data-testid="input-received-date"
-                />
-              </div>
-
-              {/* POD Number */}
-              <div className="space-y-1">
-                <Label htmlFor="podNumber" className="text-sm font-medium">POD Number *</Label>
-                <Input
-                  id="podNumber"
-                  value={formData.podNumber || ""}
-                  onChange={(e) => setFormData({ ...formData, podNumber: e.target.value })}
-                  placeholder="Enter POD Number"
-                  className="h-9"
-                  required
-                  data-testid="input-pod-number"
-                />
-              </div>
-
-              {/* Courier Vendor */}
-              <div className="space-y-1">
-                <Label htmlFor="courierVendor" className="text-sm font-medium">Courier Vendor *</Label>
-                <Select
-                  value={formData.courierVendor || ""}
-                  onValueChange={(value) => setFormData({ ...formData, courierVendor: value })}
-                >
-                  <SelectTrigger className="h-9" data-testid="select-courier-vendor">
-                    <SelectValue placeholder="Select vendor" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Maruti Courier">Maruti Courier</SelectItem>
-                    <SelectItem value="India Post">India Post</SelectItem>
-                    <SelectItem value="Professional Couriers">Professional Couriers</SelectItem>
-                    <SelectItem value="Blue Dart">Blue Dart</SelectItem>
-                    <SelectItem value="DHL Express">DHL Express</SelectItem>
-                    <SelectItem value="FedEx">FedEx</SelectItem>
-                    <SelectItem value="DTDC">DTDC</SelectItem>
-                    <SelectItem value="Others">Others</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Custom Vendor Field (when "Others" is selected) */}
-              {formData.courierVendor === "Others" && (
+            <div className="space-y-4">
+              {/* Basic Information Group */}
+              <div className="space-y-3 p-3 bg-slate-50 rounded-lg border">
+                <h4 className="text-sm font-semibold text-slate-700 mb-2">📋 Basic Information</h4>
+                
+                {/* POD Number with validation */}
                 <div className="space-y-1">
-                  <Label htmlFor="customVendor" className="text-sm font-medium">Custom Vendor Name *</Label>
+                  <Label htmlFor="podNumber" className="text-sm font-medium">POD Number *</Label>
                   <Input
-                    id="customVendor"
-                    value={formData.customVendor || ""}
-                    onChange={(e) => setFormData({ ...formData, customVendor: e.target.value })}
-                    placeholder="Enter vendor name"
-                    className="h-9"
+                    id="podNumber"
+                    value={formData.podNumber || ""}
+                    onChange={(e) => {
+                      setFormData({ ...formData, podNumber: e.target.value });
+                      checkDuplicatePOD(e.target.value);
+                    }}
+                    onBlur={(e) => checkDuplicatePOD(e.target.value)}
+                    placeholder="Enter POD Number"
+                    className={cn("h-9", podError && "border-red-500")}
                     required
-                    data-testid="input-custom-courier-vendor"
+                    data-testid="input-pod-number"
                   />
+                  {podError && (
+                    <div className="flex items-center gap-1 text-red-600 text-xs">
+                      <AlertTriangle className="h-3 w-3" />
+                      {podError}
+                    </div>
+                  )}
                 </div>
-              )}
 
-              {/* Custom Department Field (when "Other" is selected) */}
-              {formData.departmentId === undefined && (
+                {/* Received Date */}
                 <div className="space-y-1">
-                  <Label htmlFor="customDepartment" className="text-sm font-medium">Custom Department Name *</Label>
+                  <Label className="text-sm font-medium">Received Date *</Label>
                   <Input
-                    id="customDepartment"
-                    value={formData.customDepartment || ""}
-                    onChange={(e) => setFormData({ ...formData, customDepartment: e.target.value })}
-                    placeholder="Enter department name"
+                    type="date"
+                    value={selectedDate ? format(selectedDate, "yyyy-MM-dd") : ""}
+                    onChange={(e) => {
+                      const date = e.target.value ? new Date(e.target.value) : new Date();
+                      setSelectedDate(date);
+                    }}
                     className="h-9"
-                    required
-                    data-testid="input-custom-department"
+                    data-testid="input-received-date"
                   />
                 </div>
-              )}
-
-              {/* Receiver Name */}
-              <div className="space-y-1">
-                <Label htmlFor="receiverName" className="text-sm font-medium">Receiver Name</Label>
-                <Input
-                  id="receiverName"
-                  value={formData.receiverName || ""}
-                  onChange={(e) => setFormData({ ...formData, receiverName: e.target.value })}
-                  placeholder="Name of person receiving"
-                  className="h-9"
-                  data-testid="input-receiver-name"
-                />
               </div>
 
-              {/* Email ID */}
-              <div className="space-y-1">
-                <Label htmlFor="emailId" className="text-sm font-medium">Email ID</Label>
-                <Input
-                  id="emailId"
-                  type="email"
-                  value={formData.emailId || ""}
-                  onChange={(e) => setFormData({ ...formData, emailId: e.target.value, sendEmailNotification: e.target.value ? true : false })}
-                  placeholder="email@example.com"
-                  className="h-9"
-                  data-testid="input-email-id"
-                />
-              </div>
-
-              {/* Email Notification Checkbox */}
-              {formData.emailId && (
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="sendNotification"
-                    checked={formData.sendEmailNotification || false}
-                    onCheckedChange={(checked) => 
-                      setFormData({ ...formData, sendEmailNotification: !!checked })
-                    }
-                    data-testid="checkbox-send-notification"
+              {/* Sender & Receiver Information Group */}
+              <div className="space-y-3 p-3 bg-blue-50 rounded-lg border">
+                <h4 className="text-sm font-semibold text-blue-700 mb-2">👥 Sender & Receiver</h4>
+                
+                {/* From Location with auto-fill */}
+                <div className="space-y-1">
+                  <Label htmlFor="fromLocation" className="text-sm font-medium">From (Branch/Other) *</Label>
+                  <Autocomplete
+                    value={formData.fromLocation || ""}
+                    onChange={handleFromLocationChange}
+                    options={[
+                      ...(branchesData?.branches || []).map((branch: any) => ({
+                        value: branch.branchName,
+                        label: `${branch.branchName} - ${branch.email || 'No Email'}`
+                      })),
+                      ...(usersData?.users || []).map((user: any) => ({
+                        value: user.name || user.email,
+                        label: `${user.name} - ${user.email}`
+                      }))
+                    ]}
+                    placeholder="Type to search branches/users or enter custom..."
+                    onAddNew={handleFromLocationChange}
+                    data-testid="autocomplete-from-location"
                   />
-                  <Label htmlFor="sendNotification" className="text-sm">
-                    Send email notification to this address
-                  </Label>
+                  <div className="text-xs text-slate-500">
+                    💡 Typing a branch or user name will auto-fill the email
+                  </div>
                 </div>
-              )}
 
-              {/* Remarks */}
-              <div className="space-y-1">
-                <Label htmlFor="remarks" className="text-sm font-medium">Remarks</Label>
-                <Textarea
-                  id="remarks"
-                  value={formData.remarks || ""}
-                  onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
-                  placeholder="Optional remarks..."
-                  rows={3}
-                  className="resize-none text-sm"
-                  data-testid="textarea-remarks"
-                />
+                {/* To User */}
+                <div className="space-y-1">
+                  <Label htmlFor="toUser" className="text-sm font-medium">To User</Label>
+                  <Input
+                    id="toUser"
+                    value={formData.toUser || ""}
+                    onChange={(e) => setFormData({ ...formData, toUser: e.target.value })}
+                    placeholder="Enter recipient name"
+                    className="h-9"
+                    data-testid="input-to-user"
+                  />
+                </div>
+              </div>
+
+              {/* Department Information Group */}
+              <div className="space-y-3 p-3 bg-green-50 rounded-lg border">
+                <h4 className="text-sm font-semibold text-green-700 mb-2">🏢 Department</h4>
+                
+                {/* Related Department */}
+                <div className="space-y-1">
+                  <Label htmlFor="department" className="text-sm font-medium">Related Department *</Label>
+                  <Select
+                    value={formData.departmentId?.toString() || ""}
+                    onValueChange={(value) => {
+                      if (value === "other") {
+                        setFormData({ ...formData, departmentId: undefined });
+                      } else {
+                        setFormData({ ...formData, departmentId: parseInt(value), customDepartment: "" });
+                      }
+                    }}
+                  >
+                    <SelectTrigger className="h-9" data-testid="select-department">
+                      <SelectValue placeholder="Select department" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {departments.map((dept) => (
+                        <SelectItem key={dept.id} value={dept.id.toString()}>
+                          {dept.name}
+                        </SelectItem>
+                      ))}
+                      <SelectItem value="other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                {/* Custom Department */}
+                {formData.departmentId === undefined && (
+                  <div className="space-y-1">
+                    <Label htmlFor="customDepartment" className="text-sm font-medium">Custom Department Name *</Label>
+                    <Input
+                      id="customDepartment"
+                      value={formData.customDepartment || ""}
+                      onChange={(e) => setFormData({ ...formData, customDepartment: e.target.value })}
+                      placeholder="Enter department name"
+                      className="h-9"
+                      required
+                      data-testid="input-custom-department"
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Courier & Delivery Details Group */}
+              <div className="space-y-3 p-3 bg-orange-50 rounded-lg border">
+                <h4 className="text-sm font-semibold text-orange-700 mb-2">📦 Courier Details</h4>
+                
+                {/* Courier Vendor */}
+                <div className="space-y-1">
+                  <Label htmlFor="courierVendor" className="text-sm font-medium">Courier Vendor *</Label>
+                  <Select
+                    value={formData.courierVendor || ""}
+                    onValueChange={(value) => setFormData({ ...formData, courierVendor: value })}
+                  >
+                    <SelectTrigger className="h-9" data-testid="select-courier-vendor">
+                      <SelectValue placeholder="Select vendor" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Maruti Courier">Maruti Courier</SelectItem>
+                      <SelectItem value="India Post">India Post</SelectItem>
+                      <SelectItem value="Professional Couriers">Professional Couriers</SelectItem>
+                      <SelectItem value="Blue Dart">Blue Dart</SelectItem>
+                      <SelectItem value="DHL Express">DHL Express</SelectItem>
+                      <SelectItem value="FedEx">FedEx</SelectItem>
+                      <SelectItem value="DTDC">DTDC</SelectItem>
+                      <SelectItem value="Others">Others</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Custom Vendor Field (when "Others" is selected) */}
+                {formData.courierVendor === "Others" && (
+                  <div className="space-y-1">
+                    <Label htmlFor="customVendor" className="text-sm font-medium">Custom Vendor Name *</Label>
+                    <Input
+                      id="customVendor"
+                      value={formData.customVendor || ""}
+                      onChange={(e) => setFormData({ ...formData, customVendor: e.target.value })}
+                      placeholder="Enter vendor name"
+                      className="h-9"
+                      required
+                      data-testid="input-custom-courier-vendor"
+                    />
+                  </div>
+                )}
+
+                {/* Receiver Name */}
+                <div className="space-y-1">
+                  <Label htmlFor="receiverName" className="text-sm font-medium">Receiver Name</Label>
+                  <Input
+                    id="receiverName"
+                    value={formData.receiverName || ""}
+                    onChange={(e) => setFormData({ ...formData, receiverName: e.target.value })}
+                    placeholder="Name of person receiving"
+                    className="h-9"
+                    data-testid="input-receiver-name"
+                  />
+                </div>
+              </div>
+
+              {/* Notification Settings Group */}
+              <div className="space-y-3 p-3 bg-purple-50 rounded-lg border">
+                <h4 className="text-sm font-semibold text-purple-700 mb-2">📧 Notification Settings</h4>
+                
+                {/* Email ID with auto-fill indicator */}
+                <div className="space-y-1">
+                  <Label htmlFor="emailId" className="text-sm font-medium">Email ID</Label>
+                  <Input
+                    id="emailId"
+                    type="email"
+                    value={formData.emailId || ""}
+                    onChange={(e) => setFormData({ ...formData, emailId: e.target.value, sendEmailNotification: e.target.value ? true : false })}
+                    placeholder="email@example.com"
+                    className="h-9"
+                    data-testid="input-email-id"
+                  />
+                  {formData.emailId && (
+                    <div className="text-xs text-green-600">
+                      ✅ Email auto-filled from sender selection
+                    </div>
+                  )}
+                </div>
+
+                {/* Enhanced Email Notification Options */}
+                {formData.emailId && (
+                  <div className="space-y-2">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="sendNotification"
+                        checked={formData.sendEmailNotification || false}
+                        onCheckedChange={(checked) => 
+                          setFormData({ ...formData, sendEmailNotification: !!checked })
+                        }
+                        data-testid="checkbox-send-notification"
+                      />
+                      <Label htmlFor="sendNotification" className="text-sm">
+                        📨 Send confirmation email notification
+                      </Label>
+                    </div>
+                    
+                    {formData.sendEmailNotification && (
+                      <div className="ml-6 p-2 bg-blue-100 rounded text-xs text-blue-700">
+                        <strong>Email will include:</strong> POD confirmation, delivery details, and tracking information
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Additional Notes Group */}
+              <div className="space-y-3 p-3 bg-gray-50 rounded-lg border">
+                <h4 className="text-sm font-semibold text-gray-700 mb-2">📝 Additional Information</h4>
+                
+                {/* Remarks */}
+                <div className="space-y-1">
+                  <Label htmlFor="remarks" className="text-sm font-medium">Remarks</Label>
+                  <Textarea
+                    id="remarks"
+                    value={formData.remarks || ""}
+                    onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
+                    placeholder="Optional remarks..."
+                    rows={3}
+                    className="resize-none text-sm"
+                    data-testid="textarea-remarks"
+                  />
+                </div>
               </div>
             </div>
 
