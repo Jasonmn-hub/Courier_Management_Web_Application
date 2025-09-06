@@ -383,16 +383,16 @@ export default function ReceivedCouriers() {
 
       {/* Add Received Courier Modal */}
       <Dialog open={showForm} onOpenChange={setShowForm}>
-        <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-hidden">
+        <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Add Received Courier</DialogTitle>
+            <DialogTitle className="text-lg font-semibold">Add Received Courier</DialogTitle>
           </DialogHeader>
           
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="max-h-[70vh] overflow-y-auto pr-2 space-y-4">
-              {/* Related Department - First Field */}
-              <div>
-                <Label htmlFor="department">Related Department *</Label>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-3">
+              {/* Related Department */}
+              <div className="space-y-1">
+                <Label htmlFor="department" className="text-sm font-medium">Related Department *</Label>
                 <Select
                   value={formData.departmentId?.toString() || ""}
                   onValueChange={(value) => {
@@ -403,7 +403,7 @@ export default function ReceivedCouriers() {
                     }
                   }}
                 >
-                  <SelectTrigger data-testid="select-department">
+                  <SelectTrigger className="h-9" data-testid="select-department">
                     <SelectValue placeholder="Select department" />
                   </SelectTrigger>
                   <SelectContent>
@@ -417,136 +417,69 @@ export default function ReceivedCouriers() {
                 </Select>
               </div>
 
-              {/* From (Branch/Other) - Second Field */}
-              <div>
-                <Label htmlFor="fromLocation">From (Branch/Other) *</Label>
-                <Autocomplete
+              {/* From (Branch/Other) */}
+              <div className="space-y-1">
+                <Label htmlFor="fromLocation" className="text-sm font-medium">From (Branch/Other) *</Label>
+                <Input
+                  id="fromLocation"
                   value={formData.fromLocation || ""}
-                  onChange={(value) => {
-                    setFormData({ ...formData, fromLocation: value });
-                    // Auto-fill email if branch is selected
-                    const selectedBranch = branchesData?.branches?.find((b: any) => 
-                      b.branchName === value || `${b.branchName} (${b.branchCode})` === value
-                    );
-                    if (selectedBranch && selectedBranch.email) {
-                      setFormData(prev => ({ ...prev, emailId: selectedBranch.email, sendEmailNotification: true }));
-                    } else {
-                      // Check if it's a user
-                      const selectedUser = usersData?.users?.find((u: any) => 
-                        u.name === value || u.email === value
-                      );
-                      if (selectedUser && selectedUser.email) {
-                        setFormData(prev => ({ ...prev, emailId: selectedUser.email, sendEmailNotification: true }));
-                      }
-                    }
-                  }}
-                  options={[
-                    ...(branchesData?.branches || []).map((branch: any) => ({
-                      value: branch.branchName,
-                      label: `${branch.branchName} - ${branch.email || 'No Email'}`
-                    })),
-                    ...(usersData?.users || []).map((user: any) => ({
-                      value: user.name || user.email,
-                      label: `${user.name} - ${user.email}`
-                    }))
-                  ]}
-                  placeholder="Type branch name, user name, or custom location..."
-                  onAddNew={(value) => {
-                    setFormData({ ...formData, fromLocation: value });
-                    toast({ 
-                      title: "Custom Location", 
-                      description: `Using custom location: ${value}` 
-                    });
-                  }}
-                  data-testid="autocomplete-from-location"
+                  onChange={(e) => setFormData({ ...formData, fromLocation: e.target.value })}
+                  placeholder="Enter branch name or location"
+                  className="h-9"
+                  data-testid="input-from-location"
                 />
-                <div className="text-xs text-gray-500 mt-1">
-                  Type to search for existing branches/users or enter a custom location
-                </div>
               </div>
 
-              {/* To User - Third Field */}
-              <div>
-                <Label htmlFor="toUser">To User</Label>
-                <Autocomplete
+              {/* To User */}
+              <div className="space-y-1">
+                <Label htmlFor="toUser" className="text-sm font-medium">To User</Label>
+                <Input
+                  id="toUser"
                   value={formData.toUser || ""}
-                  onChange={(value) => {
-                    setFormData({ ...formData, toUser: value });
-                  }}
-                  options={[
-                    ...(branchesData?.branches || []).map((branch: any) => ({
-                      value: branch.branchName,
-                      label: `${branch.branchName} - ${branch.email || 'No Email'}`
-                    })),
-                    ...(usersData?.users || []).map((user: any) => ({
-                      value: user.name || user.email,
-                      label: `${user.name} - ${user.email}`
-                    }))
-                  ]}
-                  placeholder="Type user name, branch name, or custom recipient..."
-                  onAddNew={(value) => {
-                    setFormData({ ...formData, toUser: value });
-                    toast({ 
-                      title: "Custom Recipient", 
-                      description: `Using custom recipient: ${value}` 
-                    });
-                  }}
-                  data-testid="autocomplete-to-user"
+                  onChange={(e) => setFormData({ ...formData, toUser: e.target.value })}
+                  placeholder="Enter recipient name"
+                  className="h-9"
+                  data-testid="input-to-user"
                 />
-                <div className="text-xs text-gray-500 mt-1">
-                  Type to search for existing users/branches or enter a custom recipient
-                </div>
               </div>
 
-              {/* Received Date - Third Field */}
-              <div>
-                <Label>Received Date *</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "w-full justify-start text-left font-normal",
-                        !selectedDate && "text-muted-foreground"
-                      )}
-                      data-testid="button-received-date"
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {selectedDate ? format(selectedDate, "PPP") : "Pick a date"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={selectedDate}
-                      onSelect={setSelectedDate}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
+              {/* Received Date */}
+              <div className="space-y-1">
+                <Label className="text-sm font-medium">Received Date *</Label>
+                <Input
+                  type="date"
+                  value={selectedDate ? format(selectedDate, "yyyy-MM-dd") : ""}
+                  onChange={(e) => {
+                    const date = e.target.value ? new Date(e.target.value) : undefined;
+                    setSelectedDate(date);
+                  }}
+                  className="h-9"
+                  data-testid="input-received-date"
+                />
               </div>
 
-              {/* POD Number - Fourth Field */}
-              <div>
-                <Label htmlFor="podNumber">POD Number *</Label>
+              {/* POD Number */}
+              <div className="space-y-1">
+                <Label htmlFor="podNumber" className="text-sm font-medium">POD Number *</Label>
                 <Input
                   id="podNumber"
                   value={formData.podNumber || ""}
                   onChange={(e) => setFormData({ ...formData, podNumber: e.target.value })}
                   placeholder="Enter POD Number"
+                  className="h-9"
                   required
                   data-testid="input-pod-number"
                 />
               </div>
 
-              {/* Courier Vendor - Fifth Field */}
-              <div>
-                <Label htmlFor="courierVendor">Courier Vendor *</Label>
+              {/* Courier Vendor */}
+              <div className="space-y-1">
+                <Label htmlFor="courierVendor" className="text-sm font-medium">Courier Vendor *</Label>
                 <Select
                   value={formData.courierVendor || ""}
                   onValueChange={(value) => setFormData({ ...formData, courierVendor: value })}
                 >
-                  <SelectTrigger data-testid="select-courier-vendor">
+                  <SelectTrigger className="h-9" data-testid="select-courier-vendor">
                     <SelectValue placeholder="Select vendor" />
                   </SelectTrigger>
                   <SelectContent>
@@ -564,55 +497,59 @@ export default function ReceivedCouriers() {
 
               {/* Custom Vendor Field (when "Others" is selected) */}
               {formData.courierVendor === "Others" && (
-                <div>
-                  <Label htmlFor="customVendor">Custom Vendor Name *</Label>
+                <div className="space-y-1">
+                  <Label htmlFor="customVendor" className="text-sm font-medium">Custom Vendor Name *</Label>
                   <Input
                     id="customVendor"
                     value={formData.customVendor || ""}
                     onChange={(e) => setFormData({ ...formData, customVendor: e.target.value })}
                     placeholder="Enter vendor name"
+                    className="h-9"
                     required
                     data-testid="input-custom-courier-vendor"
                   />
                 </div>
               )}
 
-              {/* Custom Department Field (when "Other" is selected) - Sixth Field */}
+              {/* Custom Department Field (when "Other" is selected) */}
               {formData.departmentId === undefined && (
-                <div>
-                  <Label htmlFor="customDepartment">Custom Department Name *</Label>
+                <div className="space-y-1">
+                  <Label htmlFor="customDepartment" className="text-sm font-medium">Custom Department Name *</Label>
                   <Input
                     id="customDepartment"
                     value={formData.customDepartment || ""}
                     onChange={(e) => setFormData({ ...formData, customDepartment: e.target.value })}
                     placeholder="Enter department name"
+                    className="h-9"
                     required
                     data-testid="input-custom-department"
                   />
                 </div>
               )}
 
-              {/* Receiver Name - Seventh Field */}
-              <div>
-                <Label htmlFor="receiverName">Receiver Name</Label>
+              {/* Receiver Name */}
+              <div className="space-y-1">
+                <Label htmlFor="receiverName" className="text-sm font-medium">Receiver Name</Label>
                 <Input
                   id="receiverName"
                   value={formData.receiverName || ""}
                   onChange={(e) => setFormData({ ...formData, receiverName: e.target.value })}
-                  placeholder="Name of person who received"
+                  placeholder="Name of person receiving"
+                  className="h-9"
                   data-testid="input-receiver-name"
                 />
               </div>
 
-              {/* Email ID - Eighth Field */}
-              <div>
-                <Label htmlFor="emailId">Email ID</Label>
+              {/* Email ID */}
+              <div className="space-y-1">
+                <Label htmlFor="emailId" className="text-sm font-medium">Email ID</Label>
                 <Input
                   id="emailId"
                   type="email"
                   value={formData.emailId || ""}
                   onChange={(e) => setFormData({ ...formData, emailId: e.target.value, sendEmailNotification: e.target.value ? true : false })}
                   placeholder="email@example.com"
+                  className="h-9"
                   data-testid="input-email-id"
                 />
               </div>
@@ -634,20 +571,22 @@ export default function ReceivedCouriers() {
                 </div>
               )}
 
-              {/* Remarks - Ninth Field */}
-              <div>
-                <Label htmlFor="remarks">Remarks</Label>
+              {/* Remarks */}
+              <div className="space-y-1">
+                <Label htmlFor="remarks" className="text-sm font-medium">Remarks</Label>
                 <Textarea
                   id="remarks"
                   value={formData.remarks || ""}
                   onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
                   placeholder="Optional remarks..."
+                  rows={3}
+                  className="resize-none text-sm"
                   data-testid="textarea-remarks"
                 />
               </div>
             </div>
 
-            <div className="flex gap-3 pt-4 border-t bg-white">
+            <div className="flex justify-end gap-2 pt-4 border-t">
               <Button
                 type="button"
                 variant="outline"
@@ -655,6 +594,7 @@ export default function ReceivedCouriers() {
                   setShowForm(false);
                   resetForm();
                 }}
+                className="px-4 py-2 text-sm"
                 data-testid="button-cancel"
               >
                 Cancel
@@ -662,6 +602,7 @@ export default function ReceivedCouriers() {
               <Button 
                 type="submit" 
                 disabled={createMutation.isPending}
+                className="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700"
                 data-testid="button-submit"
               >
                 {createMutation.isPending ? "Adding..." : "Add Received Courier"}
