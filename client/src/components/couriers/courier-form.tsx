@@ -40,7 +40,7 @@ const courierSchema = z.object({
   podNo: z.string().min(1, "POD number is required"),
   contactDetails: z.string().min(1, "Contact details are required"),
   receiverName: z.string().min(1, "Receiver name is required"),
-  details: z.string().min(1, "Courier details are required"),
+  details: z.string().optional(), // Made optional since it's conditionally hidden
   remarks: z.string().optional(),
   sendEmail: z.boolean().default(true),
   ccEmails: z.string().optional(),
@@ -480,25 +480,27 @@ export default function CourierForm({ courier, onClose, onSuccess }: CourierForm
                 )}
               />
 
-              {/* Courier Details */}
-              <FormField
-                control={form.control}
-                name="details"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Courier Details</FormLabel>
-                    <FormControl>
-                      <Textarea 
-                        rows={3}
-                        placeholder="Describe the courier contents/details" 
-                        {...field} 
-                        data-testid="textarea-details"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              {/* Courier Details - Hidden for dispatched couriers */}
+              {courier?.status !== 'dispatched' && (
+                <FormField
+                  control={form.control}
+                  name="details"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Courier Details</FormLabel>
+                      <FormControl>
+                        <Textarea 
+                          rows={3}
+                          placeholder="Describe the courier contents/details" 
+                          {...field} 
+                          data-testid="textarea-details"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
 
             {/* Render Custom Fields Inline */}
             {departmentFields.map((field: any) => {
