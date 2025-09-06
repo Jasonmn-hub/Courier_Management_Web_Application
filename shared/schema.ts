@@ -116,6 +116,7 @@ export const receivedCouriers = pgTable("received_couriers", {
   customVendor: varchar("custom_vendor", { length: 100 }),
   receiverName: varchar("receiver_name", { length: 100 }),
   emailId: varchar("email_id", { length: 100 }),
+  ccEmails: text("cc_emails"), // Store comma-separated CC email addresses
   sendEmailNotification: boolean("send_email_notification").default(false),
   customDepartment: varchar("custom_department", { length: 100 }),
   remarks: text("remarks"),
