@@ -258,16 +258,7 @@ export default function ReceivedCouriers() {
     createMutation.mutate(submitData);
   };
 
-  // Auto-add current user's email to the email field
-  useEffect(() => {
-    if (user?.email && (!formData.emailId || !formData.emailId.includes(user.email))) {
-      setFormData(prev => ({
-        ...prev,
-        emailId: prev.emailId ? `${prev.emailId}, ${user.email}` : user.email,
-        sendEmailNotification: true
-      }));
-    }
-  }, [user?.email]);
+  // Note: User can manually add their own email using the autocomplete suggestions
 
   if (isLoading || !isAuthenticated) {
     return (
