@@ -206,47 +206,9 @@ export default function ReceivedCouriers() {
     }
   };
 
-  // Auto-fill email from branch/user selection
+  // Handle from location change without auto-filling email
   const handleFromLocationChange = (value: string) => {
     setFormData({ ...formData, fromLocation: value });
-    
-    // Auto-fill email if branch is selected
-    const selectedBranch = branchesData?.branches?.find((b: any) => 
-      b.branchName?.toLowerCase().includes(value.toLowerCase()) ||
-      b.branchCode?.toLowerCase().includes(value.toLowerCase())
-    );
-    
-    if (selectedBranch && selectedBranch.email) {
-      setFormData(prev => ({ 
-        ...prev, 
-        fromLocation: value,
-        emailId: selectedBranch.email, 
-        sendEmailNotification: true 
-      }));
-      toast({ 
-        title: "Email Auto-filled", 
-        description: `Email set to: ${selectedBranch.email}` 
-      });
-    } else {
-      // Check if it's a user
-      const selectedUser = usersData?.users?.find((u: any) => 
-        u.name?.toLowerCase().includes(value.toLowerCase()) ||
-        u.email?.toLowerCase().includes(value.toLowerCase())
-      );
-      
-      if (selectedUser && selectedUser.email) {
-        setFormData(prev => ({ 
-          ...prev, 
-          fromLocation: value,
-          emailId: selectedUser.email, 
-          sendEmailNotification: true 
-        }));
-        toast({ 
-          title: "Email Auto-filled", 
-          description: `Email set to: ${selectedUser.email}` 
-        });
-      }
-    }
   };
 
   const resetForm = () => {
