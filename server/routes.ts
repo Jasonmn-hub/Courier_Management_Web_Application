@@ -2958,7 +2958,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           branchAddress: branch.branchAddress,
           state: branch.state,
           status: branch.status,
-          updatedFields: Object.keys(validatedData)
+          updatedFields: Object.keys(validatedData).join(', ')
         }
       );
       
