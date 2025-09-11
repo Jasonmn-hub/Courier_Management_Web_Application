@@ -263,7 +263,9 @@ export default function Departments() {
                     <TableBody>
                       {departments.map((dept) => (
                         <TableRow key={dept.id}>
-                          <TableCell className="font-medium">{dept.name}</TableCell>
+                          <TableCell className="font-medium">
+                            {dept.name} <span className="text-sm text-slate-500 font-normal">(ID: {dept.id})</span>
+                          </TableCell>
                           <TableCell>
                             {new Date(dept.createdAt).toLocaleDateString()}
                           </TableCell>
