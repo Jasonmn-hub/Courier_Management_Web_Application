@@ -360,6 +360,67 @@ export const upsertUserSchema = createInsertSchema(users).pick({
   departmentId: true,
 });
 
+// Enhanced validation schemas for secure user operations
+export const userProfileUpdateSchema = z.object({
+  name: z.string().min(1, "Name is required").max(100, "Name must be less than 100 characters").optional(),
+  firstName: z.string().max(50, "First name must be less than 50 characters").optional().nullable(),
+  lastName: z.string().max(50, "Last name must be less than 50 characters").optional().nullable(),
+  employeeCode: z.string().max(50, "Employee code must be less than 50 characters").optional().nullable(),
+  mobileNumber: z.string().regex(/^[\+]?[1-9][\d]{0,15}$/, "Invalid mobile number format").optional().nullable(),
+  email: z.string().email("Invalid email format").optional(),
+});
+
+export const userPasswordChangeSchema = z.object({
+  currentPassword: z.string().min(1, "Current password is required"),
+  newPassword: z.string()
+    .min(8, "Password must be at least 8 characters")
+    .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, "Password must contain at least one uppercase letter, one lowercase letter, and one number"),
+  confirmPassword: z.string()
+}).refine((data) => data.newPassword === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ["confirmPassword"],
+});
+
+export const adminUserUpdateSchema = insertUserSchema.extend({
+  role: z.enum(['admin', 'sub_admin', 'manager', 'user']).optional(),
+  departmentId: z.number().int().positive().optional().nullable(),
+  password: z.string()
+    .min(8, "Password must be at least 8 characters")
+    .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, "Password must contain at least one uppercase letter, one lowercase letter, and one number")
+    .optional(),
+}).partial();
+
+export const userRegistrationSchema = z.object({
+  name: z.string().min(1, "Name is required").max(100, "Name must be less than 100 characters"),
+  email: z.string().email("Invalid email format"),
+  password: z.string()
+    .min(8, "Password must be at least 8 characters")
+    .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, "Password must contain at least one uppercase letter, one lowercase letter, and one number"),
+  employeeCode: z.string().max(50, "Employee code must be less than 50 characters").optional().nullable(),
+  mobileNumber: z.string().regex(/^[\+]?[1-9][\d]{0,15}$/, "Invalid mobile number format").optional().nullable(),
+  role: z.enum(['admin', 'sub_admin', 'manager', 'user']).default('user'),
+  departmentId: z.number().int().positive().optional().nullable(),
+});
+
+// Secure response filtering schemas
+export const userPublicSchema = z.object({
+  id: z.string(),
+  name: z.string().nullable(),
+  email: z.string().nullable(),
+  role: z.enum(['admin', 'sub_admin', 'manager', 'user']).nullable(),
+  profileImageUrl: z.string().nullable(),
+  employeeCode: z.string().nullable(),
+});
+
+export const userPrivateSchema = userPublicSchema.extend({
+  firstName: z.string().nullable(),
+  lastName: z.string().nullable(),
+  mobileNumber: z.string().nullable(),
+  departmentId: z.number().nullable(),
+  createdAt: z.date().nullable(),
+  updatedAt: z.date().nullable(),
+});
+
 export const insertDepartmentSchema = createInsertSchema(departments).omit({
   id: true,
   createdAt: true,
@@ -432,6 +493,12 @@ export const insertVendorSchema = createInsertSchema(vendors).omit({
 export type UpsertUser = z.infer<typeof upsertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
+export type UserProfileUpdate = z.infer<typeof userProfileUpdateSchema>;
+export type UserPasswordChange = z.infer<typeof userPasswordChangeSchema>;
+export type AdminUserUpdate = z.infer<typeof adminUserUpdateSchema>;
+export type UserRegistration = z.infer<typeof userRegistrationSchema>;
+export type UserPublic = z.infer<typeof userPublicSchema>;
+export type UserPrivate = z.infer<typeof userPrivateSchema>;
 export type Department = typeof departments.$inferSelect;
 export type InsertDepartment = z.infer<typeof insertDepartmentSchema>;
 export type Courier = typeof couriers.$inferSelect;

@@ -53,7 +53,8 @@ export interface IStorage {
   getAllUsers(): Promise<User[]>;
   getUsersWithDepartments(searchTerm?: string): Promise<Array<User & { departments: Array<{ id: number; name: string }> }>>;
   createUser(user: { name: string; email: string; employeeCode?: string | null; mobileNumber?: string | null; password: string; role: string; departmentId?: number | null }): Promise<User>;
-  updateUser(id: string, userData: { name: string; email: string; employeeCode?: string | null; mobileNumber?: string | null; role: string; departmentId?: number | null; password?: string }): Promise<User | undefined>;
+  updateUser(id: string, userData: { name?: string; email?: string; employeeCode?: string | null; mobileNumber?: string | null; role?: string; departmentId?: number | null; password?: string; profileImageUrl?: string | null; firstName?: string | null; lastName?: string | null }): Promise<User | undefined>;
+  updateUserPassword(email: string, hashedPassword: string): Promise<boolean>;
   deleteUser(id: string): Promise<boolean>;
   upsertUser(user: UpsertUser): Promise<User>;
   getUserDepartments(userId: string): Promise<number[]>;
@@ -220,20 +221,22 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(users).orderBy(users.createdAt);
   }
 
-  async updateUser(id: string, userData: { name: string; email: string; employeeCode?: string | null; mobileNumber?: string | null; role: string; departmentId?: number | null; password?: string }): Promise<User | undefined> {
+  async updateUser(id: string, userData: { name?: string; email?: string; employeeCode?: string | null; mobileNumber?: string | null; role?: string; departmentId?: number | null; password?: string; profileImageUrl?: string | null; firstName?: string | null; lastName?: string | null }): Promise<User | undefined> {
     const updateData: any = {
-      name: userData.name,
-      email: userData.email,
-      employeeCode: userData.employeeCode,
-      mobileNumber: userData.mobileNumber,
-      role: userData.role as any,
-      departmentId: userData.departmentId,
       updatedAt: new Date()
     };
     
-    if (userData.password) {
-      updateData.password = userData.password;
-    }
+    // Only update fields that are provided
+    if (userData.name !== undefined) updateData.name = userData.name;
+    if (userData.email !== undefined) updateData.email = userData.email;
+    if (userData.employeeCode !== undefined) updateData.employeeCode = userData.employeeCode;
+    if (userData.mobileNumber !== undefined) updateData.mobileNumber = userData.mobileNumber;
+    if (userData.role !== undefined) updateData.role = userData.role as any;
+    if (userData.departmentId !== undefined) updateData.departmentId = userData.departmentId;
+    if (userData.profileImageUrl !== undefined) updateData.profileImageUrl = userData.profileImageUrl;
+    if (userData.firstName !== undefined) updateData.firstName = userData.firstName;
+    if (userData.lastName !== undefined) updateData.lastName = userData.lastName;
+    if (userData.password) updateData.password = userData.password;
     
     const [user] = await db.update(users)
       .set(updateData)
