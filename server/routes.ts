@@ -3019,9 +3019,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const deletedCount = await storage.deleteBulkBranches(branchIds);
       
+      // Get branch details before deletion for audit log
+      const branchesToDelete = await Promise.all(
+        branchIds.map(async (id: number) => {
+          const branch = await storage.getBranchById(id);
+          return branch;
+        })
+      );
+      
       // Log individual audit entries for each branch deleted
-      for (const branchId of branchIds) {
-        await logAudit(req.currentUser.id, 'DELETE', 'branch', branchId);
+      for (let i = 0; i < branchIds.length; i++) {
+        const branch = branchesToDelete[i];
+        await logAudit(
+          req.currentUser.id, 
+          'DELETE', 
+          'branch', 
+          branchIds[i],
+          undefined,
+          branch ? `Branch deleted: ${branch.branchName} (${branch.branchCode})` : `Branch deleted: ID ${branchIds[i]}`,
+          branch ? {
+            branchName: branch.branchName,
+            branchCode: branch.branchCode,
+            branchAddress: branch.branchAddress,
+            state: branch.state,
+            status: branch.status
+          } : { branchId: branchIds[i] }
+        );
       }
       
       res.json({ 
@@ -3048,7 +3071,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Branch not found" });
       }
       
-      await logAudit(req.currentUser.id, 'UPDATE', 'branch', branch.id);
+      await logAudit(
+        req.currentUser.id, 
+        'UPDATE', 
+        'branch', 
+        branch.id,
+        undefined,
+        `Branch status updated: ${branch.branchName} (${branch.branchCode}) - Status changed to ${status}`,
+        {
+          branchName: branch.branchName,
+          branchCode: branch.branchCode,
+          oldStatus: branch.status === status ? (status === 'active' ? 'closed' : 'active') : 'unknown',
+          newStatus: status
+        }
+      );
       
       res.json(branch);
     } catch (error) {
@@ -3192,7 +3228,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Log individual audit entries for each branch created
       for (const branch of createdBranches) {
-        await logAudit(req.currentUser.id, 'CREATE', 'branch', branch.id);
+        await logAudit(
+          req.currentUser.id, 
+          'CREATE', 
+          'branch', 
+          branch.id,
+          undefined,
+          `Branch created: ${branch.branchName} (${branch.branchCode})`,
+          {
+            branchName: branch.branchName,
+            branchCode: branch.branchCode,
+            branchAddress: branch.branchAddress,
+            state: branch.state,
+            status: branch.status
+          }
+        );
       }
 
       res.status(201).json({
