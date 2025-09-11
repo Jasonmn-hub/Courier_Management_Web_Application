@@ -2940,10 +2940,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const id = parseInt(req.params.id);
       const validatedData = insertBranchSchema.partial().parse(req.body);
       
+      // Get original branch data before update for comparison
+      const originalBranch = await storage.getBranchById(id);
+      if (!originalBranch) {
+        return res.status(404).json({ message: "Branch not found" });
+      }
+      
       const branch = await storage.updateBranch(id, validatedData);
       if (!branch) {
         return res.status(404).json({ message: "Branch not found" });
       }
+      
+      // Create detailed change tracking - only show changed fields
+      const changes: Record<string, { oldValue: any; newValue: any }> = {};
+      const changedFields: string[] = [];
+      
+      Object.keys(validatedData).forEach((field) => {
+        const oldValue = (originalBranch as any)[field];
+        const newValue = validatedData[field as keyof typeof validatedData];
+        
+        if (oldValue !== newValue) {
+          changes[field] = { oldValue, newValue };
+          changedFields.push(`${field}: "${oldValue}" → "${newValue}"`);
+        }
+      });
       
       await logAudit(
         req.currentUser.id, 
@@ -2951,14 +2971,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         'branch', 
         branch.id,
         undefined,
-        `Branch updated: ${branch.branchName} (${branch.branchCode})`,
+        `Branch updated: ${branch.branchName} (${branch.branchCode}) - ${changedFields.join(', ')}`,
         {
           branchName: branch.branchName,
           branchCode: branch.branchCode,
-          branchAddress: branch.branchAddress,
-          state: branch.state,
-          status: branch.status,
-          updatedFields: Object.keys(validatedData).join(', ')
+          changes: changes,
+          updatedFields: Object.keys(changes).join(', ')
         }
       );
       

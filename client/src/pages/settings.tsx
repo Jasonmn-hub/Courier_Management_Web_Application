@@ -506,12 +506,38 @@ function AuditLogsTable() {
                   <div className="bg-slate-50 p-3 rounded-md mt-2">
                     {typeof viewingLog.entityData === 'object' ? (
                       Object.entries(viewingLog.entityData).map(([key, value]) => {
+                        // Special formatting for changes object (before/after values)
+                        if (key === 'changes' && typeof value === 'object' && value !== null) {
+                          return (
+                            <div key={key} className="py-2 border-b border-slate-200 last:border-0">
+                              <span className="font-medium text-slate-600 block mb-2">Field Changes:</span>
+                              <div className="space-y-3">
+                                {Object.entries(value as Record<string, { oldValue: any; newValue: any }>).map(([fieldName, change]) => (
+                                  <div key={fieldName} className="bg-white border border-slate-200 rounded-md p-3">
+                                    <div className="font-medium text-slate-700 mb-2 capitalize">{fieldName}</div>
+                                    <div className="grid grid-cols-2 gap-3 text-sm">
+                                      <div>
+                                        <span className="block text-red-600 font-medium mb-1">Old Value:</span>
+                                        <span className="text-slate-800 bg-red-50 px-2 py-1 rounded break-words">{change.oldValue || 'None'}</span>
+                                      </div>
+                                      <div>
+                                        <span className="block text-green-600 font-medium mb-1">New Value:</span>
+                                        <span className="text-slate-800 bg-green-50 px-2 py-1 rounded break-words">{change.newValue || 'None'}</span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        }
+                        
                         // Special formatting for updatedFields
                         if (key === 'updatedFields' && typeof value === 'string') {
                           const fields = value.split(',').map(field => field.trim());
                           return (
                             <div key={key} className="py-2 border-b border-slate-200 last:border-0">
-                              <span className="font-medium text-slate-600 block mb-1">{key}:</span>
+                              <span className="font-medium text-slate-600 block mb-1">Updated Fields:</span>
                               <div className="flex flex-wrap gap-1">
                                 {fields.map((field, index) => (
                                   <span key={index} className="bg-blue-100 text-blue-800 px-2 py-1 rounded-md text-xs font-medium">
@@ -521,6 +547,11 @@ function AuditLogsTable() {
                               </div>
                             </div>
                           );
+                        }
+                        
+                        // Skip displaying basic entity info if we have detailed changes
+                        if ((key === 'branchName' || key === 'branchCode') && viewingLog.entityData.changes) {
+                          return null;
                         }
                         
                         // Special formatting for long addresses
@@ -540,7 +571,7 @@ function AuditLogsTable() {
                             <span className="text-slate-800 text-right ml-4 break-words">{value as string}</span>
                           </div>
                         );
-                      })
+                      }).filter(Boolean)
                     ) : (
                       <p>{JSON.stringify(viewingLog.entityData)}</p>
                     )}
