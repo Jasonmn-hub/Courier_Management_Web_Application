@@ -1513,11 +1513,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Compare all possible fields
       const fieldsToCheck = ['name', 'email', 'employeeCode', 'mobileNumber', 'role', 'departmentId'];
       
-      // Get all departments for name resolution
-      let departmentMap = new Map<number, string>();
+      // Get all departments for name resolution with string keys
+      let departmentMap = new Map<string, string>();
       try {
         const allDepartments = await storage.getAllDepartments();
-        departmentMap = new Map(allDepartments.map(dept => [dept.id, dept.name]));
+        departmentMap = new Map(allDepartments.map(dept => [String(dept.id), dept.name]));
       } catch (error) {
         console.error('Error fetching departments for audit log:', error);
       }
@@ -1529,13 +1529,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (oldValue !== newValue) {
           // Special handling for departmentId to store department names in audit data
           if (field === 'departmentId') {
-            const oldId = oldValue ? Number(oldValue) : null;
-            const newId = newValue ? Number(newValue) : null;
+            const oldKey = oldValue == null ? null : String(oldValue);
+            const newKey = newValue == null ? null : String(newValue);
             
-            const oldDeptName = oldId && !isNaN(oldId) ? 
-              departmentMap.get(oldId) || `Department ID: ${oldId}` : 'None';
-            const newDeptName = newId && !isNaN(newId) ? 
-              departmentMap.get(newId) || `Department ID: ${newId}` : 'None';
+            const oldDeptName = oldKey ? departmentMap.get(oldKey) ?? `Department ID: ${oldKey}` : 'None';
+            const newDeptName = newKey ? departmentMap.get(newKey) ?? `Department ID: ${newKey}` : 'None';
             
             // Store department names in the structured audit data
             changes[field] = { 
