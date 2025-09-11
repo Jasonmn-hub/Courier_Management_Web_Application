@@ -393,11 +393,6 @@ export class DatabaseStorage implements IStorage {
     return result.length > 0;
   }
 
-  async getDepartmentById(id: number): Promise<Department | undefined> {
-    const [department] = await db.select().from(departments).where(eq(departments.id, id));
-    return department;
-  }
-
   // Courier operations
   async getAllCouriers(filters: {
     status?: string;
