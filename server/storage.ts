@@ -61,6 +61,7 @@ export interface IStorage {
   
   // Department operations
   getAllDepartments(): Promise<Department[]>;
+  getDepartmentById(id: number): Promise<Department | undefined>;
   createDepartment(department: InsertDepartment): Promise<Department>;
   updateDepartment(id: number, department: Partial<InsertDepartment> & { authorityDocumentPath?: string }): Promise<Department | undefined>;
   deleteDepartment(id: number): Promise<boolean>;
@@ -363,6 +364,11 @@ export class DatabaseStorage implements IStorage {
   // Department operations
   async getAllDepartments(): Promise<Department[]> {
     return await db.select().from(departments).orderBy(departments.name);
+  }
+
+  async getDepartmentById(id: number): Promise<Department | undefined> {
+    const [department] = await db.select().from(departments).where(eq(departments.id, id));
+    return department;
   }
 
   async createDepartment(department: InsertDepartment): Promise<Department> {

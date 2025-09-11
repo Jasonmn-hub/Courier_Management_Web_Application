@@ -249,8 +249,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (courier.departmentId) {
             try {
               const departmentUsers = await storage.getAllUsers();
-              if (departmentUsers && departmentUsers.users && Array.isArray(departmentUsers.users)) {
-                departmentUsers.users.forEach((user: any) => {
+              if (departmentUsers && Array.isArray(departmentUsers)) {
+                departmentUsers.forEach((user: any) => {
                   if ((user.role === 'admin' || user.role === 'manager') && user.departmentId === courier.departmentId) {
                     if (user.email && !recipients.includes(user.email) && !ccRecipients.includes(user.email)) {
                       ccRecipients.push(user.email);
@@ -455,7 +455,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           <html>
             <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
               <h2 style="color: #16a34a;">✅ Already Confirmed</h2>
-              <p>This courier (POD: ${courier.podNumber}) has already been marked as received.</p>
+              <p>This courier (POD: ${courier.podNo}) has already been marked as received.</p>
               <p style="color: #6b7280; font-size: 14px;">Thank you for confirming the delivery.</p>
             </body>
           </html>
@@ -534,8 +534,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Get department admin emails for CC
             try {
               const departmentUsers = await storage.getAllUsers();
-              if (departmentUsers && departmentUsers.users && Array.isArray(departmentUsers.users)) {
-                departmentUsers.users.forEach((user: any) => {
+              if (departmentUsers && Array.isArray(departmentUsers)) {
+                departmentUsers.forEach((user: any) => {
                   if ((user.role === 'admin' || user.role === 'manager') && user.departmentId === courier.departmentId) {
                     if (user.email && !recipients.includes(user.email) && user.email !== (courier as any).emailId) {
                       ccRecipients.push(user.email);
@@ -602,7 +602,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:13px;color:#374151;">
                       <tr>
                         <td style="padding:4px 0;font-weight:600;">POD Number:</td>
-                        <td style="padding:4px 0;">${courier.podNumber}</td>
+                        <td style="padding:4px 0;">${courier.podNo}</td>
                       </tr>
                       <tr>
                         <td style="padding:4px 0;font-weight:600;">Received Date:</td>
@@ -677,7 +677,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             <h2 style="color: #16a34a;">✅ Courier Received Successfully</h2>
             <p>Thank you for confirming the receipt of courier:</p>
             <div style="background: #f9fafb; padding: 20px; border-radius: 8px; margin: 20px auto; max-width: 400px;">
-              <p><strong>POD Number:</strong> ${courier.podNumber}</p>
+              <p><strong>POD Number:</strong> ${courier.podNo}</p>
               <p><strong>From:</strong> ${courier.fromLocation}</p>
               <p><strong>Vendor:</strong> ${courier.courierVendor === 'Others' && (courier as any).customVendor ? (courier as any).customVendor : courier.courierVendor}</p>
               <p><strong>Status:</strong> <span style="background: #dcfce7; color: #166534; padding: 4px 8px; border-radius: 4px;">RECEIVED</span></p>
@@ -1922,7 +1922,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Get department name before deletion
-      const deptToDelete = await storage.getDepartment(id);
+      const deptToDelete = await storage.getDepartmentById(id);
       await logAudit(req.currentUser.id, 'DELETE', 'department', id, null, `Department Name: ${deptToDelete?.name || 'Unknown'}`);
       
       res.json({ message: "Department deleted successfully" });
@@ -2126,7 +2126,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       receivedCouriers.forEach(courier => {
         const row = [
           'Received Courier',
-          courier.podNumber || '',
+          courier.podNo || '',
           courier.fromLocation || '',
           courier.emailId || '',
           courier.courierVendor || '',
@@ -2482,15 +2482,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (validatedData.toBranch && existingCourier.toBranch !== validatedData.toBranch) {
         changes.push(`To Branch: "${existingCourier.toBranch}" → "${validatedData.toBranch}"`);
       }
-      if (validatedData.fromBranch && existingCourier.fromBranch !== validatedData.fromBranch) {
-        changes.push(`From Branch: "${existingCourier.fromBranch}" → "${validatedData.fromBranch}"`);
+      if (validatedData.toBranch && existingCourier.toBranch !== validatedData.toBranch) {
+        changes.push(`To Branch: "${existingCourier.toBranch}" → "${validatedData.toBranch}"`);
       }
       if (validatedData.details && existingCourier.details !== validatedData.details) {
         changes.push(`Details: Updated`);
       }
-      if (validatedData.priority && existingCourier.priority !== validatedData.priority) {
-        changes.push(`Priority: "${existingCourier.priority}" → "${validatedData.priority}"`);
-      }
+      // Priority field not available in schema - removed
 
       const auditDetails = changes.length > 0 ? 
         `Courier POD "${existingCourier.podNo}" updated. Changes: ${changes.join(', ')}` :
@@ -2809,7 +2807,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const id = parseInt(req.params.id);
       
       // Get branch details before deletion for audit log
-      const branchToDelete = await storage.getBranch(id);
+      const branchToDelete = await storage.getBranchById(id);
       
       const success = await storage.deleteBranch(id);
       
@@ -3357,7 +3355,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:13px;color:#374151;">
                       <tr>
                         <td style="padding:6px 0;width:180px;">POD Number</td>
-                        <td style="padding:6px 0;"><strong>${courier.podNumber || 'N/A'}</strong></td>
+                        <td style="padding:6px 0;"><strong>${courier.podNo || 'N/A'}</strong></td>
                       </tr>
                       <tr>
                         <td style="padding:6px 0;">From Location</td>
@@ -3520,7 +3518,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           <tr>
             <td style="padding:20px 24px;color:#111827;font-size:14px;line-height:1.5;">
               Dear ${(courier as any).receiverName || 'Team'},<br><br>
-              This is to notify you that the courier with POD Number <strong>${courier.podNumber}</strong> 
+              This is to notify you that the courier with POD Number <strong>${courier.podNo}</strong> 
               has been <strong>dispatched back</strong> from our office.
             </td>
           </tr>
@@ -3539,7 +3537,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:13px;color:#374151;">
                       <tr>
                         <td style="padding:4px 0;font-weight:600;">POD Number:</td>
-                        <td style="padding:4px 0;">${courier.podNumber}</td>
+                        <td style="padding:4px 0;">${courier.podNo}</td>
                       </tr>
                       <tr>
                         <td style="padding:4px 0;font-weight:600;">Received Date:</td>
