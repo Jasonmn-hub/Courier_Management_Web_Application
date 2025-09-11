@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { authenticateToken, requireRole, hashPassword, comparePassword, generateToken, verifyToken } from "./auth";
 import jwt from "jsonwebtoken";
-import { insertCourierSchema, insertDepartmentSchema, insertFieldSchema, insertSmtpSettingsSchema, insertSamlSettingsSchema, insertReceivedCourierSchema, insertAuthorityLetterTemplateSchema, insertAuthorityLetterFieldSchema, insertBranchSchema, insertUserPolicySchema, type InsertBranch } from "@shared/schema";
+import { insertCourierSchema, insertDepartmentSchema, insertFieldSchema, insertSmtpSettingsSchema, insertSamlSettingsSchema, insertReceivedCourierSchema, insertAuthorityLetterTemplateSchema, insertAuthorityLetterFieldSchema, insertBranchSchema, insertUserPolicySchema, userProfileUpdateSchema, userPasswordChangeSchema, adminUserUpdateSchema, userRegistrationSchema, userPublicSchema, userPrivateSchema, type InsertBranch, type UserProfileUpdate, type UserPasswordChange, type AdminUserUpdate, type UserRegistration, type UserPublic, type UserPrivate } from "@shared/schema";
 import { z } from "zod";
 import multer from "multer";
 import path from "path";
@@ -1065,6 +1065,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Enhanced password change endpoint with better validation
+  app.post('/api/auth/change-password-secure', authenticateToken, async (req: any, res) => {
+    try {
+      const validationResult = userPasswordChangeSchema.safeParse(req.body);
+      if (!validationResult.success) {
+        return res.status(400).json({ 
+          message: "Validation error", 
+          errors: validationResult.error.errors 
+        });
+      }
+
+      const { currentPassword, newPassword } = validationResult.data;
+      const userId = req.user.id;
+
+      // Get user from database
+      const user = await storage.getUser(userId);
+      if (!user || !user.password) {
+        return res.status(404).json({ message: 'User not found or password not set' });
+      }
+
+      // Verify current password
+      const isValidCurrentPassword = await comparePassword(currentPassword, user.password);
+      if (!isValidCurrentPassword) {
+        return res.status(400).json({ message: 'Current password is incorrect' });
+      }
+
+      // Hash new password
+      const hashedNewPassword = await hashPassword(newPassword);
+
+      // Update user password
+      const passwordUpdated = await storage.updateUserPassword(user.email!, hashedNewPassword);
+      if (!passwordUpdated) {
+        return res.status(500).json({ message: 'Failed to update password' });
+      }
+
+      // Log the password change
+      await logAudit(userId, 'UPDATE', 'user_password', userId, user.email, 'User changed password');
+
+      res.json({ message: 'Password changed successfully' });
+    } catch (error) {
+      console.error('Secure password change error:', error);
+      res.status(500).json({ message: 'Password change failed' });
+    }
+  });
+
   // Auth routes
   // Get current user endpoint
   app.get('/api/auth/user', authenticateToken, async (req: any, res) => {
@@ -1084,19 +1129,144 @@ export async function registerRoutes(app: Express): Promise<Server> {
     };
   };
 
+  // Enhanced user profile endpoints
+  // Get current user's profile (secure)
+  app.get('/api/user/profile', authenticateToken, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      // Filter response using secure schema
+      const secureUserData = userPrivateSchema.parse({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        employeeCode: user.employeeCode,
+        mobileNumber: user.mobileNumber,
+        role: user.role,
+        profileImageUrl: user.profileImageUrl,
+        departmentId: user.departmentId,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt
+      });
+
+      res.json(secureUserData);
+    } catch (error) {
+      console.error("Error fetching user profile:", error);
+      res.status(500).json({ message: "Failed to fetch user profile" });
+    }
+  });
+
+  // Update current user's profile (secure self-update)
+  app.put('/api/user/profile', authenticateToken, async (req: any, res) => {
+    try {
+      const validationResult = userProfileUpdateSchema.safeParse(req.body);
+      if (!validationResult.success) {
+        return res.status(400).json({ 
+          message: "Validation error", 
+          errors: validationResult.error.errors 
+        });
+      }
+
+      const userId = req.user.id;
+      const updateData = validationResult.data;
+
+      // Get current user data for audit comparison
+      const existingUser = await storage.getUser(userId);
+      if (!existingUser) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      // Check if email is being changed and ensure it's not already taken
+      if (updateData.email && updateData.email !== existingUser.email) {
+        const existingEmailUser = await storage.getUserByEmail(updateData.email);
+        if (existingEmailUser && existingEmailUser.id !== userId) {
+          return res.status(400).json({ message: 'Email already in use' });
+        }
+      }
+
+      // Update user profile
+      const updatedUser = await storage.updateUser(userId, updateData);
+      if (!updatedUser) {
+        return res.status(500).json({ message: 'Failed to update profile' });
+      }
+
+      // Create detailed audit log
+      const changes = [];
+      if (updateData.name && existingUser.name !== updateData.name) {
+        changes.push(`Name: "${existingUser.name}" → "${updateData.name}"`);
+      }
+      if (updateData.email && existingUser.email !== updateData.email) {
+        changes.push(`Email: "${existingUser.email}" → "${updateData.email}"`);
+      }
+      if (updateData.firstName !== undefined && existingUser.firstName !== updateData.firstName) {
+        changes.push(`First Name: "${existingUser.firstName || 'None'}" → "${updateData.firstName || 'None'}"`);
+      }
+      if (updateData.lastName !== undefined && existingUser.lastName !== updateData.lastName) {
+        changes.push(`Last Name: "${existingUser.lastName || 'None'}" → "${updateData.lastName || 'None'}"`);
+      }
+      if (updateData.employeeCode !== undefined && existingUser.employeeCode !== updateData.employeeCode) {
+        changes.push(`Employee Code: "${existingUser.employeeCode || 'None'}" → "${updateData.employeeCode || 'None'}"`);
+      }
+      if (updateData.mobileNumber !== undefined && existingUser.mobileNumber !== updateData.mobileNumber) {
+        changes.push(`Mobile: "${existingUser.mobileNumber || 'None'}" → "${updateData.mobileNumber || 'None'}"`);
+      }
+
+      const auditDetails = changes.length > 0 ? 
+        `User profile self-updated. Changes: ${changes.join(', ')}` :
+        'User profile self-updated - No changes detected';
+
+      await logAudit(userId, 'UPDATE', 'user_profile', userId, updatedUser.email, auditDetails);
+
+      // Return filtered user data
+      const secureUserData = userPrivateSchema.parse({
+        id: updatedUser.id,
+        name: updatedUser.name,
+        email: updatedUser.email,
+        firstName: updatedUser.firstName,
+        lastName: updatedUser.lastName,
+        employeeCode: updatedUser.employeeCode,
+        mobileNumber: updatedUser.mobileNumber,
+        role: updatedUser.role,
+        profileImageUrl: updatedUser.profileImageUrl,
+        departmentId: updatedUser.departmentId,
+        createdAt: updatedUser.createdAt,
+        updatedAt: updatedUser.updatedAt
+      });
+
+      res.json({ message: 'Profile updated successfully', user: secureUserData });
+    } catch (error) {
+      console.error("Error updating user profile:", error);
+      res.status(500).json({ message: "Failed to update user profile" });
+    }
+  });
+
   // User management routes
   app.get('/api/users', authenticateToken, async (req: any, res) => {
     try {
       const { search } = req.query;
       const users = await storage.getUsersWithDepartments(search as string);
-      // Only return basic info for security
-      const basicUsers = users.map(user => ({
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        departments: user.departments
-      }));
+      // Only return basic info for security - enhanced filtering
+      const basicUsers = users.map(user => {
+        const secureData = userPublicSchema.parse({
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          profileImageUrl: user.profileImageUrl,
+          employeeCode: user.employeeCode
+        });
+        return {
+          ...secureData,
+          departments: user.departments
+        };
+      });
       res.json({ users: basicUsers });
     } catch (error) {
       console.error("Error fetching users:", error);
