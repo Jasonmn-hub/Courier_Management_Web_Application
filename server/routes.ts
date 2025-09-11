@@ -2085,15 +2085,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete('/api/departments/:id', authenticateToken, requireRole(['admin', 'sub_admin']), setCurrentUser(), async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
+      
+      // Get department details BEFORE deletion for audit log
+      const deptToDelete = await storage.getDepartmentById(id);
+      if (!deptToDelete) {
+        return res.status(404).json({ message: "Department not found" });
+      }
+      
       const success = await storage.deleteDepartment(id);
       
       if (!success) {
         return res.status(404).json({ message: "Department not found" });
       }
       
-      // Get department name before deletion
-      const deptToDelete = await storage.getDepartmentById(id);
-      await logAudit(req.currentUser.id, 'DELETE', 'department', id, null, `Department Name: ${deptToDelete?.name || 'Unknown'}`);
+      await logAudit(req.currentUser.id, 'DELETE', 'department', id, null, `Department deleted: ${deptToDelete.name}`, {
+        departmentName: deptToDelete.name,
+        authorityDocumentEnabled: deptToDelete.authorityDocumentEnabled
+      });
       
       res.json({ message: "Department deleted successfully" });
     } catch (error) {
