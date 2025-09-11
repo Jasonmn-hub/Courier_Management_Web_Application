@@ -505,12 +505,42 @@ function AuditLogsTable() {
                   <Label className="font-semibold">Entity Information</Label>
                   <div className="bg-slate-50 p-3 rounded-md mt-2">
                     {typeof viewingLog.entityData === 'object' ? (
-                      Object.entries(viewingLog.entityData).map(([key, value]) => (
-                        <div key={key} className="flex justify-between py-1 border-b border-slate-200 last:border-0">
-                          <span className="font-medium text-slate-600">{key}:</span>
-                          <span className="text-slate-800">{value as string}</span>
-                        </div>
-                      ))
+                      Object.entries(viewingLog.entityData).map(([key, value]) => {
+                        // Special formatting for updatedFields
+                        if (key === 'updatedFields' && typeof value === 'string') {
+                          const fields = value.split(',').map(field => field.trim());
+                          return (
+                            <div key={key} className="py-2 border-b border-slate-200 last:border-0">
+                              <span className="font-medium text-slate-600 block mb-1">{key}:</span>
+                              <div className="flex flex-wrap gap-1">
+                                {fields.map((field, index) => (
+                                  <span key={index} className="bg-blue-100 text-blue-800 px-2 py-1 rounded-md text-xs font-medium">
+                                    {field}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        }
+                        
+                        // Special formatting for long addresses
+                        if (key === 'branchAddress' && typeof value === 'string' && value.length > 50) {
+                          return (
+                            <div key={key} className="py-2 border-b border-slate-200 last:border-0">
+                              <span className="font-medium text-slate-600 block mb-1">{key}:</span>
+                              <span className="text-slate-800 text-sm break-words">{value as string}</span>
+                            </div>
+                          );
+                        }
+                        
+                        // Default formatting
+                        return (
+                          <div key={key} className="flex justify-between py-1 border-b border-slate-200 last:border-0">
+                            <span className="font-medium text-slate-600">{key}:</span>
+                            <span className="text-slate-800 text-right ml-4 break-words">{value as string}</span>
+                          </div>
+                        );
+                      })
                     ) : (
                       <p>{JSON.stringify(viewingLog.entityData)}</p>
                     )}
