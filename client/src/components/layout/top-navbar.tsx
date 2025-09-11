@@ -8,6 +8,7 @@ import {
   DropdownMenuItem, 
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { Menu, Bell, ChevronDown } from "lucide-react";
 import { useLocation } from "wouter";
 import AccountProfile from "./account-profile";
@@ -76,6 +77,9 @@ export default function TopNavbar({ onMenuClick }: TopNavbarProps) {
               3
             </span>
           </Button>
+
+          {/* Theme Toggle */}
+          <ThemeToggle />
 
           {/* Account Profile */}
           <AccountProfile />

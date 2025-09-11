@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   Table,
   TableBody,
@@ -44,6 +44,14 @@ export default function CourierTable({
   const [departmentFilter, setDepartmentFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState(status || "all");
   const [viewingCourier, setViewingCourier] = useState<any>(null);
+  const [deleteConfirmation, setDeleteConfirmation] = useState<{ show: boolean; courier: any | null }>({
+    show: false,
+    courier: null,
+  });
+  const [restoreConfirmation, setRestoreConfirmation] = useState<{ show: boolean; courier: any | null }>({
+    show: false,
+    courier: null,
+  });
 
   const { data: couriersResult, isLoading } = useQuery({
     queryKey: ['/api/couriers', statusFilter, search, pageSize, currentPage, departmentFilter],
@@ -139,15 +147,25 @@ export default function CourierTable({
     },
   });
 
-  const handleDelete = (id: number) => {
-    if (confirm("Are you sure you want to delete this courier?")) {
-      deleteMutation.mutate(id);
+  const handleDelete = (courier: any) => {
+    setDeleteConfirmation({ show: true, courier });
+  };
+
+  const confirmDelete = () => {
+    if (deleteConfirmation.courier) {
+      deleteMutation.mutate(deleteConfirmation.courier.id);
+      setDeleteConfirmation({ show: false, courier: null });
     }
   };
 
-  const handleRestore = (id: number) => {
-    if (confirm("Are you sure you want to restore this courier?")) {
-      restoreMutation.mutate(id);
+  const handleRestore = (courier: any) => {
+    setRestoreConfirmation({ show: true, courier });
+  };
+
+  const confirmRestore = () => {
+    if (restoreConfirmation.courier) {
+      restoreMutation.mutate(restoreConfirmation.courier.id);
+      setRestoreConfirmation({ show: false, courier: null });
     }
   };
 
@@ -404,7 +422,7 @@ export default function CourierTable({
                               <Button 
                                 variant="ghost" 
                                 size="sm" 
-                                onClick={() => handleRestore(courier.id)}
+                                onClick={() => handleRestore(courier)}
                                 disabled={restoreMutation.isPending}
                                 data-testid={`button-restore-${courier.id}`}
                               >
@@ -414,7 +432,7 @@ export default function CourierTable({
                               <Button 
                                 variant="ghost" 
                                 size="sm" 
-                                onClick={() => handleDelete(courier.id)}
+                                onClick={() => handleDelete(courier)}
                                 disabled={deleteMutation.isPending}
                                 data-testid={`button-delete-${courier.id}`}
                               >
@@ -624,6 +642,67 @@ export default function CourierTable({
             <div className="flex justify-end pt-4">
               <Button onClick={() => setViewingCourier(null)}>Close</Button>
             </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      {deleteConfirmation.show && deleteConfirmation.courier && (
+        <Dialog open={deleteConfirmation.show} onOpenChange={(open) => !open && setDeleteConfirmation({ show: false, courier: null })}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Delete Courier</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to delete courier "{deleteConfirmation.courier.podNo}"? This action cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setDeleteConfirmation({ show: false, courier: null })}
+                data-testid="button-cancel-delete"
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={confirmDelete}
+                disabled={deleteMutation.isPending}
+                data-testid="button-confirm-delete"
+              >
+                {deleteMutation.isPending ? "Deleting..." : "Delete"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Restore Confirmation Dialog */}
+      {restoreConfirmation.show && restoreConfirmation.courier && (
+        <Dialog open={restoreConfirmation.show} onOpenChange={(open) => !open && setRestoreConfirmation({ show: false, courier: null })}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Restore Courier</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to restore courier "{restoreConfirmation.courier.podNo}"? This will make it active again.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setRestoreConfirmation({ show: false, courier: null })}
+                data-testid="button-cancel-restore"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={confirmRestore}
+                disabled={restoreMutation.isPending}
+                data-testid="button-confirm-restore"
+              >
+                {restoreMutation.isPending ? "Restoring..." : "Restore"}
+              </Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
       )}

@@ -390,7 +390,7 @@ export class DatabaseStorage implements IStorage {
 
   async deleteDepartment(id: number): Promise<boolean> {
     const result = await db.delete(departments).where(eq(departments.id, id));
-    return result.length > 0;
+    return (result as any).rowCount > 0 || result.length > 0;
   }
 
   // Courier operations
