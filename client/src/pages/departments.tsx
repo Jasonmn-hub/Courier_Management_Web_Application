@@ -255,6 +255,7 @@ export default function Departments() {
                   <Table>
                     <TableHeader>
                       <TableRow>
+                        <TableHead>ID</TableHead>
                         <TableHead>Name</TableHead>
                         <TableHead>Created</TableHead>
                         <TableHead className="text-center">Actions</TableHead>
@@ -263,8 +264,11 @@ export default function Departments() {
                     <TableBody>
                       {departments.map((dept) => (
                         <TableRow key={dept.id}>
+                          <TableCell className="font-medium text-slate-600">
+                            {dept.id}
+                          </TableCell>
                           <TableCell className="font-medium">
-                            {dept.name} <span className="text-sm text-slate-500 font-normal">(ID: {dept.id})</span>
+                            {dept.name}
                           </TableCell>
                           <TableCell>
                             {new Date(dept.createdAt).toLocaleDateString()}
