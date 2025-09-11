@@ -2081,6 +2081,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Department routes
   app.get('/api/departments', authenticateToken, async (req: any, res) => {
     try {
+      const includeDeleted = req.query.includeDeleted === 'true';
+      // Note: Current system uses hard deletion, so includeDeleted will always return the same result
+      // This parameter is prepared for future soft delete implementation
       const departments = await storage.getAllDepartments();
       res.json(departments);
     } catch (error) {

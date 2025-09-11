@@ -3,6 +3,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Plus, Upload, Edit, Trash2, Settings, Search } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import DepartmentForm from "@/components/departments/department-form";
@@ -49,6 +51,7 @@ export default function Departments() {
     show: false,
     department: null,
   });
+  const [showDeleted, setShowDeleted] = useState(false);
 
   // Redirect to home if not authenticated or not admin
   useEffect(() => {
@@ -66,16 +69,23 @@ export default function Departments() {
   }, [isAuthenticated, isLoading, user, toast]);
 
   const { data: allDepartments = [], isLoading: departmentsLoading } = useQuery<Department[]>({
-    queryKey: ['/api/departments'],
+    queryKey: ['/api/departments', showDeleted ? 'with-deleted' : 'active'],
+    queryFn: async () => {
+      const url = showDeleted ? '/api/departments?includeDeleted=true' : '/api/departments';
+      const response = await apiRequest('GET', url);
+      return response.json();
+    },
     enabled: isAuthenticated && (user as User)?.role === 'admin',
   });
 
-  // Filter departments on the client side
-  const departments = allDepartments.filter((dept) => {
-    if (!searchTerm) return true;
-    const searchLower = searchTerm.toLowerCase();
-    return dept.name?.toLowerCase().includes(searchLower);
-  });
+  // Filter and sort departments on the client side
+  const departments = allDepartments
+    .filter((dept) => {
+      if (!searchTerm) return true;
+      const searchLower = searchTerm.toLowerCase();
+      return dept.name?.toLowerCase().includes(searchLower);
+    })
+    .sort((a, b) => a.id - b.id); // Always sort by ID
 
   // Fetch authority letter fields for selected department
   const { data: departmentFields = [], isLoading: fieldsLoading, refetch: refetchFields } = useQuery<any[]>({
@@ -240,6 +250,19 @@ export default function Departments() {
                     className="pl-10"
                     data-testid="input-search-departments"
                   />
+                </div>
+                
+                {/* Show Deleted Checkbox */}
+                <div className="flex items-center space-x-2 mt-3">
+                  <Checkbox
+                    id="show-deleted"
+                    checked={showDeleted}
+                    onCheckedChange={(checked) => setShowDeleted(checked as boolean)}
+                    data-testid="checkbox-show-deleted"
+                  />
+                  <Label htmlFor="show-deleted" className="text-sm text-slate-600">
+                    Show deleted departments
+                  </Label>
                 </div>
               </CardHeader>
               <CardContent>
