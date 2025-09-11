@@ -1506,35 +1506,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: 'User not found' });
       }
 
-      // Create detailed audit log showing what changed
-      const changes = [];
-      if (existingUser.name !== updateData.name) {
-        changes.push(`Name: "${existingUser.name}" → "${updateData.name}"`);
-      }
-      if (existingUser.email !== updateData.email) {
-        changes.push(`Email: "${existingUser.email}" → "${updateData.email}"`);
-      }
-      if (existingUser.employeeCode !== updateData.employeeCode) {
-        changes.push(`Employee Code: "${existingUser.employeeCode || 'None'}" → "${updateData.employeeCode || 'None'}"`);
-      }
-      if (existingUser.mobileNumber !== updateData.mobileNumber) {
-        changes.push(`Mobile: "${existingUser.mobileNumber || 'None'}" → "${updateData.mobileNumber || 'None'}"`);
-      }
-      if (existingUser.role !== updateData.role) {
-        changes.push(`Role: "${existingUser.role}" → "${updateData.role}"`);
-      }
-      if (existingUser.departmentId !== updateData.departmentId) {
-        changes.push(`Department ID: "${existingUser.departmentId || 'None'}" → "${updateData.departmentId || 'None'}"`);
-      }
+      // Create detailed change tracking - only show changed fields
+      const changes: Record<string, { oldValue: any; newValue: any }> = {};
+      const changedFields: string[] = [];
+      
+      // Compare all possible fields
+      const fieldsToCheck = ['name', 'email', 'employeeCode', 'mobileNumber', 'role', 'departmentId'];
+      
+      fieldsToCheck.forEach((field) => {
+        const oldValue = (existingUser as any)[field];
+        const newValue = (updateData as any)[field];
+        
+        if (oldValue !== newValue) {
+          changes[field] = { 
+            oldValue: oldValue || 'None', 
+            newValue: newValue || 'None' 
+          };
+          changedFields.push(`${field}: "${oldValue || 'None'}" → "${newValue || 'None'}"`);
+        }
+      });
+      
+      // Special handling for password
       if (password && password.trim()) {
-        changes.push('Password: Updated');
+        changes['password'] = { 
+          oldValue: 'Hidden', 
+          newValue: 'Updated' 
+        };
+        changedFields.push('Password: Updated');
       }
 
-      const auditDetails = changes.length > 0 ? 
-        `User "${existingUser.name}" (${existingUser.email}) updated. Changes: ${changes.join(', ')}` :
-        `User "${existingUser.name}" (${existingUser.email}) updated - No changes detected`;
+      const auditDetails = changedFields.length > 0 ? 
+        `User updated: ${existingUser.name} (${existingUser.email}) - ${changedFields.join(', ')}` :
+        `User updated: ${existingUser.name} (${existingUser.email}) - No changes detected`;
 
-      await logAudit(req.currentUser.id, 'UPDATE', 'user', userId, updateData.email, auditDetails);
+      await logAudit(
+        req.currentUser.id, 
+        'UPDATE', 
+        'user', 
+        userId, 
+        updateData.email, 
+        auditDetails,
+        {
+          userName: existingUser.name,
+          userEmail: existingUser.email,
+          changes: changes,
+          updatedFields: Object.keys(changes).join(', ')
+        }
+      );
 
       res.json(updatedUser);
     } catch (error) {
@@ -2065,12 +2083,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const id = parseInt(req.params.id);
       const validatedData = insertDepartmentSchema.partial().parse(req.body);
       
+      // Get original department data before update for comparison
+      const originalDepartment = await storage.getDepartmentById(id);
+      if (!originalDepartment) {
+        return res.status(404).json({ message: "Department not found" });
+      }
+      
       const department = await storage.updateDepartment(id, validatedData);
       if (!department) {
         return res.status(404).json({ message: "Department not found" });
       }
       
-      await logAudit(req.currentUser.id, 'UPDATE', 'department', department.id, null, `Department Name: ${department.name}`);
+      // Create detailed change tracking - only show changed fields
+      const changes: Record<string, { oldValue: any; newValue: any }> = {};
+      const changedFields: string[] = [];
+      
+      Object.keys(validatedData).forEach((field) => {
+        const oldValue = (originalDepartment as any)[field];
+        const newValue = validatedData[field as keyof typeof validatedData];
+        
+        if (oldValue !== newValue) {
+          changes[field] = { oldValue, newValue };
+          changedFields.push(`${field}: "${oldValue}" → "${newValue}"`);
+        }
+      });
+      
+      await logAudit(
+        req.currentUser.id, 
+        'UPDATE', 
+        'department', 
+        department.id, 
+        null, 
+        `Department updated: ${department.name} - ${changedFields.join(', ')}`,
+        {
+          departmentName: department.name,
+          changes: changes,
+          updatedFields: Object.keys(changes).join(', ')
+        }
+      );
       
       res.json(department);
     } catch (error) {
