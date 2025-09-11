@@ -5850,11 +5850,54 @@ ${result.value}
         return res.status(400).json({ message: "departmentIds must be an array" });
       }
 
+      // Get current user departments for comparison
+      const currentDepartmentIds = await storage.getUserDepartments(userId);
+      
+      // Get all departments for name resolution with string keys for robust matching
+      const allDepartments = await storage.getAllDepartments();
+      const departmentMap = new Map(allDepartments.map(dept => [String(dept.id), dept.name]));
+      
       await storage.assignUserToDepartments(userId, departmentIds);
       
       // Get user details for audit log
       const targetUser = await storage.getUser(userId);
-      await logAudit(req.currentUser.id, 'UPDATE', 'user_departments', userId, targetUser?.email, `User Email ID and Name: ${targetUser?.email} - ${targetUser?.name}`);
+      
+      // Normalize IDs to strings for consistent mapping
+      const normalizeIds = (arr: any[]) => arr.map(id => String(id));
+      const oldIds = normalizeIds(currentDepartmentIds);
+      const newIds = normalizeIds(departmentIds);
+      
+      // Create detailed change description
+      const oldDeptNames = oldIds
+        .map(id => departmentMap.get(id) || `Department ID: ${id}`)
+        .sort();
+      const newDeptNames = newIds
+        .map(id => departmentMap.get(id) || `Department ID: ${id}`)
+        .sort();
+      
+      const changeDetails = `Department: [${oldDeptNames.join(', ')}] → [${newDeptNames.join(', ')}]`;
+      
+      await logAudit(
+        req.currentUser.id, 
+        'UPDATE', 
+        'user', 
+        userId, 
+        targetUser?.email, 
+        `User updated: ${targetUser?.name} (${targetUser?.email}) - ${changeDetails}`,
+        {
+          userName: targetUser?.name,
+          userEmail: targetUser?.email,
+          changes: {
+            departmentId: {
+              oldValue: oldDeptNames.join(', '),
+              newValue: newDeptNames.join(', '),
+              oldDepartmentIds: currentDepartmentIds,
+              newDepartmentIds: departmentIds
+            }
+          },
+          updatedFields: 'departmentId'
+        }
+      );
       
       res.json({ message: "User departments updated successfully" });
     } catch (error) {
