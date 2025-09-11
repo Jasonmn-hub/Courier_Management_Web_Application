@@ -1513,18 +1513,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Compare all possible fields
       const fieldsToCheck = ['name', 'email', 'employeeCode', 'mobileNumber', 'role', 'departmentId'];
       
-      fieldsToCheck.forEach((field) => {
+      // Get all departments for name resolution
+      let departmentMap = new Map<number, string>();
+      try {
+        const allDepartments = await storage.getAllDepartments();
+        departmentMap = new Map(allDepartments.map(dept => [dept.id, dept.name]));
+      } catch (error) {
+        console.error('Error fetching departments for audit log:', error);
+      }
+      
+      for (const field of fieldsToCheck) {
         const oldValue = (existingUser as any)[field];
         const newValue = (updateData as any)[field];
         
         if (oldValue !== newValue) {
-          changes[field] = { 
-            oldValue: oldValue || 'None', 
-            newValue: newValue || 'None' 
-          };
-          changedFields.push(`${field}: "${oldValue || 'None'}" → "${newValue || 'None'}"`);
+          // Special handling for departmentId to store department names in audit data
+          if (field === 'departmentId') {
+            const oldId = oldValue ? Number(oldValue) : null;
+            const newId = newValue ? Number(newValue) : null;
+            
+            const oldDeptName = oldId && !isNaN(oldId) ? 
+              departmentMap.get(oldId) || `Department ID: ${oldId}` : 'None';
+            const newDeptName = newId && !isNaN(newId) ? 
+              departmentMap.get(newId) || `Department ID: ${newId}` : 'None';
+            
+            // Store department names in the structured audit data
+            changes[field] = { 
+              oldValue: oldDeptName, 
+              newValue: newDeptName,
+              oldDepartmentId: oldValue || null,
+              newDepartmentId: newValue || null
+            };
+            
+            changedFields.push(`Department: "${oldDeptName}" → "${newDeptName}"`);
+          } else {
+            changes[field] = { 
+              oldValue: oldValue || 'None', 
+              newValue: newValue || 'None' 
+            };
+            changedFields.push(`${field}: "${oldValue || 'None'}" → "${newValue || 'None'}"`);
+          }
         }
-      });
+      }
       
       // Special handling for password
       if (password && password.trim()) {
