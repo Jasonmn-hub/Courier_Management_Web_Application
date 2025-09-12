@@ -271,9 +271,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log(`📧 Final recipient list - TO: [${recipients.join(', ')}], CC: [${ccRecipients.join(', ')}]`);
           if (recipients.length > 0) {
             const mailOptions: any = {
-              from: smtpSettings.fromEmail || smtpSettings.username,
+              from: smtpSettings.fromName ? `${smtpSettings.fromName} <${smtpSettings.fromEmail || smtpSettings.username}>` : (smtpSettings.fromEmail || smtpSettings.username),
               to: recipients.join(','),
-              replyTo: (courier as any).emailId, // Reply goes to the original courier recipient
+              replyTo: courier.email, // Reply goes to the original courier recipient
               cc: ccRecipients.length > 0 ? ccRecipients.join(',') : undefined,
               subject: 'Courier Received Confirmation - Courier Management System',
               html: `
@@ -557,9 +557,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log(`📧 Final recipient list - TO: [${recipients.join(', ')}], CC: [${ccRecipients.join(', ')}]`);
           if (recipients.length > 0) {
             const mailOptions: any = {
-              from: smtpSettings.fromEmail || smtpSettings.username,
+              from: smtpSettings.fromName ? `${smtpSettings.fromName} <${smtpSettings.fromEmail || smtpSettings.username}>` : (smtpSettings.fromEmail || smtpSettings.username),
               to: recipients.join(','),
-              replyTo: (courier as any).emailId, // Reply goes to the original courier recipient
+              replyTo: courier.email, // Reply goes to the original courier recipient
               cc: ccRecipients.length > 0 ? ccRecipients.join(',') : undefined,
               subject: 'Courier Received Confirmation - Courier Management System',
               html: `
@@ -1780,7 +1780,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 (process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : `https://${req.get('host')}`);
 
               const mailOptions = {
-                from: smtpSettings.fromEmail || smtpSettings.username,
+                from: smtpSettings.fromName ? `${smtpSettings.fromName} <${smtpSettings.fromEmail || smtpSettings.username}>` : (smtpSettings.fromEmail || smtpSettings.username),
                 to: userData.email,
                 subject: 'Welcome to Courier Management System - Account Created',
                 html: `
@@ -2576,7 +2576,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
 
             const mailOptions: any = {
-              from: smtpSettings.fromEmail || smtpSettings.username,
+              from: smtpSettings.fromName ? `${smtpSettings.fromName} <${smtpSettings.fromEmail || smtpSettings.username}>` : (smtpSettings.fromEmail || smtpSettings.username),
               to: req.body.email,
               replyTo: user.email, // Reply goes to the person who created the courier
               cc: req.body.ccEmails ? req.body.ccEmails.split(',').map((email: string) => email.trim()).filter((email: string) => email) : undefined,
@@ -3678,7 +3678,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const transporter = nodemailer.createTransport(transportConfig);
 
             const mailOptions = {
-              from: smtpSettings.fromEmail || smtpSettings.username,
+              from: smtpSettings.fromName ? `${smtpSettings.fromName} <${smtpSettings.fromEmail || smtpSettings.username}>` : (smtpSettings.fromEmail || smtpSettings.username),
               to: req.body.emailId,
               replyTo: user.email, // Reply goes to the person who marked the courier as received
               subject: 'Courier Received Notification - Courier Management System',

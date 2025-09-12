@@ -248,7 +248,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteUser(id: string): Promise<boolean> {
-    const result = await db.delete(users).where(eq(users.id, id));
+    const result = await db.delete(users).where(eq(users.id, id)).returning({ id: users.id });
     return result.length > 0;
   }
 
@@ -676,7 +676,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteField(id: number): Promise<boolean> {
-    const result = await db.delete(fields).where(eq(fields.id, id));
+    const result = await db.delete(fields).where(eq(fields.id, id)).returning({ id: fields.id });
     return result.length > 0;
   }
 
@@ -1246,7 +1246,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteReceivedCourier(id: number): Promise<boolean> {
-    const result = await db.delete(receivedCouriers).where(eq(receivedCouriers.id, id));
+    const result = await db.delete(receivedCouriers).where(eq(receivedCouriers.id, id)).returning({ id: receivedCouriers.id });
     return result.length > 0;
   }
 
@@ -1342,8 +1342,8 @@ export class DatabaseStorage implements IStorage {
 
   async deleteFieldDropdownOption(id: number): Promise<boolean> {
     try {
-      const result = await db.delete(fieldDropdownOptions).where(eq(fieldDropdownOptions.id, id));
-      return (result as any).rowCount > 0 || result.length > 0;
+      const result = await db.delete(fieldDropdownOptions).where(eq(fieldDropdownOptions.id, id)).returning({ id: fieldDropdownOptions.id });
+      return result.length > 0;
     } catch (error) {
       console.error("Error deleting field dropdown option:", error);
       return false;
@@ -1436,8 +1436,8 @@ export class DatabaseStorage implements IStorage {
 
   async deleteBranch(id: number): Promise<boolean> {
     try {
-      const result = await db.delete(branches).where(eq(branches.id, id));
-      return (result as any).rowCount > 0 || result.length > 0;
+      const result = await db.delete(branches).where(eq(branches.id, id)).returning({ id: branches.id });
+      return result.length > 0;
     } catch (error) {
       console.error("Error deleting branch:", error);
       return false;
@@ -1446,8 +1446,8 @@ export class DatabaseStorage implements IStorage {
 
   async deleteBulkBranches(ids: number[]): Promise<number> {
     try {
-      const result = await db.delete(branches).where(inArray(branches.id, ids));
-      return (result as any).rowCount || 0;
+      const result = await db.delete(branches).where(inArray(branches.id, ids)).returning({ id: branches.id });
+      return result.length;
     } catch (error) {
       console.error("Error deleting branches:", error);
       return 0;
@@ -1555,8 +1555,8 @@ export class DatabaseStorage implements IStorage {
 
   async deleteVendor(id: number): Promise<boolean> {
     try {
-      const result = await db.delete(vendors).where(eq(vendors.id, id));
-      return (result as any).rowCount > 0 || result.length > 0;
+      const result = await db.delete(vendors).where(eq(vendors.id, id)).returning({ id: vendors.id });
+      return result.length > 0;
     } catch (error) {
       console.error("Error deleting vendor:", error);
       return false;
