@@ -186,8 +186,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       // Send confirmation receipt email to courier-related contacts
+      let smtpSettings: any = null;
       try {
-        const smtpSettings = await storage.getSmtpSettings();
+        smtpSettings = await storage.getSmtpSettings();
         if (smtpSettings && smtpSettings.host && smtpSettings.username && smtpSettings.password) {
           const nodemailer = await import('nodemailer');
           
@@ -470,8 +471,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       // Send confirmation receipt email to courier-related contacts
+      let smtpSettings: any = null;
       try {
-        const smtpSettings = await storage.getSmtpSettings();
+        smtpSettings = await storage.getSmtpSettings();
         if (smtpSettings && smtpSettings.host && smtpSettings.username && smtpSettings.password) {
           const nodemailer = await import('nodemailer');
           
