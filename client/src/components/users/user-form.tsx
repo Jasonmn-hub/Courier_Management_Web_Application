@@ -2,12 +2,22 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
+import { useState } from "react";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   Form,
   FormControl,
@@ -19,7 +29,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Save, Key } from "lucide-react";
+import { Save, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
@@ -57,6 +67,13 @@ interface UserFormProps {
 export default function UserForm({ user, onClose, onSuccess }: UserFormProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [duplicateDialog, setDuplicateDialog] = useState<{
+    isOpen: boolean;
+    duplicateFields: Array<{ field: string; value: string; displayName: string }>;
+  }>({
+    isOpen: false,
+    duplicateFields: []
+  });
 
   const form = useForm({
     resolver: zodResolver(user ? updateUserSchema : createUserSchema),
@@ -112,27 +129,56 @@ export default function UserForm({ user, onClose, onSuccess }: UserFormProps) {
         return;
       }
 
-      // Handle field-specific validation errors
+      // Handle field-specific validation errors (especially duplicates)
       if (error?.response?.data?.field && error?.response?.data?.message) {
         const fieldName = error.response.data.field;
         const message = error.response.data.message;
+        const value = error.response.data.value || '';
         
-        // Set specific field error instead of showing generic toast
-        if (fieldName === 'email') {
-          form.setError('email', { message });
-        } else if (fieldName === 'employeeCode') {
-          form.setError('employeeCode', { message });
-        } else if (fieldName === 'name') {
-          form.setError('name', { message });
-        } else if (fieldName === 'mobileNumber') {
-          form.setError('mobileNumber', { message });
-        } else {
-          // For any other field or unknown field, show toast
-          toast({
-            title: "Error",
-            description: message,
-            variant: "destructive",
+        // Check if this is a duplicate field error
+        const isDuplicateError = message.toLowerCase().includes('already exists');
+        
+        if (isDuplicateError && (fieldName === 'email' || fieldName === 'employeeCode' || fieldName === 'mobileNumber')) {
+          // Set the field error (red message below field)
+          if (fieldName === 'email') {
+            form.setError('email', { message });
+          } else if (fieldName === 'employeeCode') {
+            form.setError('employeeCode', { message });
+          } else if (fieldName === 'mobileNumber') {
+            form.setError('mobileNumber', { message });
+          }
+
+          // Also show popup for duplicate fields
+          const displayName = fieldName === 'employeeCode' ? 'Employee Code' : 
+                              fieldName === 'mobileNumber' ? 'Mobile Number' : 
+                              'Email Address';
+          
+          setDuplicateDialog({
+            isOpen: true,
+            duplicateFields: [{
+              field: fieldName,
+              value: value,
+              displayName: displayName
+            }]
           });
+        } else {
+          // Set specific field error for non-duplicate errors
+          if (fieldName === 'email') {
+            form.setError('email', { message });
+          } else if (fieldName === 'employeeCode') {
+            form.setError('employeeCode', { message });
+          } else if (fieldName === 'name') {
+            form.setError('name', { message });
+          } else if (fieldName === 'mobileNumber') {
+            form.setError('mobileNumber', { message });
+          } else {
+            // For any other field or unknown field, show toast
+            toast({
+              title: "Error",
+              description: message,
+              variant: "destructive",
+            });
+          }
         }
       } else {
         // Generic error handling for non-field-specific errors
@@ -152,13 +198,52 @@ export default function UserForm({ user, onClose, onSuccess }: UserFormProps) {
   const watchedRole = form.watch("role");
 
   return (
-    <Dialog open onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>
-            {user ? 'Edit User' : 'Add New User'}
-          </DialogTitle>
-        </DialogHeader>
+    <>
+      {/* Duplicate Fields Alert Dialog */}
+      <AlertDialog open={duplicateDialog.isOpen} onOpenChange={(open) => setDuplicateDialog(prev => ({ ...prev, isOpen: open }))}>
+        <AlertDialogContent data-testid="dialog-duplicate-validation">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center space-x-2 text-red-600">
+              <AlertTriangle className="h-5 w-5" />
+              <span>Duplicate Information Detected</span>
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3">
+              <p>The following fields contain information that already exists in the system:</p>
+              <div className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg p-3 space-y-2">
+                {duplicateDialog.duplicateFields.map((duplicate, index) => (
+                  <div key={index} className="flex items-center space-x-2">
+                    <div className="w-2 h-2 bg-red-500 rounded-full flex-shrink-0" />
+                    <span className="font-medium text-red-700 dark:text-red-300">{duplicate.displayName}:</span>
+                    <span className="text-red-600 dark:text-red-400 font-mono bg-red-100 dark:bg-red-900 px-2 py-1 rounded text-sm">
+                      {duplicate.value}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <p className="text-sm text-slate-600 dark:text-slate-400">
+                Please modify the highlighted fields with unique values before saving the user.
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction 
+              onClick={() => setDuplicateDialog(prev => ({ ...prev, isOpen: false }))}
+              data-testid="button-close-duplicate-dialog"
+            >
+              I'll Fix This
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Main User Form Dialog */}
+      <Dialog open onOpenChange={onClose}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {user ? 'Edit User' : 'Add New User'}
+            </DialogTitle>
+          </DialogHeader>
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -360,5 +445,6 @@ export default function UserForm({ user, onClose, onSuccess }: UserFormProps) {
         </Form>
       </DialogContent>
     </Dialog>
+    </>
   );
 }
