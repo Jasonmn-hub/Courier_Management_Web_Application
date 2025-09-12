@@ -423,7 +423,7 @@ export class DatabaseStorage implements IStorage {
     return result.length > 0;
   }
 
-  async checkUserExists(email?: string, name?: string, employeeCode?: string, excludeId?: string): Promise<{ exists: boolean; field?: string; value?: string }> {
+  async checkUserExists(email?: string, name?: string, employeeCode?: string, mobileNumber?: string, excludeId?: string): Promise<{ exists: boolean; field?: string; value?: string }> {
     if (email) {
       const result = await db.select({ id: users.id }).from(users).where(
         excludeId ? and(eq(users.email, email), sql`${users.id} != ${excludeId}`) : eq(users.email, email)
@@ -448,6 +448,15 @@ export class DatabaseStorage implements IStorage {
       );
       if (result.length > 0) {
         return { exists: true, field: 'employeeCode', value: employeeCode };
+      }
+    }
+
+    if (mobileNumber) {
+      const result = await db.select({ id: users.id }).from(users).where(
+        excludeId ? and(eq(users.mobileNumber, mobileNumber), sql`${users.id} != ${excludeId}`) : eq(users.mobileNumber, mobileNumber)
+      );
+      if (result.length > 0) {
+        return { exists: true, field: 'mobileNumber', value: mobileNumber };
       }
     }
 

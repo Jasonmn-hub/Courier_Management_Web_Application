@@ -1305,9 +1305,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Check for other duplicate fields
-      const duplicateCheck = await storage.checkUserExists(email, name, employeeCode);
+      const duplicateCheck = await storage.checkUserExists(email, name, employeeCode, mobileNumber);
       if (duplicateCheck.exists) {
-        const fieldName = duplicateCheck.field === 'employeeCode' ? 'employee code' : duplicateCheck.field;
+        const fieldName = duplicateCheck.field === 'employeeCode' ? 'employee code' : 
+                         duplicateCheck.field === 'mobileNumber' ? 'mobile number' : duplicateCheck.field;
         return res.status(400).json({ 
           message: `A user with this ${fieldName} already exists: ${duplicateCheck.value}`,
           field: duplicateCheck.field
@@ -1918,8 +1919,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Check user uniqueness route for validation
   app.post('/api/check-user-exists', authenticateToken, requireRole(['admin', 'sub_admin']), async (req: any, res) => {
     try {
-      const { email, name, employeeCode, excludeId } = req.body;
-      const result = await storage.checkUserExists(email, name, employeeCode, excludeId);
+      const { email, name, employeeCode, mobileNumber, excludeId } = req.body;
+      const result = await storage.checkUserExists(email, name, employeeCode, mobileNumber, excludeId);
       res.json(result);
     } catch (error) {
       console.error("Error checking user exists:", error);

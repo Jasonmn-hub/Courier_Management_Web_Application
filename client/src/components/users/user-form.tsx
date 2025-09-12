@@ -124,6 +124,8 @@ export default function UserForm({ user, onClose, onSuccess }: UserFormProps) {
           form.setError('employeeCode', { message });
         } else if (fieldName === 'name') {
           form.setError('name', { message });
+        } else if (fieldName === 'mobileNumber') {
+          form.setError('mobileNumber', { message });
         } else {
           // For any other field or unknown field, show toast
           toast({
