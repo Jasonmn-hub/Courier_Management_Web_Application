@@ -99,7 +99,7 @@ export default function UserForm({ user, onClose, onSuccess }: UserFormProps) {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
       onSuccess();
     },
-    onError: (error) => {
+    onError: (error: any) => {
       if (isUnauthorizedError(error)) {
         toast({
           title: "Unauthorized",
@@ -111,11 +111,35 @@ export default function UserForm({ user, onClose, onSuccess }: UserFormProps) {
         }, 500);
         return;
       }
-      toast({
-        title: "Error",
-        description: `Failed to ${user ? 'update' : 'create'} user`,
-        variant: "destructive",
-      });
+
+      // Handle field-specific validation errors
+      if (error?.response?.data?.field && error?.response?.data?.message) {
+        const fieldName = error.response.data.field;
+        const message = error.response.data.message;
+        
+        // Set specific field error instead of showing generic toast
+        if (fieldName === 'email') {
+          form.setError('email', { message });
+        } else if (fieldName === 'employeeCode') {
+          form.setError('employeeCode', { message });
+        } else if (fieldName === 'name') {
+          form.setError('name', { message });
+        } else {
+          // For any other field or unknown field, show toast
+          toast({
+            title: "Error",
+            description: message,
+            variant: "destructive",
+          });
+        }
+      } else {
+        // Generic error handling for non-field-specific errors
+        toast({
+          title: "Error",
+          description: `Failed to ${user ? 'update' : 'create'} user`,
+          variant: "destructive",
+        });
+      }
     },
   });
 
