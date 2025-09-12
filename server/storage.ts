@@ -44,7 +44,7 @@ import {
   type InsertVendor,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, ilike, or, sql, lt, gt, inArray } from "drizzle-orm";
+import { eq, and, desc, ilike, or, sql, lt, gt, inArray, isNull, isNotNull } from "drizzle-orm";
 
 export interface IStorage {
   // User operations
@@ -61,11 +61,13 @@ export interface IStorage {
   assignUserToDepartments(userId: string, departmentIds: number[]): Promise<void>;
   
   // Department operations
-  getAllDepartments(): Promise<Department[]>;
+  getAllDepartments(includeDeleted?: boolean): Promise<Department[]>;
   getDepartmentById(id: number): Promise<Department | undefined>;
   createDepartment(department: InsertDepartment): Promise<Department>;
   updateDepartment(id: number, department: Partial<InsertDepartment> & { authorityDocumentPath?: string }): Promise<Department | undefined>;
   deleteDepartment(id: number): Promise<boolean>;
+  checkDepartmentNameExists(name: string, excludeId?: number): Promise<boolean>;
+  checkUserExists(email?: string, name?: string, employeeCode?: string, excludeId?: string): Promise<{ exists: boolean; field?: string; value?: string }>;
   
   // Courier operations
   getAllCouriers(filters?: {
@@ -365,8 +367,15 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Department operations
-  async getAllDepartments(): Promise<Department[]> {
-    return await db.select().from(departments).orderBy(departments.name);
+  async getAllDepartments(includeDeleted: boolean = false): Promise<Department[]> {
+    let query = db.select().from(departments);
+    
+    if (!includeDeleted) {
+      query = query.where(isNull(departments.deletedAt));
+    }
+    
+    query = query.orderBy(departments.name);
+    return await query;
   }
 
   async getDepartmentById(id: number): Promise<Department | undefined> {
@@ -389,11 +398,60 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteDepartment(id: number): Promise<boolean> {
-    const deleted = await db
-      .delete(departments)
-      .where(eq(departments.id, id))
+    const updated = await db
+      .update(departments)
+      .set({ deletedAt: new Date(), updatedAt: new Date() })
+      .where(and(eq(departments.id, id), isNull(departments.deletedAt)))
       .returning({ id: departments.id });
-    return deleted.length > 0;
+    return updated.length > 0;
+  }
+
+  async checkDepartmentNameExists(name: string, excludeId?: number): Promise<boolean> {
+    const conditions = [
+      eq(departments.name, name),
+      isNull(departments.deletedAt)
+    ];
+    
+    if (excludeId) {
+      conditions.push(sql`${departments.id} != ${excludeId}`);
+    }
+    
+    const result = await db.select({ id: departments.id })
+      .from(departments)
+      .where(and(...conditions));
+    
+    return result.length > 0;
+  }
+
+  async checkUserExists(email?: string, name?: string, employeeCode?: string, excludeId?: string): Promise<{ exists: boolean; field?: string; value?: string }> {
+    if (email) {
+      const result = await db.select({ id: users.id }).from(users).where(
+        excludeId ? and(eq(users.email, email), sql`${users.id} != ${excludeId}`) : eq(users.email, email)
+      );
+      if (result.length > 0) {
+        return { exists: true, field: 'email', value: email };
+      }
+    }
+
+    if (name) {
+      const result = await db.select({ id: users.id }).from(users).where(
+        excludeId ? and(eq(users.name, name), sql`${users.id} != ${excludeId}`) : eq(users.name, name)
+      );
+      if (result.length > 0) {
+        return { exists: true, field: 'name', value: name };
+      }
+    }
+
+    if (employeeCode) {
+      const result = await db.select({ id: users.id }).from(users).where(
+        excludeId ? and(eq(users.employeeCode, employeeCode), sql`${users.id} != ${excludeId}`) : eq(users.employeeCode, employeeCode)
+      );
+      if (result.length > 0) {
+        return { exists: true, field: 'employeeCode', value: employeeCode };
+      }
+    }
+
+    return { exists: false };
   }
 
   // Courier operations

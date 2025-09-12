@@ -60,6 +60,7 @@ export const departments = pgTable("departments", {
   id: serial("id").primaryKey(),
   name: varchar("name", { length: 100 }).notNull(),
   authorityDocumentPath: varchar("authority_document_path", { length: 255 }), // Legacy - kept for backward compatibility
+  deletedAt: timestamp("deleted_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

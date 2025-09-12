@@ -1298,10 +1298,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: 'Password is required for new users' });
       }
 
-      // Check if user already exists
+      // Check if user already exists (email, name, employeeCode)
       const existingUser = await storage.getUserByEmail(email);
       if (existingUser) {
-        return res.status(400).json({ message: 'User already exists' });
+        return res.status(400).json({ message: 'User with this email already exists' });
+      }
+
+      // Check for other duplicate fields
+      const duplicateCheck = await storage.checkUserExists(email, name, employeeCode);
+      if (duplicateCheck.exists) {
+        const fieldName = duplicateCheck.field === 'employeeCode' ? 'employee code' : duplicateCheck.field;
+        return res.status(400).json({ 
+          message: `A user with this ${fieldName} already exists: ${duplicateCheck.value}`,
+          field: duplicateCheck.field
+        });
       }
 
       const hashedPassword = await hashPassword(password);
@@ -1905,6 +1915,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Check user uniqueness route for validation
+  app.post('/api/check-user-exists', authenticateToken, requireRole(['admin', 'sub_admin']), async (req: any, res) => {
+    try {
+      const { email, name, employeeCode, excludeId } = req.body;
+      const result = await storage.checkUserExists(email, name, employeeCode, excludeId);
+      res.json(result);
+    } catch (error) {
+      console.error("Error checking user exists:", error);
+      res.status(500).json({ message: "Failed to check user existence" });
+    }
+  });
+
   // Helper function to log audit
   const logAudit = async (
     userId: string | null, 
@@ -2082,9 +2104,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/departments', authenticateToken, async (req: any, res) => {
     try {
       const includeDeleted = req.query.includeDeleted === 'true';
-      // Note: Current system uses hard deletion, so includeDeleted will always return the same result
-      // This parameter is prepared for future soft delete implementation
-      const departments = await storage.getAllDepartments();
+      const departments = await storage.getAllDepartments(includeDeleted);
       res.json(departments);
     } catch (error) {
       console.error("Error fetching departments:", error);
@@ -2095,6 +2115,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/departments', authenticateToken, requireRole(['admin', 'sub_admin']), setCurrentUser(), async (req: any, res) => {
     try {
       const validatedData = insertDepartmentSchema.parse(req.body);
+      
+      // Check for duplicate department name
+      const nameExists = await storage.checkDepartmentNameExists(validatedData.name);
+      if (nameExists) {
+        return res.status(400).json({ 
+          message: "Department name already exists", 
+          field: "name" 
+        });
+      }
+      
       const department = await storage.createDepartment(validatedData);
       
       await logAudit(req.currentUser.id, 'CREATE', 'department', department.id, null, `Department Name: ${department.name}`);
@@ -2118,6 +2148,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const originalDepartment = await storage.getDepartmentById(id);
       if (!originalDepartment) {
         return res.status(404).json({ message: "Department not found" });
+      }
+      
+      // Check for duplicate department name if name is being updated
+      if (validatedData.name && validatedData.name !== originalDepartment.name) {
+        const nameExists = await storage.checkDepartmentNameExists(validatedData.name, id);
+        if (nameExists) {
+          return res.status(400).json({ 
+            message: "Department name already exists", 
+            field: "name" 
+          });
+        }
       }
       
       const department = await storage.updateDepartment(id, validatedData);
