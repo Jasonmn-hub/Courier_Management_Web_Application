@@ -136,6 +136,7 @@ export const smtpSettings = pgTable("smtp_settings", {
   username: varchar("username", { length: 100 }),
   password: text("password"),
   fromEmail: varchar("from_email", { length: 100 }),
+  fromName: varchar("from_name", { length: 100 }),
   applicationUrl: varchar("application_url", { length: 255 }), // Login link URL for emails
 });
 

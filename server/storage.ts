@@ -1280,8 +1280,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteAuthorityLetterTemplate(id: number): Promise<boolean> {
-    const result = await db.delete(authorityLetterTemplates).where(eq(authorityLetterTemplates.id, id));
-    return result.rowCount !== undefined ? result.rowCount > 0 : result.length > 0;
+    const result = await db.delete(authorityLetterTemplates).where(eq(authorityLetterTemplates.id, id)).returning({ id: authorityLetterTemplates.id });
+    return result.length > 0;
   }
 
   // Authority Letter Field methods
@@ -1318,8 +1318,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteAuthorityLetterField(id: number): Promise<boolean> {
-    const result = await db.delete(authorityLetterFields).where(eq(authorityLetterFields.id, id));
-    return result.rowCount !== undefined ? result.rowCount > 0 : result.length > 0;
+    const result = await db.delete(authorityLetterFields).where(eq(authorityLetterFields.id, id)).returning({ id: authorityLetterFields.id });
+    return result.length > 0;
   }
 
   // Field Dropdown Options methods
