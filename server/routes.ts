@@ -780,7 +780,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check if user already exists
       const existingUser = await storage.getUserByEmail(email);
       if (existingUser) {
-        return res.status(400).json({ message: 'User already exists' });
+        return res.status(400).json({ 
+          message: 'User with this email already exists',
+          field: 'email',
+          value: email
+        });
       }
 
       const hashedPassword = await hashPassword(password);
@@ -1303,7 +1307,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check if user already exists (email, name, employeeCode)
       const existingUser = await storage.getUserByEmail(email);
       if (existingUser) {
-        return res.status(400).json({ message: 'User with this email already exists' });
+        return res.status(400).json({ 
+          message: 'User with this email already exists',
+          field: 'email',
+          value: email
+        });
       }
 
       // Check for other duplicate fields
