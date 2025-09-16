@@ -1,0 +1,143 @@
+-- ================================================
+-- Courier Management System - Initial Data
+-- PostgreSQL INSERT Statements
+-- Copy and paste this after creating the schema
+-- ================================================
+
+-- ================================================
+-- DEFAULT DEPARTMENTS
+-- ================================================
+
+INSERT INTO departments (name) VALUES 
+('IT Department'),
+('Operations'), 
+('Customer Service'),
+('Finance'),
+('Human Resources'),
+('Administration');
+
+-- ================================================
+-- DEFAULT ADMIN USER
+-- Note: Password is 'admin123' (hashed using bcrypt)
+-- ================================================
+
+INSERT INTO users (id, name, email, password, role, department_id) VALUES 
+(gen_random_uuid(), 'System Admin', 'admin@system.com', '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin', 1);
+
+-- ================================================
+-- DEFAULT FIELDS (for custom forms)
+-- ================================================
+
+INSERT INTO fields (name, type) VALUES 
+('Customer Name', 'text'),
+('Priority Level', 'dropdown'),
+('Due Date', 'calendar'),
+('Contact Number', 'text'),
+('Address', 'text');
+
+-- ================================================
+-- DEFAULT VENDORS (common courier services)
+-- ================================================
+
+INSERT INTO vendors (vendor_name, mobile_number, email, address) VALUES 
+('Blue Dart', '1234567890', 'info@bluedart.com', 'Blue Dart Corporate Office'),
+('DTDC', '1234567891', 'info@dtdc.com', 'DTDC Corporate Office'),
+('FedEx', '1234567892', 'info@fedex.com', 'FedEx Corporate Office'),
+('DHL', '1234567893', 'info@dhl.com', 'DHL Corporate Office'),
+('India Post', '1234567894', 'info@indiapost.com', 'India Post Office'),
+('Delhivery', '1234567895', 'info@delhivery.com', 'Delhivery Corporate Office');
+
+-- ================================================
+-- SAMPLE BRANCHES (modify according to your locations)
+-- ================================================
+
+INSERT INTO branches (sr_no, branch_name, branch_code, branch_address, pincode, state, status, department_id) VALUES 
+(1, 'Head Office', 'HO001', '123 Main Street, Business District', '110001', 'Delhi', 'active', 1),
+(2, 'Mumbai Branch', 'MB002', '456 Commercial Road, Andheri', '400001', 'Maharashtra', 'active', 2),
+(3, 'Bangalore Branch', 'BB003', '789 Tech Park, Electronic City', '560001', 'Karnataka', 'active', 1),
+(4, 'Chennai Branch', 'CB004', '321 IT Corridor, OMR', '600001', 'Tamil Nadu', 'active', 3),
+(5, 'Kolkata Branch', 'KB005', '654 Business Center, Salt Lake', '700001', 'West Bengal', 'active', 2);
+
+-- ================================================
+-- DEFAULT USER POLICIES (tab permissions)
+-- ================================================
+
+INSERT INTO user_policies (department_id, tab_name, is_enabled) VALUES 
+-- IT Department permissions
+(1, 'branches', true),
+(1, 'couriers', true),
+(1, 'users', true),
+(1, 'departments', true),
+(1, 'vendors', true),
+(1, 'settings', true),
+-- Operations permissions  
+(2, 'branches', true),
+(2, 'couriers', true),
+(2, 'vendors', true),
+-- Customer Service permissions
+(3, 'couriers', true),
+(3, 'branches', true);
+
+-- ================================================
+-- SMTP SETTINGS (template - update with your values)
+-- ================================================
+
+INSERT INTO smtp_settings (host, port, use_tls, from_email, from_name, application_url) VALUES 
+('smtp.gmail.com', 587, true, 'your-email@gmail.com', 'Courier Management System', 'http://localhost:5000');
+
+-- ================================================
+-- FIELD DROPDOWN OPTIONS (for dropdown fields)
+-- ================================================
+
+-- Priority Level options (field_id = 2 from above)
+INSERT INTO field_dropdown_options (field_id, department_id, option_value, option_label, sort_order) VALUES 
+(2, 1, 'low', 'Low Priority', 1),
+(2, 1, 'medium', 'Medium Priority', 2),
+(2, 1, 'high', 'High Priority', 3),
+(2, 1, 'urgent', 'Urgent', 4);
+
+-- ================================================
+-- SAMPLE AUTHORITY LETTER TEMPLATE
+-- ================================================
+
+INSERT INTO authority_letter_templates (department_id, template_name, template_content, template_description, is_default) VALUES 
+(1, 'Standard Authority Letter', 
+'<div style="font-family: Arial, sans-serif; padding: 20px;">
+<h2 style="text-align: center;">AUTHORITY LETTER</h2>
+<p>Date: ##date##</p>
+<p>To,<br>##vendor_name##</p>
+<p>Subject: Authorization for Courier Collection</p>
+<p>Dear Sir/Madam,</p>
+<p>This is to authorize <strong>##authorized_person##</strong> to collect the courier package with POD No: <strong>##pod_number##</strong> on behalf of our organization.</p>
+<p>Package Details:<br>
+- From: ##from_location##<br>
+- To: ##to_location##<br>
+- Date: ##courier_date##</p>
+<p>Please hand over the package to the authorized person upon verification of this letter.</p>
+<p>Thank you.</p>
+<p>Sincerely,<br>##department_name##<br>##organization_name##</p>
+</div>', 
+'Standard template for courier collection authorization', 
+true);
+
+-- Get the template ID for field insertion
+-- Note: You may need to adjust the template_id value based on the actual ID generated
+
+INSERT INTO authority_letter_fields (template_id, field_name, field_label, field_type, sort_order, is_required) VALUES 
+(1, 'date', 'Date', 'date', 1, true),
+(1, 'vendor_name', 'Vendor Name', 'text', 2, true),
+(1, 'authorized_person', 'Authorized Person', 'text', 3, true),
+(1, 'pod_number', 'POD Number', 'text', 4, true),
+(1, 'from_location', 'From Location', 'text', 5, true),
+(1, 'to_location', 'To Location', 'text', 6, true),
+(1, 'courier_date', 'Courier Date', 'date', 7, true),
+(1, 'department_name', 'Department Name', 'text', 8, true),
+(1, 'organization_name', 'Organization Name', 'text', 9, true);
+
+-- ================================================
+-- SUCCESS MESSAGE
+-- ================================================
+
+SELECT 'Initial data inserted successfully!' as status,
+       'Default admin login: admin@system.com / admin123' as login_info,
+       'Remember to update SMTP settings and change default passwords!' as reminder;
