@@ -287,7 +287,19 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUsersWithDepartments(searchTerm?: string): Promise<Array<User & { departments: Array<{ id: number; name: string }> }>> {
-    // First get all users with their primary department
+    // Build the query with optional search filtering
+    let whereConditions;
+    if (searchTerm?.trim()) {
+      const searchLower = `%${searchTerm.trim().toLowerCase()}%`;
+      whereConditions = or(
+        ilike(users.name, searchLower),
+        ilike(users.email, searchLower),
+        ilike(users.employeeCode, searchLower),
+        ilike(users.mobileNumber, searchLower)
+      );
+    }
+
+    // Get all users with their primary department
     const allUsers = await db.select({
       id: users.id,
       email: users.email,
@@ -305,22 +317,24 @@ export class DatabaseStorage implements IStorage {
       primaryDepartmentName: departments.name,
     })
     .from(users)
-    .leftJoin(departments, eq(users.departmentId, departments.id));
+    .leftJoin(departments, eq(users.departmentId, departments.id))
+    .where(whereConditions);
 
-    // Then get all additional department assignments
+    // Get all additional department assignments
     const userDeptAssignments = await db.select({
       userId: userDepartments.userId,
       departmentId: userDepartments.departmentId,
       departmentName: departments.name,
     })
     .from(userDepartments)
-    .leftJoin(departments, eq(userDepartments.departmentId, departments.id));
+    .innerJoin(departments, eq(userDepartments.departmentId, departments.id));
 
     // Build user map with all departments
-    const userMap = new Map();
+    const userMap = new Map<string, User & { departments: Array<{ id: number; name: string }> }>();
     
+    // First add all users with their primary department
     allUsers.forEach(user => {
-      const departmentsList = [];
+      const departmentsList: Array<{ id: number; name: string }> = [];
       
       // Add primary department if it exists
       if (user.departmentId && user.primaryDepartmentName) {
@@ -350,20 +364,24 @@ export class DatabaseStorage implements IStorage {
 
     // Add additional department assignments
     userDeptAssignments.forEach(assignment => {
-      const user = userMap.get(assignment.userId);
-      if (user && assignment.departmentId && assignment.departmentName) {
-        // Check if this department is not already added (avoid duplicates with primary dept)
-        const existingDept = user.departments.find((d: any) => d.id === assignment.departmentId);
-        if (!existingDept) {
-          user.departments.push({
-            id: assignment.departmentId,
-            name: assignment.departmentName
-          });
+      if (assignment.userId && assignment.departmentId && assignment.departmentName) {
+        const user = userMap.get(assignment.userId);
+        if (user) {
+          // Check if this department is not already added (avoid duplicates with primary dept)
+          const existingDept = user.departments.find(d => d.id === assignment.departmentId);
+          if (!existingDept) {
+            user.departments.push({
+              id: assignment.departmentId,
+              name: assignment.departmentName
+            });
+          }
         }
       }
     });
 
-    return Array.from(userMap.values());
+    // Convert back to array and sort by name
+    const result = Array.from(userMap.values());
+    return result.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
   }
 
   // Department operations
