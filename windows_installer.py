@@ -41,10 +41,17 @@ class CourierInstaller:
         else:
             print("⚠️  Administrator privileges required for Node.js installation")
             print("🔄 Restarting with administrator privileges...")
-            ctypes.windll.shell32.ShellExecuteW(
-                None, "runas", sys.executable, " ".join(sys.argv), None, 1
-            )
-            return False
+            try:
+                ctypes.windll.shell32.ShellExecuteW(
+                    None, "runas", sys.executable, " ".join(sys.argv), None, 1
+                )
+                # Exit cleanly after launching elevated process
+                print("✅ Elevated process started. This window will close.")
+                time.sleep(2)  # Give time for user to see the message
+                sys.exit(0)
+            except Exception as e:
+                print(f"❌ Failed to restart with admin privileges: {e}")
+                return False
 
     def run_command(self, cmd, check=True, shell=True, env=None, cwd=None):
         """Run a command and handle errors"""
@@ -84,9 +91,19 @@ class CourierInstaller:
             version = result.stdout.strip()
             print(f"✅ Node.js found: {version}")
             
-            # Check npm too
+            # Check npm availability (non-critical)
+            self.check_npm_available()
+            return True
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            return False
+
+    def check_npm_available(self):
+        """Check if npm is available (non-critical)"""
+        try:
+            # Try with shell=True to handle Windows .cmd files
             result = subprocess.run(
-                ["npm", "--version"], 
+                "npm --version", 
+                shell=True,
                 capture_output=True, 
                 text=True, 
                 check=True
@@ -95,6 +112,7 @@ class CourierInstaller:
             print(f"✅ npm found: v{npm_version}")
             return True
         except (subprocess.CalledProcessError, FileNotFoundError):
+            print("⚠️  npm command not found, but will try during dependency installation")
             return False
 
     def install_node_windows(self):
