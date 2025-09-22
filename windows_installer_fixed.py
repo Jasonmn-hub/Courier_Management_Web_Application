@@ -145,19 +145,49 @@ NODE_ENV=development
 # Session Configuration
 SESSION_SECRET={session_secret}
 
+# JWT Secret for authentication
+JWT_SECRET=your_jwt_secret_at_least_32_characters_long_for_security
+
 # Optional Email Configuration (configure in admin settings)
 # SMTP_HOST=smtp.gmail.com
 # SMTP_PORT=587
 # SMTP_USER=your-email@gmail.com
 # SMTP_PASS=your-app-password
+
+# File upload settings
+UPLOAD_DIR=uploads
+MAX_FILE_SIZE=10485760
+ALLOWED_EXTENSIONS=.pdf,.png,.jpg,.jpeg,.docx,.doc
+
+# Development settings
+DEBUG=false
+DEV_MODE=true
 """
         
         env_path = self.project_dir / ".env"
-        with open(env_path, 'w') as f:
-            f.write(env_content)
-        
-        print(f"✅ Environment file created: {env_path}")
-        return True
+        try:
+            with open(env_path, 'w') as f:
+                f.write(env_content)
+            print(f"✅ Environment file created: {env_path}")
+            return True
+        except Exception as e:
+            print(f"⚠️ Could not create .env file automatically: {e}")
+            print("📝 Creating .env file manually...")
+            
+            # Create .env manually for the user
+            print("=" * 60)
+            print("📝 MANUAL STEP: Create .env file")
+            print("=" * 60)
+            print(f"Please create a file named '.env' in this folder:")
+            print(f"📁 {self.project_dir}")
+            print()
+            print("📄 Copy and paste this content into the .env file:")
+            print("-" * 40)
+            print(env_content)
+            print("-" * 40)
+            
+            input("✅ Press Enter after you've created the .env file...")
+            return True
 
     def install_npm_dependencies(self):
         """Install npm dependencies in the project directory"""
