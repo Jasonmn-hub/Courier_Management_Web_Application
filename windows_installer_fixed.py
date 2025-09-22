@@ -73,16 +73,21 @@ class CourierInstaller:
             version = result.stdout.strip()
             print(f"✅ Node.js found: {version}")
             
-            # Check npm too
-            result = subprocess.run(
-                ["npm", "--version"], 
-                capture_output=True, 
-                text=True, 
-                check=True
-            )
-            npm_version = result.stdout.strip()
-            print(f"✅ npm found: v{npm_version}")
-            return True
+            # Check npm too (non-critical for Node detection)
+            try:
+                result = subprocess.run(
+                    ["npm", "--version"], 
+                    shell=True,  # Use shell=True for Windows .cmd files
+                    capture_output=True, 
+                    text=True, 
+                    check=True
+                )
+                npm_version = result.stdout.strip()
+                print(f"✅ npm found: v{npm_version}")
+            except (subprocess.CalledProcessError, FileNotFoundError):
+                print("⚠️ npm check failed, but continuing (npm should work during installation)")
+            
+            return True  # Return True if Node.js is found, regardless of npm check
         except (subprocess.CalledProcessError, FileNotFoundError):
             return False
 
@@ -203,10 +208,10 @@ SESSION_SECRET={session_secret}
         """Start the Courier Management System application"""
         print("🚀 Starting the Courier Management System...")
         try:
-            # Set environment variables
+            # Set environment variables for Windows
             env = os.environ.copy()
             env["NODE_ENV"] = "development"
-            env["PORT"] = "5000"
+            env["PORT"] = "5000" 
             env["DATABASE_URL"] = f"postgresql://{self.db_user}:{self.db_password}@{self.db_host}:{self.db_port}/{self.db_name}"
             
             print("📊 Starting server...")
@@ -215,7 +220,8 @@ SESSION_SECRET={session_secret}
             print("⏹️ Press Ctrl+C to stop the server")
             print("-" * 60)
             
-            # Start in development mode
+            # Use Windows-compatible command - avoid npm scripts with inline env vars
+            # Use direct tsx command instead of npm start to avoid Windows env issues
             cmd = ["npx", "tsx", "server/index.ts"]
             process = subprocess.Popen(
                 cmd,
@@ -271,8 +277,16 @@ pause
     def run_installation(self):
         """Run the complete installation process"""
         print("=" * 70)
-        print("🚀 Courier Management System - Windows Installer (FIXED)")
+        print("🚀 Courier Management System - Windows Installer (FIXED v2)")
         print("=" * 70)
+        
+        # Check if we're in the right directory
+        package_json = self.project_dir / "package.json"
+        if not package_json.exists():
+            print("❌ package.json not found in current directory")
+            print(f"📁 Current directory: {self.project_dir}")
+            print("⚠️ Please run this installer from the Courier Management System project folder")
+            return False
         
         # Check if Node.js is installed
         if not self.check_node_installed():
@@ -322,8 +336,43 @@ pause
         # Create batch files for easy startup
         self.create_batch_files()
         
+        print("\n" + "="*60)
+        print("🎯 TESTING APPLICATION STARTUP")
+        print("="*60)
+        
+        # Test that the application can start (quick test)
+        print("🔍 Testing if application starts correctly...")
+        try:
+            env = os.environ.copy()
+            env["NODE_ENV"] = "development"
+            env["DATABASE_URL"] = f"postgresql://{self.db_user}:{self.db_password}@{self.db_host}:{self.db_port}/{self.db_name}"
+            
+            # Quick test start
+            process = subprocess.Popen(
+                ["npx", "tsx", "server/index.ts"],
+                env=env,
+                cwd=self.project_dir,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                universal_newlines=True
+            )
+            
+            # Wait a few seconds to see if it starts
+            time.sleep(3)
+            if process.poll() is None:  # Still running
+                print("✅ Application startup test successful!")
+                process.terminate()
+                process.wait()
+            else:
+                stdout, stderr = process.communicate()
+                print(f"⚠️ Application startup test failed:")
+                print(f"Output: {stdout}")
+                print(f"Error: {stderr}")
+        except Exception as e:
+            print(f"⚠️ Could not test application startup: {e}")
+        
         # Ask user if they want to start the application
-        choice = input("\n🚀 Start the application now? (y/n): ").lower().strip()
+        choice = input("\n🚀 Start the application now for real use? (y/n): ").lower().strip()
         if choice in ['y', 'yes', '']:
             print("\n" + "="*60)
             print("🚀 STARTING APPLICATION")
@@ -332,7 +381,9 @@ pause
         else:
             print(f"\n📝 To start later:")
             print(f"   📄 Double-click: start_courier_system.bat")
-            print(f"   ⌨️  Or run: npx tsx server/index.ts")
+            print(f"   ⌨️ Or run in Command Prompt:")
+            print(f"      cd \"{self.project_dir}\"")
+            print(f"      npx tsx server/index.ts")
             
         return True
 
